@@ -45,7 +45,7 @@ class Migration(SchemaMigration):
                 ('event', self.gf('django.db.models.fields.related.ForeignKey')(to=Event)),
                 ('entered', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
                 ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=User)),
-                ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=ReportStatus)),
+                ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=ReportStatus, null=True, blank=True)),
             ))
             db.send_create_signal(u'qual', ['Report'])
 
@@ -204,7 +204,7 @@ class Migration(SchemaMigration):
             'entered': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'reports'", 'to': u"orm['qual.Event']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['qual.ReportStatus']"}),
+            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['qual.ReportStatus']", 'null': 'True', 'blank': 'True'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
         },
         u'qual.reportstatus': {

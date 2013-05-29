@@ -7,6 +7,7 @@ MODELS = {
     for model in ('Site', 'Event', 'Report', 'ReportStatus')
 }
 
+VALID_REPORT_ORDER = getattr(settings, "WQ_VALID_REPORT_ORDER", ('-entered',))
 # Base classes for Site-Event-Report-Attribute-Value pattern
 # Extend these when swapping out default implementation (below)
 
@@ -16,14 +17,42 @@ class BaseSite(models.NaturalKeyModel):
 
 class BaseEvent(models.NaturalKeyModel):
     site = models.ForeignKey(MODELS['Site'])
+
+    @property
+    def valid_reports(self):
+        return self.reports.filter(status__is_valid=True).order_by(*VALID_REPORT_ORDER)
+
+    @property
+    def vals(self):
+        vals = {}
+        for report in reversed(self.valid_reports):
+            vals.update(report.vals)
+        return vals
+    
     class Meta:
         abstract = True
 
+class ReportManager(models.Manager):
+    def create_report(self, event_key, values, **kwargs):
+        Event = swapper.load_model('qual', 'Event')
+        kwargs['event'] = Event.objects.find(*event_key)
+        report = self.create(**kwargs)
+        report.vals = values
+        return report
+
+class ValidReportManager(ReportManager):
+    def get_queryset(self):
+        qs = super(ValidReportManager, self)
+        return qs.filter(status__is_valid=True).order_by(*VALID_REPORT_ORDER)
+
 class BaseReport(models.AnnotatedModel):
-    event = models.ForeignKey(MODELS['Event']) 
+    event = models.ForeignKey(MODELS['Event'], related_name='reports')
     entered = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    status = models.ForeignKey(MODELS['ReportStatus'])
+    status = models.ForeignKey(MODELS['ReportStatus'], null=True, blank=True)
+
+    objects = ReportManager()
+    valid_objects = ValidReportManager()
 
     def __unicode__(self):
         return "%s according to %s" % (self.event, self.user)
@@ -41,9 +70,14 @@ class BaseReportStatus(models.Model):
     class Meta:
         abstract = True
 
+class ParameterManager(models.IdentifiedModelManager, models.AnnotationTypeManager):
+    pass
+
 class BaseParameter(models.BaseAnnotationType, models.IdentifiedModel):
     is_numeric = models.BooleanField()
     units = models.CharField(max_length=50, null=True, blank=True)
+
+    objects = ParameterManager()
 
     @property
     def annotated_model(self):
@@ -63,9 +97,16 @@ class BaseResult(models.BaseAnnotation):
 
     @property
     def value(self):
-        if self.value_numeric is not None:
+        if self.type.is_numeric:
             return self.value_numeric
         return self.value_text
+
+    @value.setter
+    def value(self, val):
+        if self.type.is_numeric:
+            self.value_numeric = val
+        else:
+            self.value_text = val
 
     class Meta:
         abstract = True
