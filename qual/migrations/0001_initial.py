@@ -17,6 +17,9 @@ class Migration(SchemaMigration):
             ))
             db.send_create_signal(u'qual', ['Site'])
 
+            # Adding unique constraint on 'Site', fields ['latitude', 'longitude']
+            db.create_unique('wq_site', ['latitude', 'longitude'])
+
         if not swapper.is_swapped('qual', 'Event'):
             Site = swapper.load_model('qual', 'Site', orm)
             
@@ -27,6 +30,9 @@ class Migration(SchemaMigration):
                 ('site', self.gf('django.db.models.fields.related.ForeignKey')(to=Site)),
             ))
             db.send_create_signal(u'qual', ['Event'])
+
+            # Adding unique constraint on 'Event', fields ['site', 'date']
+            db.create_unique('wq_event', ['site_id', 'date'])
 
         if not swapper.is_swapped('qual', 'Report'):
             Event        = swapper.load_model('qual', 'Event', orm)
@@ -79,10 +85,16 @@ class Migration(SchemaMigration):
     def backwards(self, orm):
 
         if not swapper.is_swapped('qual', 'Site'):
+            # Removing unique constraint on 'Site', fields ['latitude', 'longitude']
+            db.delete_unique('wq_site', ['latitude', 'longitude'])
+
             # Deleting model 'Site'
             db.delete_table('wq_site')
 
         if not swapper.is_swapped('qual', 'Event'):
+            # Removing unique constraint on 'Event', fields ['site', 'date']
+            db.delete_unique('wq_event', ['site_id', 'date'])
+
             # Deleting model 'Event'
             db.delete_table('wq_event')
 

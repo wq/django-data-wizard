@@ -10,11 +10,11 @@ MODELS = {
 # Base classes for Site-Event-Report-Attribute-Value pattern
 # Extend these when swapping out default implementation (below)
 
-class BaseSite(models.Model):
+class BaseSite(models.NaturalKeyModel):
     class Meta:
         abstract = True
 
-class BaseEvent(models.Model):
+class BaseEvent(models.NaturalKeyModel):
     site = models.ForeignKey(MODELS['Site'])
     class Meta:
         abstract = True
@@ -71,13 +71,17 @@ class BaseResult(models.BaseAnnotation):
         abstract = True
 
 # Default implementation of the above classes, can be swapped
-class Site(models.IdentifiedRelatedModel, BaseSite):
+class Site(BaseSite):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
+
+    def __unicode__(self):
+        return "%s, %s" % (round(self.latitude, 3), round(self.longitude, 3))
 
     class Meta(BaseEvent.Meta):
         db_table = 'wq_site'
         swappable = swapper.swappable_setting('qual', 'Site')
+        unique_together = ('latitude', 'longitude')
     
 class Event(BaseEvent):
     date = models.DateField()
@@ -88,6 +92,7 @@ class Event(BaseEvent):
     class Meta(BaseEvent.Meta):
         db_table = 'wq_event'
         swappable = swapper.swappable_setting('qual', 'Event')
+        unique_together = ('site', 'date')
 
 class Report(BaseReport):
     class Meta(BaseReport.Meta):
