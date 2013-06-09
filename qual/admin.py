@@ -3,7 +3,7 @@ from wq.db.patterns.models import Authority, RelationshipType
 from wq.db.patterns.base import swapper
 from django.conf import settings
 
-class ParameterAdmin(admin.AnnotationTypeAdmin):
+class ParameterAdmin(admin.AnnotationTypeAdmin, admin.IdentifiedModelAdmin):
     list_display = ('name', 'units')
     list_filter = ('units', 'is_numeric')
     exclude = ('contenttype',)

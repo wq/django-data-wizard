@@ -70,10 +70,11 @@ class BaseReportStatus(models.Model):
     class Meta:
         abstract = True
 
-class ParameterManager(models.IdentifiedModelManager, models.AnnotationTypeManager):
+class ParameterManager(models.IdentifiedRelatedModelManager,
+                       models.AnnotationTypeManager):
     pass
 
-class BaseParameter(models.BaseAnnotationType, models.IdentifiedModel):
+class BaseParameter(models.BaseAnnotationType, models.IdentifiedRelatedModel):
     is_numeric = models.BooleanField()
     units = models.CharField(max_length=50, null=True, blank=True)
 
