@@ -27,3 +27,7 @@ class StartImportView(FileTaskView):
 class ResetView(FileTaskView):
     template_name = "file_detail.html"
     task_name = 'reset'
+
+class ImportDataView(FileTaskView):
+    template_name = 'file_data.html'
+    task_name = 'import_data'

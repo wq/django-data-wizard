@@ -105,7 +105,10 @@ class BaseResult(models.BaseAnnotation):
     @value.setter
     def value(self, val):
         if self.type.is_numeric:
-            self.value_numeric = val
+            if isinstance(val, basestring):
+                self.value_numeric = None
+            else:
+                self.value_numeric = val
         else:
             self.value_text = val
 

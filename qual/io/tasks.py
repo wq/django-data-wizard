@@ -1,5 +1,6 @@
 from celery import task
 from xlrd import colname
+from collections import namedtuple
 from wq.io import ExcelFileIO
 from wq.db.patterns.models import Identifier, RelationshipType
 from wq.db.patterns.base import swapper
@@ -9,6 +10,10 @@ from django.conf import settings
     
 from wq.db.rest.models import get_ct, get_object_id
 Parameter = swapper.load_model('annotate', 'AnnotationType')
+Event = swapper.load_model('qual', 'Event')
+EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
+EventKey = namedtuple('EventKey', EVENT_KEY)
+Report = swapper.load_model('qual', 'Report')
 CONTENT_TYPES = {
     File:     get_ct(File),
     Parameter: get_ct(Parameter),
@@ -174,3 +179,35 @@ def update_columns(file, post):
 @task
 def reset(file):
     file.relationships.all().delete()
+
+@task
+def import_data(file):
+    columns, rels = read_columns(file, True)
+    excel = load_file(file)
+    def add_record(row):
+        event_key = {}
+        report_meta = {}
+        param_vals  = {}
+        for i, rel in enumerate(rels):
+            rel = rels[i]
+            val = row[i]
+            col = rel.right
+            if isinstance(col, Parameter):
+                param_vals[get_object_id(col)] = val
+            elif isinstance(col, MetaColumn):
+                if not val:
+                    continue
+                if col.type == 'event' and col.name in EVENT_KEY:
+                    event_key[col.name] = val
+                elif col.type == 'report':
+                    report_meta[col.name] = val
+        if len(event_key.keys()) < len(EVENT_KEY):
+            return
+        report_meta['user_id'] = 1
+        Report.objects.create_report(
+            EventKey(**event_key),
+            param_vals,
+            **report_meta
+        )
+
+    map(add_record, excel)
