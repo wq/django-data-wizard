@@ -14,25 +14,26 @@ class Migration(SchemaMigration):
             ('name', self.gf('django.db.models.fields.CharField')(max_length=255)),
             ('type', self.gf('django.db.models.fields.CharField')(max_length=10)),
         ))
-        db.send_create_signal(u'io', ['MetaColumn'])
+        db.send_create_signal('vera', ['MetaColumn'])
 
         # Adding model 'UnknownItem'
         db.create_table('wq_unknownitem', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('name', self.gf('django.db.models.fields.CharField')(max_length=255)),
         ))
-        db.send_create_signal(u'io', ['UnknownItem'])
+        db.send_create_signal('vera', ['UnknownItem'])
 
         # Adding model 'Range'
         db.create_table('wq_range', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('relationship', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['relate.Relationship'])),
+            ('type', self.gf('django.db.models.fields.CharField')(max_length=10)),
             ('start_row', self.gf('django.db.models.fields.IntegerField')()),
-            ('end_row', self.gf('django.db.models.fields.IntegerField')()),
+            ('end_row', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('start_column', self.gf('django.db.models.fields.IntegerField')()),
             ('end_column', self.gf('django.db.models.fields.IntegerField')()),
         ))
-        db.send_create_signal(u'io', ['Range'])
+        db.send_create_signal('vera', ['Range'])
 
 
     def backwards(self, orm):
@@ -82,11 +83,12 @@ class Migration(SchemaMigration):
         u'io.range': {
             'Meta': {'object_name': 'Range', 'db_table': "'wq_range'"},
             'end_column': ('django.db.models.fields.IntegerField', [], {}),
-            'end_row': ('django.db.models.fields.IntegerField', [], {}),
+            'end_row': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'relationship': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['relate.Relationship']"}),
             'start_column': ('django.db.models.fields.IntegerField', [], {}),
-            'start_row': ('django.db.models.fields.IntegerField', [], {})
+            'start_row': ('django.db.models.fields.IntegerField', [], {}),
+            'type': ('django.db.models.fields.CharField', [], {'max_length': '10'})
         },
         u'io.unknownitem': {
             'Meta': {'object_name': 'UnknownItem', 'db_table': "'wq_unknownitem'"},
@@ -114,4 +116,4 @@ class Migration(SchemaMigration):
         }
     }
 
-    complete_apps = ['io']
+    complete_apps = []

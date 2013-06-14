@@ -16,6 +16,7 @@ class MetaColumn(models.IdentifiedRelatedModel):
 
     class Meta:
         db_table = 'wq_metacolumn'
+        app_label = 'vera'
 
 class UnknownItem(models.IdentifiedRelatedModel):
     name = models.CharField(max_length=255)
@@ -24,11 +25,18 @@ class UnknownItem(models.IdentifiedRelatedModel):
         
     class Meta:
         db_table = 'wq_unknownitem'
+        app_label = 'vera'
 
 class Range(models.Model):
+    RANGE_TYPES = (
+        ('head', 'Column header / label'),
+        ('value', 'Global Value'),
+        ('list', 'Data series'),
+    )
     relationship = models.ForeignKey(models.Relationship)
+    type = models.CharField(max_length=10, choices=RANGE_TYPES)
     start_row    = models.IntegerField()
-    end_row      = models.IntegerField()
+    end_row      = models.IntegerField(null=True, blank=True)
     start_column = models.IntegerField()
     end_column   = models.IntegerField()
 
@@ -36,7 +44,10 @@ class Range(models.Model):
         if self.start_row == self.end_row:
             row = "Row %s" % self.start_row
         else:
-            row = "Rows %s-%s" % (self.start_row, self.end_row)
+            if self.end_row is not None:
+                row = "Rows %s-%s" % (self.start_row, self.end_row)
+            else:
+                row = "Row %s onward" % (self.start_row,)
 
         if self.start_column == self.end_column:
             column = "Column %s" % self.start_column
@@ -47,3 +58,4 @@ class Range(models.Model):
     
     class Meta:
         db_table = 'wq_range'
+        app_label = 'vera'
