@@ -3,7 +3,7 @@ from wq.db.patterns.base import swapper
 from django.conf import settings
 
 MODELS = {
-    model: swapper.is_swapped('qual', model) or model
+    model: swapper.is_swapped('vera', model) or model
     for model in ('Site', 'Event', 'Report', 'ReportStatus')
 }
 
@@ -34,7 +34,7 @@ class BaseEvent(models.NaturalKeyModel):
 
 class ReportManager(models.Manager):
     def create_report(self, event_key, values, **kwargs):
-        Event = swapper.load_model('qual', 'Event')
+        Event = swapper.load_model('vera', 'Event')
         kwargs['event'] = Event.objects.find(*event_key)
         report = self.create(**kwargs)
         report.vals = values
@@ -82,7 +82,7 @@ class BaseParameter(models.BaseAnnotationType, models.IdentifiedRelatedModel):
 
     @property
     def annotated_model(self):
-        return swapper.load_model('qual', 'Report') 
+        return swapper.load_model('vera', 'Report') 
 
     def __unicode__(self):
         if self.units:
@@ -125,7 +125,7 @@ class Site(BaseSite):
 
     class Meta(BaseEvent.Meta):
         db_table = 'wq_site'
-        swappable = swapper.swappable_setting('qual', 'Site')
+        swappable = swapper.swappable_setting('vera', 'Site')
         unique_together = ('latitude', 'longitude')
     
 class Event(BaseEvent):
@@ -136,27 +136,27 @@ class Event(BaseEvent):
 
     class Meta(BaseEvent.Meta):
         db_table = 'wq_event'
-        swappable = swapper.swappable_setting('qual', 'Event')
+        swappable = swapper.swappable_setting('vera', 'Event')
         unique_together = ('site', 'date')
 
 class Report(BaseReport):
     class Meta(BaseReport.Meta):
         db_table = 'wq_report'
-        swappable = swapper.swappable_setting('qual', 'Report')
+        swappable = swapper.swappable_setting('vera', 'Report')
 
 class ReportStatus(BaseReportStatus):
     class Meta(BaseReportStatus.Meta):
         verbose_name_plural = 'report statuses'
         db_table = 'wq_reportstatus'
-        swappable = swapper.swappable_setting('qual', 'ReportStatus')
+        swappable = swapper.swappable_setting('vera', 'ReportStatus')
 
 # These will be inactive unless they are explicitly swapped for annotate's equivalents
 class Parameter(BaseParameter):
     class Meta(BaseParameter.Meta):
         db_table = 'wq_parameter'
-        abstract = not (swapper.is_swapped('annotate', 'AnnotationType') == 'qual.Parameter')
+        abstract = not (swapper.is_swapped('annotate', 'AnnotationType') == 'vera.Parameter')
 
 class Result(BaseResult):
     class Meta(BaseResult.Meta):
         db_table = 'wq_result'
-        abstract = not (swapper.is_swapped('annotate', 'Annotation') == 'qual.Result')
+        abstract = not (swapper.is_swapped('annotate', 'Annotation') == 'vera.Result')

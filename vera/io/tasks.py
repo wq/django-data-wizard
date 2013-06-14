@@ -10,10 +10,10 @@ from django.conf import settings
     
 from wq.db.rest.models import get_ct, get_object_id
 Parameter = swapper.load_model('annotate', 'AnnotationType')
-Event = swapper.load_model('qual', 'Event')
+Event = swapper.load_model('vera', 'Event')
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
-Report = swapper.load_model('qual', 'Report')
+Report = swapper.load_model('vera', 'Report')
 CONTENT_TYPES = {
     File:     get_ct(File),
     Parameter: get_ct(Parameter),
@@ -23,7 +23,7 @@ CONTENT_TYPES = {
 
 if not CONTENT_TYPES[Parameter].is_identified:
     raise Exception("AnnotationType should be swapped for an IdentifiedModel!"
-                 +  "\n(HINT: set WQ_ANNOTATIONTYPE_MODEL='qual.Parameter')")
+                 +  "\n(HINT: set WQ_ANNOTATIONTYPE_MODEL='vera.Parameter')")
 
 PRIORITY = {
     'parameter': 1,

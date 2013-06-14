@@ -8,20 +8,20 @@ from wq.db.patterns.base import swapper
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        if not swapper.is_swapped('qual', 'Site'):
+        if not swapper.is_swapped('vera', 'Site'):
             # Adding model 'Site'
             db.create_table('wq_site', (
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
                 ('latitude', self.gf('django.db.models.fields.FloatField')(null=True, blank=True)),
                 ('longitude', self.gf('django.db.models.fields.FloatField')(null=True, blank=True)),
             ))
-            db.send_create_signal(u'qual', ['Site'])
+            db.send_create_signal(u'vera', ['Site'])
 
             # Adding unique constraint on 'Site', fields ['latitude', 'longitude']
             db.create_unique('wq_site', ['latitude', 'longitude'])
 
-        if not swapper.is_swapped('qual', 'Event'):
-            Site = swapper.load_model('qual', 'Site', orm)
+        if not swapper.is_swapped('vera', 'Event'):
+            Site = swapper.load_model('vera', 'Site', orm)
             
             # Adding model 'Event'
             db.create_table('wq_event', (
@@ -29,15 +29,15 @@ class Migration(SchemaMigration):
                 ('date', self.gf('django.db.models.fields.DateField')()),
                 ('site', self.gf('django.db.models.fields.related.ForeignKey')(to=Site)),
             ))
-            db.send_create_signal(u'qual', ['Event'])
+            db.send_create_signal(u'vera', ['Event'])
 
             # Adding unique constraint on 'Event', fields ['site', 'date']
             db.create_unique('wq_event', ['site_id', 'date'])
 
-        if not swapper.is_swapped('qual', 'Report'):
-            Event        = swapper.load_model('qual', 'Event', orm)
+        if not swapper.is_swapped('vera', 'Report'):
+            Event        = swapper.load_model('vera', 'Event', orm)
             User         = swapper.load_model('auth', 'User', orm)
-            ReportStatus = swapper.load_model('qual', 'ReportStatus', orm)
+            ReportStatus = swapper.load_model('vera', 'ReportStatus', orm)
 
             # Adding model 'Report'
             db.create_table('wq_report', (
@@ -47,18 +47,18 @@ class Migration(SchemaMigration):
                 ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=User)),
                 ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=ReportStatus, null=True, blank=True)),
             ))
-            db.send_create_signal(u'qual', ['Report'])
+            db.send_create_signal(u'vera', ['Report'])
 
-        if not swapper.is_swapped('qual', 'ReportStatus'):
+        if not swapper.is_swapped('vera', 'ReportStatus'):
             # Adding model 'ReportStatus'
             db.create_table('wq_reportstatus', (
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
                 ('name', self.gf('django.db.models.fields.CharField')(max_length=255)),
                 ('is_valid', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ))
-            db.send_create_signal(u'qual', ['ReportStatus'])
+            db.send_create_signal(u'vera', ['ReportStatus'])
 
-        if swapper.is_swapped('annotate', 'AnnotationType') == 'qual.Parameter':
+        if swapper.is_swapped('annotate', 'AnnotationType') == 'vera.Parameter':
             # Adding model 'Parameter'
             db.create_table('wq_parameter', (
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -67,9 +67,9 @@ class Migration(SchemaMigration):
                 ('is_numeric', self.gf('django.db.models.fields.BooleanField')(default=False)),
                 ('units', self.gf('django.db.models.fields.CharField')(max_length=50, null=True, blank=True)),
             ))
-            db.send_create_signal(u'qual', ['Parameter'])
+            db.send_create_signal(u'vera', ['Parameter'])
 
-        if swapper.is_swapped('annotate', 'Annotation') == 'qual.Result':
+        if swapper.is_swapped('annotate', 'Annotation') == 'vera.Result':
             AnnotationType = swapper.load_model('annotate', 'AnnotationType')
             # Adding model 'Result'
             db.create_table('wq_result', (
@@ -80,37 +80,37 @@ class Migration(SchemaMigration):
                 ('value_numeric', self.gf('django.db.models.fields.FloatField')(null=True, blank=True)),
                 ('value_text', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
             ))
-            db.send_create_signal(u'qual', ['Result'])
+            db.send_create_signal(u'vera', ['Result'])
 
     def backwards(self, orm):
 
-        if not swapper.is_swapped('qual', 'Site'):
+        if not swapper.is_swapped('vera', 'Site'):
             # Removing unique constraint on 'Site', fields ['latitude', 'longitude']
             db.delete_unique('wq_site', ['latitude', 'longitude'])
 
             # Deleting model 'Site'
             db.delete_table('wq_site')
 
-        if not swapper.is_swapped('qual', 'Event'):
+        if not swapper.is_swapped('vera', 'Event'):
             # Removing unique constraint on 'Event', fields ['site', 'date']
             db.delete_unique('wq_event', ['site_id', 'date'])
 
             # Deleting model 'Event'
             db.delete_table('wq_event')
 
-        if not swapper.is_swapped('qual', 'Report'):
+        if not swapper.is_swapped('vera', 'Report'):
             # Deleting model 'Report'
             db.delete_table('wq_report')
 
-        if not swapper.is_swapped('qual', 'ReportStatus'):
+        if not swapper.is_swapped('vera', 'ReportStatus'):
             # Deleting model 'ReportStatus'
             db.delete_table('wq_reportstatus')
 
-        if swapper.is_swapped('qual', 'AnnotationType') == 'qual.Parameter':
+        if swapper.is_swapped('vera', 'AnnotationType') == 'vera.Parameter':
             # Deleting model 'Parameter'
             db.delete_table('wq_parameter')
 
-        if swapper.is_swapped('qual', 'Annotation') == 'qual.Result':
+        if swapper.is_swapped('vera', 'Annotation') == 'vera.Result':
             # Deleting model 'Result'
             db.delete_table('wq_result')
 
@@ -185,13 +185,13 @@ class Migration(SchemaMigration):
             'valid_from': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'}),
             'valid_to': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'})
         },
-        u'qual.event': {
+        u'vera.event': {
             'Meta': {'object_name': 'Event', 'db_table': "'wq_event'"},
             'date': ('django.db.models.fields.DateField', [], {}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'site': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['qual.Site']"})
+            'site': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['vera.Site']"})
         },
-        u'qual.parameter': {
+        u'vera.parameter': {
             'Meta': {'object_name': 'Parameter', 'db_table': "'wq_parameter'"},
             'contenttype': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']", 'null': 'True', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -199,30 +199,30 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'units': ('django.db.models.fields.CharField', [], {'max_length': '50', 'null': 'True', 'blank': 'True'})
         },
-        u'qual.report': {
+        u'vera.report': {
             'Meta': {'object_name': 'Report', 'db_table': "'wq_report'"},
             'entered': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'reports'", 'to': u"orm['qual.Event']"}),
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'reports'", 'to': u"orm['vera.Event']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['qual.ReportStatus']", 'null': 'True', 'blank': 'True'}),
+            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['vera.ReportStatus']", 'null': 'True', 'blank': 'True'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
         },
-        u'qual.reportstatus': {
+        u'vera.reportstatus': {
             'Meta': {'object_name': 'ReportStatus', 'db_table': "'wq_reportstatus'"},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'is_valid': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255'})
         },
-        u'qual.result': {
+        u'vera.result': {
             'Meta': {'object_name': 'Result', 'db_table': "'wq_result'"},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'object_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['qual.Parameter']"}),
+            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['vera.Parameter']"}),
             'value_numeric': ('django.db.models.fields.FloatField', [], {'null': 'True', 'blank': 'True'}),
             'value_text': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'})
         },
-        u'qual.site': {
+        u'vera.site': {
             'Meta': {'object_name': 'Site', 'db_table': "'wq_site'"},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'latitude': ('django.db.models.fields.FloatField', [], {'null': 'True', 'blank': 'True'}),
@@ -249,4 +249,4 @@ class Migration(SchemaMigration):
         }
     }
 
-    complete_apps = ['qual']
+    complete_apps = ['vera']

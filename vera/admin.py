@@ -17,10 +17,10 @@ default_admin = {
 
 # Register models with admin, but only if they haven't been swapped
 for model in default_admin:
-    if swapper.is_swapped('qual', model):
+    if swapper.is_swapped('vera', model):
         continue
     admin.site.register(
-        swapper.load_model('qual', model),
+        swapper.load_model('vera', model),
         default_admin[model]
     )
  
@@ -32,7 +32,7 @@ if not swapper.is_swapped('annotate', 'AnnotationType'):
     )
 
 # Register Parameter, if AnnotationType has been swapped for it
-if swapper.is_swapped('annotate', 'AnnotationType') == 'qual.Parameter':
+if swapper.is_swapped('annotate', 'AnnotationType') == 'vera.Parameter':
     admin.site.register(
         swapper.load_model('annotate', 'AnnotationType'),
         ParameterAdmin,

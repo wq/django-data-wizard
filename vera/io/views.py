@@ -1,7 +1,7 @@
 from wq.db.rest.views import InstanceModelView
 from wq.db.patterns.base import swapper
 from .models import MetaColumn
-from wq.db.contrib.qual.io import tasks
+from wq.db.contrib.vera.io import tasks
 from wq.db.rest.app import router
 
 class FileTaskView(InstanceModelView):
