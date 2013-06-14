@@ -1,7 +1,7 @@
 from celery import task
 from xlrd import colname
 from collections import namedtuple
-from wq.io import ExcelFileIO
+from wq.io import load_file as load_file_io
 from wq.db.patterns.models import Identifier, RelationshipType
 from wq.db.patterns.base import swapper
 from wq.db.contrib.files.models import File
@@ -33,7 +33,7 @@ PRIORITY = {
 
 def load_file(file_obj):
     filename = "%s/%s" % (settings.MEDIA_ROOT, file_obj.file.name)
-    return ExcelFileIO(filename=filename)
+    return load_file_io(filename)
 
 def get_choices(file_obj):
     def make_list(cls, name):
@@ -63,7 +63,7 @@ def get_choices(file_obj):
 
 @task
 def read_columns(file, with_rels=False):
-    excel = load_file(file)
+    table = load_file(file)
     matched_columns = []
     if with_rels:
         rels = []
@@ -78,10 +78,10 @@ def read_columns(file, with_rels=False):
         for rel in existing:
             item = rel.right
             rng = rel.range_set.all()[0]
-            if rng.start_row == excel.start_row:
+            if rng.start_row == table.header_row:
                 col = rng.start_column
                 info = {
-                    'name': excel.field_map.keys()[col],
+                    'name': table.field_map.keys()[col],
                     'match': unicode(rel.right),
                     'column': colname(col),
                 }
@@ -90,7 +90,7 @@ def read_columns(file, with_rels=False):
                 matched_columns.append(info)
         
     else:
-        for i, (name, attr_name) in enumerate(excel.field_map.items()):
+        for i, (name, attr_name) in enumerate(table.field_map.items()):
             matches = list(Identifier.objects.filter_by_identifier(name))
             if len(matches) > 0:
                 matches.sort(key=lambda ident: PRIORITY[ident.content_type.name])
@@ -113,9 +113,9 @@ def read_columns(file, with_rels=False):
             )
             Range.objects.create(
                 relationship = rel,
-                start_row = excel.start_row,
+                start_row = table.header_row,
                 start_column = i,
-                end_row = excel.start_row,
+                end_row = table.header_row,
                 end_column = i
             )
             info = {
@@ -183,7 +183,7 @@ def reset(file):
 @task
 def import_data(file):
     columns, rels = read_columns(file, True)
-    excel = load_file(file)
+    table = load_file(file)
     def add_record(row):
         event_key = {}
         report_meta = {}
@@ -210,4 +210,4 @@ def import_data(file):
             **report_meta
         )
 
-    map(add_record, excel)
+    map(add_record, table)
