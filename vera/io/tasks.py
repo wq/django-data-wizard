@@ -88,16 +88,24 @@ def already_parsed(file):
     ).exists()
 
 def load_file_options(file):
-    rels = file.relationships.filter(type__name = 'Contains Column')
-    headers = rels.filter(range__type='list').distinct()
-    if headers.count() == 0:
-        return {}
-    header_row = headers[0].range_set.get(type='head').start_row
-    start_row  = headers[0].range_set.get(type='list').start_row
-    return {
-        'header_row': header_row, 
-        'start_row': start_row
-    }
+    headers = file.relationships.filter(
+        type__name = 'Contains Column',
+        range__type = 'list'
+    )
+    if headers.exists():
+        header_row = headers[0].range_set.get(type='head').start_row
+        start_row  = headers[0].range_set.get(type='list').start_row
+        return {
+            'header_row': header_row, 
+            'start_row': start_row
+        }
+    
+    templates = file.inverserelationships.filter(type__inverse_name='Template')
+    if templates.exists():
+        return load_file_options(templates[0].right)
+
+    return {}
+
 
 def load_columns(file):
     rels = file.relationships.filter(type__name = 'Contains Column')
@@ -135,58 +143,66 @@ def get_range_value(table, rng):
 
 def parse_columns(file):
     table = load_file(file)
-    matched = []
-    for i, (name, attr_name) in enumerate(table.field_map.items()):
-        matches = list(Identifier.objects.filter_by_identifier(name))
-        if len(matches) > 0:
-            matches.sort(key=lambda ident: PRIORITY.get(ident.content_type.name, 0))
-            column = matches[0].content_object
-            ctype = matches[0].content_type
-        else:
-            column = UnknownItem.objects.find(name)
-            ctype  = CONTENT_TYPES[UnknownItem]
+    for r in table.extra_data:
+        row = table.extra_data[r]
+        for c in row:
+            if c + 1 in row and c - 1 not in row:
+                parse_column(
+                    file,
+                    name = row[c], 
+                    head = [r, c,     r, c],
+                    body = [r, c + 1, r, c + 1],
+                    body_type = 'value'
+                )
 
-        reltype, is_new = RelationshipType.objects.get_or_create(
-            from_type    = CONTENT_TYPES[File],
-            to_type      = ctype,
-            name         = 'Contains Column',
-            inverse_name = 'Column In'
-        )
-        rel = file.relationships.create(
-            type              = reltype,
-            to_content_type   = ctype,
-            to_object_id      = column.pk,
-        )
-        Range.objects.create(
-            relationship = rel,
-            type = 'head',
-            start_row = table.header_row,
-            start_column = i,
-            end_row = table.start_row - 1,
-            end_column = i
-        )
-        Range.objects.create(
-            relationship = rel,
-            type = 'list',
-            start_row = table.start_row,
-            start_column = i,
-            end_row = table.start_row + len(table),
-            end_column = i
+    for i, name in enumerate(table.field_map.keys()):
+        parse_column(
+            file,
+            name = name,
+            head = [table.header_row, i, table.start_row - 1, i],
+            body = [table.start_row,  i, table.start_row + len(table), i],
+            body_type = 'list'
         )
 
-        info = {
-            'name': name.replace('\n', " - "),
-            'match': unicode(column),
-            'colnum': i,
-            'column': colname(i),
-            'rel_id': rel.pk,
-        }
-        if isinstance(column, UnknownItem):
-            info['unknown'] = True
+    return load_columns(file)
+            
+def parse_column(file, name, head, body, body_type):
+    matches = list(Identifier.objects.filter_by_identifier(name))
+    if len(matches) > 0:
+        matches.sort(key=lambda ident: PRIORITY.get(ident.content_type.name, 0))
+        column = matches[0].content_object
+        ctype = matches[0].content_type
+    else:
+        column = UnknownItem.objects.find(name)
+        ctype  = CONTENT_TYPES[UnknownItem]
 
-        matched.append(info)
-
-    return matched
+    reltype, is_new = RelationshipType.objects.get_or_create(
+        from_type    = CONTENT_TYPES[File],
+        to_type      = ctype,
+        name         = 'Contains Column',
+        inverse_name = 'Column In'
+    )
+    rel = file.relationships.create(
+        type              = reltype,
+        to_content_type   = ctype,
+        to_object_id      = column.pk,
+    )
+    Range.objects.create(
+        relationship = rel,
+        type = 'head',
+        start_row    = head[0],
+        start_column = head[1],
+        end_row      = head[2],
+        end_column   = head[3]
+    )
+    Range.objects.create(
+        relationship = rel,
+        type = body_type,
+        start_row    = body[0],
+        start_column = body[1],
+        end_row      = body[2],
+        end_column   = body[3]
+    )
 
 @task
 def update_columns(file, post):
@@ -206,12 +222,15 @@ def update_columns(file, post):
         else:
              continue
         
+        item = file.relationships.get(pk=col['rel_id']).right
         if vid == 'new':
-            obj = cls.objects.find(col['name'])
+            obj = cls.objects.find(item.name)
+            obj.contenttype = CONTENT_TYPES[Parameter]
+            obj.save()
         else:
             obj = cls.objects.get_by_identifier(vid)
             obj.identifiers.create(
-                name = col['name']
+                name = item.name
             )
 
         reltype, is_new = RelationshipType.objects.get_or_create(
