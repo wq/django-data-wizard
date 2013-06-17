@@ -106,11 +106,11 @@ class Migration(SchemaMigration):
             # Deleting model 'ReportStatus'
             db.delete_table('wq_reportstatus')
 
-        if swapper.is_swapped('vera', 'AnnotationType') == 'vera.Parameter':
+        if swapper.is_swapped('annotate', 'AnnotationType') == 'vera.Parameter':
             # Deleting model 'Parameter'
             db.delete_table('wq_parameter')
 
-        if swapper.is_swapped('vera', 'Annotation') == 'vera.Result':
+        if swapper.is_swapped('annotate', 'Annotation') == 'vera.Result':
             # Deleting model 'Result'
             db.delete_table('wq_result')
 
