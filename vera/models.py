@@ -1,6 +1,7 @@
 from wq.db.patterns import models
 from wq.db.patterns.base import swapper
 from django.conf import settings
+from collections import OrderedDict
 
 MODELS = {
     model: swapper.is_swapped('vera', model) or model
@@ -20,14 +21,21 @@ class BaseEvent(models.NaturalKeyModel):
 
     @property
     def valid_reports(self):
-        return self.reports.filter(status__is_valid=True).order_by(*VALID_REPORT_ORDER)
+        return self.report_set.filter(status__is_valid=True).order_by(*VALID_REPORT_ORDER)
 
     @property
     def vals(self):
-        vals = {}
+        vals = OrderedDict()
         for report in reversed(self.valid_reports):
             vals.update(report.vals)
         return vals
+
+    @property
+    def annotations(self):
+        return [{
+            'name': key,
+            'value': val,
+        } for key, val in self.vals.items()]
     
     class Meta:
         abstract = True
@@ -46,7 +54,7 @@ class ValidReportManager(ReportManager):
         return qs.filter(status__is_valid=True).order_by(*VALID_REPORT_ORDER)
 
 class BaseReport(models.AnnotatedModel):
-    event = models.ForeignKey(MODELS['Event'], related_name='reports')
+    event = models.ForeignKey(MODELS['Event'])
     entered = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     status = models.ForeignKey(MODELS['ReportStatus'], null=True, blank=True)
@@ -86,7 +94,7 @@ class BaseParameter(models.BaseAnnotationType, models.IdentifiedRelatedModel):
 
     def __unicode__(self):
         if self.units:
-             return "%s (%s)" % (self.name, self.units)
+             return u"%s (%s)" % (self.name, self.units)
         else:
              return self.name
     class Meta:
@@ -105,7 +113,7 @@ class BaseResult(models.BaseAnnotation):
     @value.setter
     def value(self, val):
         if self.type.is_numeric:
-            if isinstance(val, basestring):
+            if isinstance(val, basestring) and len(val.strip()) == 0:
                 self.value_numeric = None
             else:
                 self.value_numeric = val
@@ -138,6 +146,7 @@ class Event(BaseEvent):
         db_table = 'wq_event'
         swappable = swapper.swappable_setting('vera', 'Event')
         unique_together = ('site', 'date')
+        ordering = ('-date',)
 
 class Report(BaseReport):
     class Meta(BaseReport.Meta):

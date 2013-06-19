@@ -1,4 +1,13 @@
 from wq.db.patterns import models
+from wq.db.patterns.base import swapper
+
+class File(swapper.load_model('files', 'File')):
+    def set_template(self, template_id):
+        template = File.objects.get(pk__in=template_id)
+        template.create_relationship(self, 'Template For', 'Template')
+
+    class Meta:
+        proxy = True
 
 class MetaColumn(models.IdentifiedRelatedModel):
     DATA_TYPES = (
@@ -12,7 +21,8 @@ class MetaColumn(models.IdentifiedRelatedModel):
     type = models.CharField(max_length=10, choices=DATA_TYPES)
 
     def __unicode__(self):
-        return "%s (%s)" % (self.name, self.get_type_display())
+        name = super(MetaColumn, self).__unicode__()
+        return "%s (%s)" % (name, self.get_type_display())
 
     class Meta:
         db_table = 'wq_metacolumn'

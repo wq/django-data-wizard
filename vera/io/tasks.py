@@ -1,4 +1,4 @@
-from celery import task
+from celery import task, current_task
 from xlrd import colname
 from collections import namedtuple
 from wq.io import load_file as load_file_io
@@ -255,27 +255,60 @@ def import_data(file):
     matched = read_columns(file)
     table = load_file(file)
 
+    for col in matched:
+        col['item'] = file.relationships.get(pk=col['rel_id']).right
+        col['item_id'] = get_object_id(col['item'])
+
     file_globals = {
         'event_key': {},
         'report_meta': {},
         'param_vals': {}
     }
 
+    for field_name in EVENT_KEY:
+        info = Event._meta.get_field_by_name(field_name)
+        field = info[0]
+        if field.null:
+            file_globals['event_key'][field_name] = None
+
     def save_value(col, val, obj):
-        item = file.relationships.get(pk=col['rel_id']).right
+        item = col['item']
         if isinstance(item, Parameter):
-            obj['param_vals'][get_object_id(item)] = val
+            obj['param_vals'][col['item_id']] = val
         elif isinstance(item, MetaColumn):
-            if not val:
+            if val is None or val == '':
                 return
-            if item.type == 'event' and item.name in EVENT_KEY:
-                fld = Event._meta.get_field_by_name(item.name)[0].get_internal_type()
-                if fld in DATE_FIELDS and not isinstance(val, DATE_FIELDS[fld]):
+            if item.type == 'event':
+                if '.' in item.name:
+                     name, part = item.name.split('.')
+                else:
+                     name, part = item.name, None
+                
+                fld = Event._meta.get_field_by_name(name)[0].get_internal_type()
+                if (fld in DATE_FIELDS and isinstance(val, basestring)):
                     from dateutil.parser import parse
                     val = parse(val)
                     if fld == 'DateField':
                         val = val.date()
-                obj['event_key'][item.name] = val
+
+                # Handle date & time being separate columns
+                if obj['event_key'].get(name) is not None:
+                    other_val = obj['event_key'][name]
+                    if not part:
+                        raise Exception('Expected multi-column date and time for %s' % name)
+                    if part not in ('date', 'time'):
+                        raise Exception('Unexpected field name: %s.%s!' % (name, part))
+                    if part == 'date':
+                        date, time = val, other_val
+                    else:
+                        date, time = other_val, val
+                    if not isinstance(date, datetime.date):
+                        raise Exception("Expected date but got %s!" % date)
+                    if not isinstance(time, datetime.time):
+                        raise Exception("Expected time but got %s!" % time)
+                    val = datetime.datetime.combine(date, time)
+
+                obj['event_key'][name] = val
             elif item.type == 'report':
                 obj['report_meta'][item.name] = val
 
@@ -301,4 +334,7 @@ def import_data(file):
             **record['report_meta']
         )
 
-    map(add_record, table)
+    rows = len(table)
+    for i, row in enumerate(table):
+        current_task.update_state(state='PROGRESS', meta={'current': i, 'total': rows})
+        add_record(row)
