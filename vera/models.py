@@ -35,7 +35,11 @@ class BaseEvent(models.NaturalKeyModel):
         return [{
             'name': key,
             'value': val,
-        } for key, val in self.vals.items()]
+          } for key, val in self.vals.items()
+            if val is not None and not (
+              isinstance(val, basestring) and val.strip() != ''
+            )
+        ]
     
     class Meta:
         abstract = True
@@ -82,7 +86,7 @@ class ParameterManager(models.IdentifiedRelatedModelManager,
                        models.AnnotationTypeManager):
     pass
 
-class BaseParameter(models.BaseAnnotationType, models.IdentifiedRelatedModel):
+class BaseParameter(models.IdentifiedRelatedModel, models.BaseAnnotationType):
     is_numeric = models.BooleanField()
     units = models.CharField(max_length=50, null=True, blank=True)
 
