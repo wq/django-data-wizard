@@ -135,10 +135,13 @@ def load_columns(file):
     return matched
    
 def get_range_value(table, rng):
-    val = ""
+    if rng.start_row == rng.end_row and rng.start_column == rng.end_column:
+        return table.extra_data.get(rng.start_row, {}).get(rng.start_column)
+
+    val = u""
     for r in range(rng.start_row, rng.end_row + 1):
         for c in range(rng.start_column, rng.end_column + 1):
-            val += table.extra_data.get(r, {}).get(c, "")
+            val += unicode(table.extra_data.get(r, {}).get(c, ""))
     return val
 
 def parse_columns(file):
@@ -305,7 +308,14 @@ def import_data(file):
                     if not isinstance(date, datetime.date):
                         raise Exception("Expected date but got %s!" % date)
                     if not isinstance(time, datetime.time):
-                        raise Exception("Expected time but got %s!" % time)
+                        if isinstance(time, float) and time >= 100 and time <= 2400:
+                            time = str(time)
+                            if len(time) == 3:
+                                time = datetime.time(int(time[0]), int(time[1:2]))
+                            else:
+                                time = datetime.time(int(time[0:1]), int(time[2:3]))
+                        else:
+                            raise Exception("Expected time but got %s!" % time)
                     val = datetime.datetime.combine(date, time)
 
                 obj['event_key'][name] = val
