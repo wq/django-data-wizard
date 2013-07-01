@@ -13,6 +13,14 @@ VALID_REPORT_ORDER = getattr(settings, "WQ_VALID_REPORT_ORDER", ('-entered',))
 # Extend these when swapping out default implementation (below)
 
 class BaseSite(models.NaturalKeyModel):
+    @property
+    def valid_events(self):
+        events = self.event_set.filter(
+            report__status__is_valid=True
+        ).values_list('pk', flat=True)
+        # FIXME: events may be duplicated
+        return self.event_set.filter(pk__in=events)
+
     class Meta:
         abstract = True
 
