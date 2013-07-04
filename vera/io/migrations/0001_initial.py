@@ -23,6 +23,13 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('vera', ['UnknownItem'])
 
+        # Adding model 'SkippedRecord'
+        db.create_table('wq_skippedrecord', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('reason', self.gf('django.db.models.fields.TextField')()),
+        ))
+        db.send_create_signal('vera', ['SkippedRecord'])
+
         # Adding model 'Range'
         db.create_table('wq_range', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -42,6 +49,9 @@ class Migration(SchemaMigration):
 
         # Deleting model 'UnknownItem'
         db.delete_table('wq_unknownitem')
+
+        # Deleting model 'SkippedRecord'
+        db.delete_table('wq_skippedrecord')
 
         # Deleting model 'Range'
         db.delete_table('wq_range')
@@ -74,13 +84,13 @@ class Migration(SchemaMigration):
             'valid_from': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'}),
             'valid_to': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'})
         },
-        u'io.metacolumn': {
+        u'vera.metacolumn': {
             'Meta': {'object_name': 'MetaColumn', 'db_table': "'wq_metacolumn'"},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'type': ('django.db.models.fields.CharField', [], {'max_length': '10'})
         },
-        u'io.range': {
+        u'vera.range': {
             'Meta': {'object_name': 'Range', 'db_table': "'wq_range'"},
             'end_column': ('django.db.models.fields.IntegerField', [], {}),
             'end_row': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
@@ -90,7 +100,12 @@ class Migration(SchemaMigration):
             'start_row': ('django.db.models.fields.IntegerField', [], {}),
             'type': ('django.db.models.fields.CharField', [], {'max_length': '10'})
         },
-        u'io.unknownitem': {
+        u'vera.skippedrecord': {
+            'Meta': {'object_name': 'SkippedRecord', 'db_table': "'wq_skippedrecord'"},
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'reason': ('django.db.models.fields.TextField', [], {})
+        },
+        u'vera.unknownitem': {
             'Meta': {'object_name': 'UnknownItem', 'db_table': "'wq_unknownitem'"},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255'})

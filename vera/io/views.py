@@ -41,7 +41,7 @@ class FileTaskView(InstanceModelView):
 
     def get(self, request, *args, **kwargs):
         response = super(FileTaskView, self).get(request, *args, **kwargs)
-        task = getattr(tasks, self.task_name).delay(self.object)
+        task = getattr(tasks, self.task_name).delay(self.object, request.user)
         if self.async:
             response.data['task_id'] = task.task_id
         else:
@@ -64,7 +64,7 @@ class StartImportView(FileTaskView):
 
     def post(self, request, *args, **kwargs):
         response = super(FileTaskView, self).get(request, *args, **kwargs)
-        result = tasks.update_columns.delay(self.object, request.POST)
+        result = tasks.update_columns.delay(self.object, request.user, request.POST)
         response.data['result'] = result.get()
         return response
 

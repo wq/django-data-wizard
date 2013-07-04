@@ -5,7 +5,7 @@ from wq.io import load_file as load_file_io
 from wq.db.patterns.models import Identifier, RelationshipType
 from wq.db.patterns.base import swapper
 from wq.db.contrib.files.models import File
-from .models import MetaColumn, UnknownItem, Range
+from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
 import datetime
     
@@ -69,7 +69,7 @@ def get_choices(file_obj):
     ]
 
 @task
-def read_columns(file):
+def read_columns(file, user=None):
     if already_parsed(file):
         matched = load_columns(file)
     else:
@@ -208,7 +208,7 @@ def parse_column(file, name, head, body, body_type):
     )
 
 @task
-def update_columns(file, post):
+def update_columns(file, user, post):
     matched = read_columns(file)
     for col in matched:
         if not col.get('unknown', False):
@@ -250,11 +250,11 @@ def update_columns(file, post):
     return read_columns(file)
 
 @task
-def reset(file):
+def reset(file, user):
     file.relationships.all().delete()
 
 @task
-def import_data(file):
+def import_data(file, user):
     matched = read_columns(file)
     table = load_file(file)
 
@@ -264,7 +264,9 @@ def import_data(file):
 
     file_globals = {
         'event_key': {},
-        'report_meta': {},
+        'report_meta': {
+            'user': user,
+        },
         'param_vals': {}
     }
 
@@ -336,14 +338,13 @@ def import_data(file):
                 save_value(col, row[col['colnum']], record)
 
         if len(record['event_key'].keys()) < len(EVENT_KEY):
-            return False
-        record['report_meta']['user_id'] = 1
-        Report.objects.create_report(
+            raise Exception('Incomplete Record')
+
+        return Report.objects.create_report(
             EventKey(**record['event_key']),
             record['param_vals'],
             **record['report_meta']
         )
-        return True
 
     rows = len(table)
     errors = []
@@ -356,19 +357,32 @@ def import_data(file):
         current_task.update_state(state='PROGRESS', meta={
             'current': i+1, 
             'total': rows,
-            'errors': errors,
             'skipped': skipped
         })
+        skipreason = None
         try:
-            added = add_record(row)
-            if not added:
-                skipped.append({'row': rownum(i)})
+            report = add_record(row)
         except Exception as e:
-            errors.append({'row': rownum(i), 'exception': repr(e)})
+            skipreason = repr(e)
+            skipped.append({'row': rownum(i), 'reason': skipreason})
+            report, is_new = SkippedRecord.objects.get_or_create(reason=skipreason)
+
+        rel = file.create_relationship(
+            report,
+            'Contains Row',
+            'Row In'
+        )
+        Range.objects.create(
+            relationship = rel,
+            type = 'row',
+            start_row    = i + table.start_row,
+            start_column = 0,
+            end_row      = i + table.start_row,
+            end_column   = len(row) - 1
+        )
 
     return {
         'current': i+1,
         'total': rows,
-        'errors': errors,
         'skipped': skipped
     }

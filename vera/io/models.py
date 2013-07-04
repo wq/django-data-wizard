@@ -37,11 +37,21 @@ class UnknownItem(models.IdentifiedRelatedModel):
         db_table = 'wq_unknownitem'
         app_label = 'vera'
 
+class SkippedRecord(models.Model):
+    reason = models.TextField()
+    def __unicode__(self):
+        return self.reason
+
+    class Meta:
+        db_table = 'wq_skippedrecord'
+        app_label = 'vera'
+
 class Range(models.Model):
     RANGE_TYPES = (
         ('head', 'Column header / label'),
         ('value', 'Global Value'),
         ('list', 'Data series'),
+        ('row', 'Individual Record'),
     )
     relationship = models.ForeignKey(models.Relationship)
     type = models.CharField(max_length=10, choices=RANGE_TYPES)
