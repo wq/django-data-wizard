@@ -336,15 +336,39 @@ def import_data(file):
                 save_value(col, row[col['colnum']], record)
 
         if len(record['event_key'].keys()) < len(EVENT_KEY):
-            return
+            return False
         record['report_meta']['user_id'] = 1
         Report.objects.create_report(
             EventKey(**record['event_key']),
             record['param_vals'],
             **record['report_meta']
         )
+        return True
 
     rows = len(table)
+    errors = []
+    skipped = []
+
+    def rownum(i):
+        return i + table.start_row + 1
+
     for i, row in enumerate(table):
-        current_task.update_state(state='PROGRESS', meta={'current': i, 'total': rows})
-        add_record(row)
+        current_task.update_state(state='PROGRESS', meta={
+            'current': i+1, 
+            'total': rows,
+            'errors': errors,
+            'skipped': skipped
+        })
+        try:
+            added = add_record(row)
+            if not added:
+                skipped.append({'row': rownum(i)})
+        except Exception as e:
+            errors.append({'row': rownum(i), 'exception': repr(e)})
+
+    return {
+        'current': i+1,
+        'total': rows,
+        'errors': errors,
+        'skipped': skipped
+    }

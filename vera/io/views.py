@@ -26,16 +26,14 @@ class TaskStatusView(View):
         response = {
             'status': result.state
         }
-        if result.state == 'PROGRESS':
-            response['current'] = result.result['current']
-            response['total'] = result.result['total']
+        if result.state in ('PROGRESS', 'SUCCESS'):
+            response.update(result.result)
         elif result.state == 'FAILURE':
             response['error'] = repr(result.result)
-        elif result.state == 'SUCCESS':
-            response['result'] = result.result
         return Response(response)
 
 class FileTaskView(InstanceModelView):
+    cached = False 
     model = File
     router = router
     task_name = None
