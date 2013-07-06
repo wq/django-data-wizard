@@ -8,9 +8,11 @@ from wq.db.patterns.base import swapper
 from wq.db.patterns.base.models import extract_nested_key
 Event = swapper.load_model('vera', 'Event')
 Report = swapper.load_model('vera', 'Report')
+Annotation = swapper.load_model('annotate', 'Annotation')
 
 class ResultSerializer(AnnotationSerializer):
     value = serializers.Field()
+    empty = serializers.Field()
     def to_native(self, obj):
         result = super(ResultSerializer, self).to_native(obj)
         if hasattr(obj.type, 'units'):
@@ -21,7 +23,12 @@ class ResultSerializer(AnnotationSerializer):
         exclude = AnnotationSerializer.Meta.exclude + ('value_text', 'value_numeric')
 
 class EventSerializer(ModelSerializer):
-    annotations = serializers.Field()
+    def get_default_fields(self, *args, **kwargs):
+        fields = super(EventSerializer, self).get_default_fields(*args, **kwargs)
+        if self.opts.depth > 0:
+            Serializer = app.router.get_serializer_for_model(Annotation)
+            fields['annotations'] = Serializer(context=self.context)
+        return fields
 
 class ReportSerializer(ModelSerializer):
     def from_native(self, data, files):

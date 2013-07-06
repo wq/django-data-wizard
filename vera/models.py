@@ -38,16 +38,20 @@ class BaseEvent(models.NaturalKeyModel):
             vals.update(report.vals)
         return vals
 
+    # Valid annotations for this event
     @property
     def annotations(self):
-        return [{
-            'name': key,
-            'value': val,
-          } for key, val in self.vals.items()
-            if val is not None and not (
-              isinstance(val, basestring) and val.strip() != ''
-            )
-        ]
+        Annotation = swapper.load_model('annotate', 'Annotation')
+        AnnotationType = swapper.load_model('annotate', 'AnnotationType')
+        # ORDER BY annotation type (parameter), then valid report order
+        order = (nest_ordering('type', AnnotationType._meta.ordering)
+                 + ['type__id']
+                 + nest_ordering('report', VALID_REPORT_ORDER))
+        # DISTINCT ON annotation types, collapsing multiple reports into one
+        distinct = (nest_ordering('type', AnnotationType._meta.ordering, True)
+                    + ['type__id'])
+        annots = Annotation.objects.filter(report__in=self.valid_reports)
+        return annots.order_by(*order).distinct(*distinct)
     
     class Meta:
         abstract = True
@@ -79,6 +83,7 @@ class BaseReport(models.AnnotatedModel):
 
     class Meta:
         abstract = True
+        ordering = VALID_REPORT_ORDER
 
 class BaseReportStatus(models.Model):
     name = models.CharField(max_length=255)
@@ -111,6 +116,7 @@ class BaseParameter(models.IdentifiedRelatedModel, models.BaseAnnotationType):
              return self.name
     class Meta:
         abstract = True
+        ordering = ('name',)
    
 class BaseResult(models.BaseAnnotation):
     value_numeric = models.FloatField(null=True, blank=True)
@@ -121,6 +127,12 @@ class BaseResult(models.BaseAnnotation):
         if self.type.is_numeric:
             return self.value_numeric
         return self.value_text
+
+    @property
+    def empty(self):
+        if self.type.is_numeric:
+            return self.value_numeric is None
+        return self.value_text is None or self.value_text.strip() == ''
 
     @value.setter
     def value(self, val):
@@ -134,6 +146,7 @@ class BaseResult(models.BaseAnnotation):
 
     class Meta:
         abstract = True
+        ordering = ('type',)
 
 # Default implementation of the above classes, can be swapped
 class Site(BaseSite):
@@ -181,3 +194,14 @@ class Result(BaseResult):
     class Meta(BaseResult.Meta):
         db_table = 'wq_result'
         abstract = not (swapper.is_swapped('annotate', 'Annotation') == 'vera.Result')
+
+def nest_ordering(prefix, ordering, ignore_reverse=False):
+    nest_order = []
+    for field in ordering:
+        reverse = ''
+        if field.startswith('-'):
+            field = field[1:]
+            if not ignore_reverse:
+                reverse = '-'
+        nest_order.append(reverse + prefix + '__' + field)
+    return nest_order
