@@ -60,7 +60,7 @@ class BaseEvent(models.NaturalKeyModel):
     class Meta:
         abstract = True
 
-class ReportManager(models.Manager):
+class ReportManager(models.RelatedModelManager):
     def create_report(self, event_key, values, **kwargs):
         Event = swapper.load_model('vera', 'Event')
         kwargs['event'] = Event.objects.find(*event_key)
@@ -73,7 +73,7 @@ class ValidReportManager(ReportManager):
         qs = super(ValidReportManager, self)
         return qs.filter(status__is_valid=True).order_by(*VALID_REPORT_ORDER)
 
-class BaseReport(models.AnnotatedModel):
+class BaseReport(models.AnnotatedModel, models.RelatedModel):
     event = models.ForeignKey(MODELS['Event'])
     entered = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
@@ -164,7 +164,7 @@ class Site(BaseSite):
     def __unicode__(self):
         return "%s, %s" % (round(self.latitude, 3), round(self.longitude, 3))
 
-    class Meta(BaseEvent.Meta):
+    class Meta(BaseSite.Meta):
         db_table = 'wq_site'
         swappable = swapper.swappable_setting('vera', 'Site')
         unique_together = ('latitude', 'longitude')
