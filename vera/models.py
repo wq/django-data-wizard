@@ -53,6 +53,10 @@ class BaseEvent(models.NaturalKeyModel):
         annots = Annotation.objects.filter(report__in=self.valid_reports)
         return annots.order_by(*order).distinct(*distinct)
     
+    @property
+    def is_valid(self):
+        return self.valid_reports.count() > 0
+
     class Meta:
         abstract = True
 
@@ -74,6 +78,10 @@ class BaseReport(models.AnnotatedModel):
     entered = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     status = models.ForeignKey(MODELS['ReportStatus'], null=True, blank=True)
+
+    @property
+    def is_valid(self):
+        return self.status and self.status.is_valid
 
     objects = ReportManager()
     valid_objects = ValidReportManager()

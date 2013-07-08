@@ -23,6 +23,7 @@ class ResultSerializer(AnnotationSerializer):
         exclude = AnnotationSerializer.Meta.exclude + ('value_text', 'value_numeric')
 
 class EventSerializer(ModelSerializer):
+    is_valid = serializers.Field()
     def get_default_fields(self, *args, **kwargs):
         fields = super(EventSerializer, self).get_default_fields(*args, **kwargs)
         if self.opts.depth > 0:
@@ -31,6 +32,7 @@ class EventSerializer(ModelSerializer):
         return fields
 
 class ReportSerializer(ModelSerializer):
+    is_valid = serializers.Field()
     def from_native(self, data, files):
         data = data.dict()
         event_key = extract_nested_key(data, Event)
