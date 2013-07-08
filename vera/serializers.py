@@ -19,6 +19,11 @@ class ResultSerializer(AnnotationSerializer):
             result['units'] = obj.type.units
         return result
 
+    def from_native(self, data, files):
+        obj = super(ResultSerializer, self).from_native(data, files)
+        obj.value = data['value']
+        return obj
+
     class Meta(AnnotationSerializer.Meta):
         exclude = AnnotationSerializer.Meta.exclude + ('value_text', 'value_numeric')
 
