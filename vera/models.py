@@ -33,10 +33,10 @@ class BaseEvent(models.NaturalKeyModel):
 
     @property
     def vals(self):
-        vals = OrderedDict()
-        for report in reversed(self.valid_reports):
-            vals.update(report.vals)
-        return vals
+        return OrderedDict([
+            (a.type.natural_key()[0], a.value)
+            for a in self.annotations
+        ])
 
     # Valid annotations for this event
     @property
