@@ -5,21 +5,6 @@ from wq.db.contrib.vera.io import tasks
 from wq.db.rest.app import router
 from celery.result import AsyncResult
 
-class TemplateListView(InstanceModelView):
-    model = File
-    router = router
-    template_name = "file_template.html"
-    def get(self, request, *args, **kwargs):
-        response = super(TemplateListView, self).get(request, *args, **kwargs)
-
-        # FIXME: need a more robust way to determine which files are templates
-        template_choices = File.objects.filter(name__icontains='template')
-        response.data['templates'] = [{
-            'template_id': template.pk,
-            'template_label': unicode(template)
-        } for template in template_choices]
-        return response
-
 class TaskStatusView(View):
     def get(self, request, *args, **kwargs):
         result = AsyncResult(kwargs['task_id'])

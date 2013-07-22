@@ -8,6 +8,7 @@ from wq.db.contrib.files.models import File
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
 import datetime
+from .signals import import_complete
     
 from wq.db.rest.models import get_ct, get_object_id
 Parameter = swapper.load_model('annotate', 'AnnotationType')
@@ -15,6 +16,7 @@ Event = swapper.load_model('vera', 'Event')
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
 Report = swapper.load_model('vera', 'Report')
+ReportStatus = swapper.load_model('vera', 'ReportStatus')
 CONTENT_TYPES = {
     File:     get_ct(File),
     Parameter: get_ct(Parameter),
@@ -26,6 +28,11 @@ DATE_FIELDS = {
     'DateTimeField': datetime.datetime,
     'DateField':     datetime.date,
 }
+
+if hasattr(settings, 'WQ_DEFAULT_REPORT_STATUS'):
+    DEFAULT_STATUS = ReportStatus.objects.get(pk=settings.WQ_DEFAULT_REPORT_STATUS)
+else:
+    DEFAULT_STATUS = None
 
 if not CONTENT_TYPES[Parameter].is_identified:
     raise Exception("AnnotationType should be swapped for an IdentifiedModel!"
@@ -44,11 +51,7 @@ def load_file(file_obj):
 
 def get_choices(file_obj):
     def make_list(cls, name):
-        rows = cls.objects.exclude(
-            pk__in = cls.objects.filter_by_related(
-                file_obj
-            ).values_list('id', flat=True)
-        )
+        rows = cls.objects.all()
         ct = CONTENT_TYPES[cls]
         result = [{
              'url': '%s/%s' % (ct.urlbase, get_object_id(row)),
@@ -266,6 +269,7 @@ def import_data(file, user):
         'event_key': {},
         'report_meta': {
             'user': user,
+            'status': DEFAULT_STATUS,
         },
         'param_vals': {}
     }
@@ -279,7 +283,13 @@ def import_data(file, user):
     def save_value(col, val, obj):
         item = col['item']
         if isinstance(item, Parameter):
-            obj['param_vals'][col['item_id']] = val
+            if col['item_id'] in obj['param_vals']:
+                obj['param_vals'][col['item_id']] = "%s %s" % (
+                    obj['param_vals'][col['item_id']],
+                    val
+                )
+            else:
+               obj['param_vals'][col['item_id']] = val
         elif isinstance(item, MetaColumn):
             if val is None or val == '':
                 return
@@ -381,8 +391,10 @@ def import_data(file, user):
             end_column   = len(row) - 1
         )
 
-    return {
+    status = {
         'current': i+1,
         'total': rows,
         'skipped': skipped
     }
+    import_complete.send(sender=import_data, file=file, status=status)
+    return status
