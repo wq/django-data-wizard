@@ -1,6 +1,6 @@
 from rest_framework.response import Response
 from wq.db.rest.views import View, InstanceModelView
-from .models import MetaColumn, File
+from .models import File
 from wq.db.contrib.vera.io import tasks
 from wq.db.rest.app import router
 from celery.result import AsyncResult
@@ -37,15 +37,6 @@ class StartImportView(FileTaskView):
     template_name = "file_import.html"
     task_name = 'read_columns'
     async = False
-
-    def get(self, request, *args, **kwargs):
-        request.GET = request.GET.copy()
-        template = request.GET.pop("template", None)
-        super(FileTaskView, self).get(request, *args, **kwargs)
-        if template:
-            self.object.set_template(template)
-
-        return super(StartImportView, self).get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         response = super(FileTaskView, self).get(request, *args, **kwargs)

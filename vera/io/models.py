@@ -1,13 +1,7 @@
 from wq.db.patterns import models
 from wq.db.patterns.base import swapper
 
-class File(swapper.load_model('files', 'File')):
-    def set_template(self, template_id):
-        template = File.objects.get(pk__in=template_id)
-        template.create_relationship(self, 'Template For', 'Template')
-
-    class Meta:
-        proxy = True
+File = swapper.load_model('files', 'File')
 
 class MetaColumn(models.IdentifiedRelatedModel):
     DATA_TYPES = (
