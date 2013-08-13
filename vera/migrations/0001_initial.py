@@ -181,9 +181,7 @@ class Migration(SchemaMigration):
             'is_primary': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255', 'db_index': 'True'}),
             'object_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'slug': ('django.db.models.fields.SlugField', [], {'max_length': '50'}),
-            'valid_from': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'}),
-            'valid_to': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'})
+            'slug': ('django.db.models.fields.SlugField', [], {'max_length': '50'})
         },
         u'vera.event': {
             'Meta': {'object_name': 'Event', 'db_table': "'wq_event'"},
