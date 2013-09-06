@@ -129,6 +129,14 @@ class BaseParameter(models.IdentifiedRelatedModel, models.BaseAnnotationType):
 class BaseResult(models.BaseAnnotation):
     value_numeric = models.FloatField(null=True, blank=True)
     value_text = models.TextField(null=True, blank=True)
+    empty = models.BooleanField(default=False, db_index=True)
+
+    def is_empty(self, value):
+        if value is None:
+            return True
+        if isinstance(value, basestring) and len(value.strip()) == 0:
+            return True
+        return False
 
     @property
     def value(self):
@@ -136,16 +144,11 @@ class BaseResult(models.BaseAnnotation):
             return self.value_numeric
         return self.value_text
 
-    @property
-    def empty(self):
-        if self.type.is_numeric:
-            return self.value_numeric is None
-        return self.value_text is None or self.value_text.strip() == ''
-
     @value.setter
     def value(self, val):
+        self.empty = self.is_empty(val)
         if self.type.is_numeric:
-            if isinstance(val, basestring) and len(val.strip()) == 0:
+            if self.empty:
                 self.value_numeric = None
             else:
                 self.value_numeric = val
@@ -155,6 +158,9 @@ class BaseResult(models.BaseAnnotation):
     class Meta:
         abstract = True
         ordering = ('type',)
+        index_together = [
+            ('type', 'object_id', 'empty'),
+        ]
 
 # Default implementation of the above classes, can be swapped
 class Site(BaseSite):

@@ -76,11 +76,15 @@ class Migration(SchemaMigration):
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
                 ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=AnnotationType)),
                 ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'])),
-                ('object_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
+                ('object_id', self.gf('django.db.models.fields.PositiveIntegerField')(db_index=True)),
                 ('value_numeric', self.gf('django.db.models.fields.FloatField')(null=True, blank=True)),
                 ('value_text', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
+                ('empty', self.gf('django.db.models.fields.BooleanField')(default=False, db_index=True)),
             ))
             db.send_create_signal(u'vera', ['Result'])
+
+            # Adding index on 'Result', fields ['type', 'object_id', 'empty']
+            db.create_index('wq_result', ['type_id', 'object_id', 'empty'])
 
     def backwards(self, orm):
 
@@ -111,6 +115,9 @@ class Migration(SchemaMigration):
             db.delete_table('wq_parameter')
 
         if swapper.is_swapped('annotate', 'Annotation') == 'vera.Result':
+            # Removing index on 'Result', fields ['type', 'object_id', 'empty']
+            db.create_index('wq_result', ['type_id', 'object_id', 'empty'])
+
             # Deleting model 'Result'
             db.delete_table('wq_result')
 

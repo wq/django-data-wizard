@@ -12,7 +12,6 @@ Annotation = swapper.load_model('annotate', 'Annotation')
 
 class ResultSerializer(AnnotationSerializer):
     value = serializers.Field()
-    empty = serializers.Field()
     def to_native(self, obj):
         result = super(ResultSerializer, self).to_native(obj)
         if hasattr(obj.type, 'units'):
