@@ -51,6 +51,8 @@ class BaseEvent(models.NaturalKeyModel):
         distinct = (nest_ordering('type', AnnotationType._meta.ordering, True)
                     + ['type__id'])
         annots = Annotation.objects.filter(report__in=self.valid_reports)
+        if issubclass(Annotation, BaseResult):
+            annots = annots.filter(empty=False)
         return annots.order_by(*order).distinct(*distinct)
     
     @property
