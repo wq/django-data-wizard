@@ -5,6 +5,7 @@ from wq.db.contrib.vera.io import tasks
 from wq.db.rest.app import router
 from celery.result import AsyncResult
 
+
 class TaskStatusView(View):
     def get(self, request, *args, **kwargs):
         result = AsyncResult(kwargs['task_id'])
@@ -17,8 +18,9 @@ class TaskStatusView(View):
             response['error'] = repr(result.result)
         return Response(response)
 
+
 class FileTaskView(InstanceModelView):
-    cached = False 
+    cached = False
     model = File
     router = router
     task_name = None
@@ -33,6 +35,7 @@ class FileTaskView(InstanceModelView):
             response.data['result'] = task.get()
         return response
 
+
 class StartImportView(FileTaskView):
     template_name = "file_import.html"
     task_name = 'read_columns'
@@ -40,14 +43,18 @@ class StartImportView(FileTaskView):
 
     def post(self, request, *args, **kwargs):
         response = super(FileTaskView, self).get(request, *args, **kwargs)
-        result = tasks.update_columns.delay(self.object, request.user, request.POST)
+        result = tasks.update_columns.delay(
+            self.object, request.user, request.POST
+        )
         response.data['result'] = result.get()
         return response
+
 
 class ResetView(FileTaskView):
     template_name = "file_detail.html"
     task_name = 'reset'
     async = False
+
 
 class ImportDataView(FileTaskView):
     template_name = 'file_data.html'

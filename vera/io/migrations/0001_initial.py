@@ -42,7 +42,6 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('vera', ['Range'])
 
-
     def backwards(self, orm):
         # Deleting model 'MetaColumn'
         db.delete_table('wq_metacolumn')
@@ -55,7 +54,6 @@ class Migration(SchemaMigration):
 
         # Deleting model 'Range'
         db.delete_table('wq_range')
-
 
     models = {
         u'contenttypes.contenttype': {

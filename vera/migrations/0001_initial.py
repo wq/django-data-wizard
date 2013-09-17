@@ -5,6 +5,7 @@ from south.v2 import SchemaMigration
 from django.db import models
 from wq.db.patterns.base import swapper
 
+
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
@@ -22,7 +23,7 @@ class Migration(SchemaMigration):
 
         if not swapper.is_swapped('vera', 'Event'):
             Site = swapper.load_model('vera', 'Site', orm)
-            
+
             # Adding model 'Event'
             db.create_table('wq_event', (
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -35,8 +36,8 @@ class Migration(SchemaMigration):
             db.create_unique('wq_event', ['site_id', 'date'])
 
         if not swapper.is_swapped('vera', 'Report'):
-            Event        = swapper.load_model('vera', 'Event', orm)
-            User         = swapper.load_model('auth', 'User', orm)
+            Event = swapper.load_model('vera', 'Event', orm)
+            User = swapper.load_model('auth', 'User', orm)
             ReportStatus = swapper.load_model('vera', 'ReportStatus', orm)
 
             # Adding model 'Report'
@@ -120,7 +121,6 @@ class Migration(SchemaMigration):
 
             # Deleting model 'Result'
             db.delete_table('wq_result')
-
 
     models = {
         u'annotate.annotation': {

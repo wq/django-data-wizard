@@ -3,6 +3,7 @@ from wq.db.patterns.models import Authority, RelationshipType
 from wq.db.patterns.base import swapper
 from django.conf import settings
 
+
 class ParameterAdmin(admin.AnnotationTypeAdmin, admin.IdentifiedModelAdmin):
     list_display = ('name', 'units')
     list_filter = ('units', 'is_numeric')
@@ -23,7 +24,7 @@ for model in default_admin:
         swapper.load_model('vera', model),
         default_admin[model]
     )
- 
+
 # Register AnnotationType, if it hasn't been swapped
 if not swapper.is_swapped('annotate', 'AnnotationType'):
     admin.site.register(
