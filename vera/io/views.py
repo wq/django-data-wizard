@@ -1,14 +1,22 @@
 from rest_framework.response import Response
-from wq.db.rest.views import View, InstanceModelView
+from rest_framework.decorators import link, action
+from wq.db.rest.views import ModelViewSet
 from .models import File
 from wq.db.contrib.vera.io import tasks
-from wq.db.rest.app import router
+from wq.db.rest import app
 from celery.result import AsyncResult
 
 
-class TaskStatusView(View):
-    def get(self, request, *args, **kwargs):
-        result = AsyncResult(kwargs['task_id'])
+class FileViewSet(ModelViewSet):
+    cached = False
+
+    @link()
+    def status(self, request, *args, **kwargs):
+        taskid = request.GET.get('task', None)
+        if not taskid:
+            return Response({})
+
+        result = AsyncResult(taskid)
         response = {
             'status': result.state
         }
@@ -18,44 +26,37 @@ class TaskStatusView(View):
             response['error'] = repr(result.result)
         return Response(response)
 
-
-class FileTaskView(InstanceModelView):
-    cached = False
-    model = File
-    router = router
-    task_name = None
-    async = True
-
-    def get(self, request, *args, **kwargs):
-        response = super(FileTaskView, self).get(request, *args, **kwargs)
-        task = getattr(tasks, self.task_name).delay(self.object, request.user)
-        if self.async:
+    def run_task(self, name, async=False):
+        response = self.retrieve(self.request, **self.kwargs)
+        task = getattr(tasks, name).delay(self.object, self.request.user)
+        if async:
             response.data['task_id'] = task.task_id
         else:
             response.data['result'] = task.get()
         return response
 
+    @link()
+    def start(self, request, *args, **kwargs):
+        self.action = 'columns'
+        return self.run_task('read_columns')
 
-class StartImportView(FileTaskView):
-    template_name = "file_import.html"
-    task_name = 'read_columns'
-    async = False
-
-    def post(self, request, *args, **kwargs):
-        response = super(FileTaskView, self).get(request, *args, **kwargs)
+    @action()
+    def columns(self, request, *args, **kwargs):
+        response = self.run_task('read_columns')
         result = tasks.update_columns.delay(
             self.object, request.user, request.POST
         )
         response.data['result'] = result.get()
         return response
 
+    @action()
+    def reset(self, request, *args, **kwargs):
+        self.task = 'retrieve'
+        response = self.run_task('reset')
+        return response
 
-class ResetView(FileTaskView):
-    template_name = "file_detail.html"
-    task_name = 'reset'
-    async = False
+    @action()
+    def data(self, request, *args, **kwargs):
+        return self.run_task('import_data', async=True)
 
-
-class ImportDataView(FileTaskView):
-    template_name = 'file_data.html'
-    task_name = 'import_data'
+app.router.register_model(File, viewset=FileViewSet)

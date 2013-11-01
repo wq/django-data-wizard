@@ -96,7 +96,10 @@ class BaseReport(models.AnnotatedModel, models.RelatedModel):
     valid_objects = ValidReportManager()
 
     def __unicode__(self):
-        return "%s according to %s" % (self.event, self.user)
+        if self.pk is not None:
+            return "%s according to %s" % (self.event, self.user)
+        else:
+            return "New Report"
 
     class Meta:
         abstract = True

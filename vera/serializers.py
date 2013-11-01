@@ -7,7 +7,6 @@ from .models import Result
 from wq.db.patterns.base import swapper
 from wq.db.patterns.base.models import extract_nested_key
 Event = swapper.load_model('vera', 'Event')
-Report = swapper.load_model('vera', 'Report')
 Annotation = swapper.load_model('annotate', 'Annotation')
 
 
@@ -60,7 +59,3 @@ class ReportSerializer(ModelSerializer):
             if user.is_authenticated():
                 data['user'] = user.pk
         return super(ReportSerializer, self).from_native(data, files)
-
-app.router.register_serializer(Result, ResultSerializer)
-app.router.register_serializer(Event, EventSerializer)
-app.router.register_serializer(Report, ReportSerializer)

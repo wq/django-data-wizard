@@ -36,7 +36,7 @@ if not swapper.is_swapped('annotate', 'AnnotationType'):
 if swapper.is_swapped('annotate', 'AnnotationType') == 'vera.Parameter':
     admin.site.register(
         swapper.load_model('annotate', 'AnnotationType'),
-        ParameterAdmin,
+        ParameterAdmin
     )
 
 # Register additional type models, if installed
