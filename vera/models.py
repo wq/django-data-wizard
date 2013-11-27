@@ -108,7 +108,7 @@ class BaseReport(models.AnnotatedModel, models.RelatedModel):
 
 class BaseReportStatus(models.Model):
     name = models.CharField(max_length=255)
-    is_valid = models.BooleanField()
+    is_valid = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.name
@@ -123,7 +123,7 @@ class ParameterManager(models.IdentifiedRelatedModelManager,
 
 
 class BaseParameter(models.IdentifiedRelatedModel, models.BaseAnnotationType):
-    is_numeric = models.BooleanField()
+    is_numeric = models.BooleanField(default=False)
     units = models.CharField(max_length=50, null=True, blank=True)
 
     objects = ParameterManager()
