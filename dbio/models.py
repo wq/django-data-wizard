@@ -21,7 +21,6 @@ class MetaColumn(models.IdentifiedRelatedModel):
 
     class Meta:
         db_table = 'wq_metacolumn'
-        app_label = 'vera'
 
 
 class UnknownItem(models.IdentifiedRelatedModel):
@@ -32,7 +31,6 @@ class UnknownItem(models.IdentifiedRelatedModel):
 
     class Meta:
         db_table = 'wq_unknownitem'
-        app_label = 'vera'
 
 
 class SkippedRecord(models.Model):
@@ -43,7 +41,6 @@ class SkippedRecord(models.Model):
 
     class Meta:
         db_table = 'wq_skippedrecord'
-        app_label = 'vera'
 
 
 class Range(models.Model):
@@ -78,4 +75,3 @@ class Range(models.Model):
 
     class Meta:
         db_table = 'wq_range'
-        app_label = 'vera'
