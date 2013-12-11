@@ -15,14 +15,14 @@ def long_description():
 
 setup(
     name = 'vera',
-    version = '0.3.1',
+    version = '0.4.0',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
     url='http://wq.io/vera',
     license='MIT',
     description='Implementation of the ERAV data integration model',
     long_description=long_description(),
-    install_requires=['wq==0.3.1', 'django-celery', 'johnny-cache', 'django-redis-cache', 'Pillow'],
+    install_requires=['wq==0.4.0', 'django-celery', 'johnny-cache', 'django-redis-cache', 'Pillow'],
     classifiers = [
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
