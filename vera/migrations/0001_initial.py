@@ -59,33 +59,32 @@ class Migration(SchemaMigration):
             ))
             db.send_create_signal(u'vera', ['ReportStatus'])
 
-        if swapper.is_swapped('annotate', 'AnnotationType') == 'vera.Parameter':
+        if not swapper.is_swapped('vera', 'Parameter'):
             # Adding model 'Parameter'
             db.create_table('wq_parameter', (
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
                 ('name', self.gf('django.db.models.fields.CharField')(max_length=255)),
-                ('contenttype', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True, blank=True)),
                 ('is_numeric', self.gf('django.db.models.fields.BooleanField')(default=False)),
                 ('units', self.gf('django.db.models.fields.CharField')(max_length=50, null=True, blank=True)),
             ))
             db.send_create_signal(u'vera', ['Parameter'])
 
-        if swapper.is_swapped('annotate', 'Annotation') == 'vera.Result':
-            AnnotationType = swapper.load_model('annotate', 'AnnotationType')
+        if not swapper.is_swapped('vera', 'Result'):
+            Parameter = swapper.load_model('vera', 'Parameter', orm)
+            Report = swapper.load_model('vera', 'Report', orm)
             # Adding model 'Result'
             db.create_table('wq_result', (
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-                ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=AnnotationType)),
-                ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'])),
-                ('object_id', self.gf('django.db.models.fields.PositiveIntegerField')(db_index=True)),
+                ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=Parameter)),
+                ('report', self.gf('django.db.models.fields.related.ForeignKey')(to=Report)),
                 ('value_numeric', self.gf('django.db.models.fields.FloatField')(null=True, blank=True)),
                 ('value_text', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
                 ('empty', self.gf('django.db.models.fields.BooleanField')(default=False, db_index=True)),
             ))
             db.send_create_signal(u'vera', ['Result'])
 
-            # Adding index on 'Result', fields ['type', 'object_id', 'empty']
-            db.create_index('wq_result', ['type_id', 'object_id', 'empty'])
+            # Adding index on 'Result', fields ['type', 'report_id', 'empty']
+            db.create_index('wq_result', ['type_id', 'report_id', 'empty'])
 
     def backwards(self, orm):
 
@@ -111,32 +110,18 @@ class Migration(SchemaMigration):
             # Deleting model 'ReportStatus'
             db.delete_table('wq_reportstatus')
 
-        if swapper.is_swapped('annotate', 'AnnotationType') == 'vera.Parameter':
+        if not swapper.is_swapped('vera', 'Parameter'):
             # Deleting model 'Parameter'
             db.delete_table('wq_parameter')
 
-        if swapper.is_swapped('annotate', 'Annotation') == 'vera.Result':
-            # Removing index on 'Result', fields ['type', 'object_id', 'empty']
-            db.create_index('wq_result', ['type_id', 'object_id', 'empty'])
+        if swapper.is_swapped('vera', 'Result'):
+            # Removing index on 'Result', fields ['type', 'report_id', 'empty']
+            db.delete_index('wq_result', ['type_id', 'report_id', 'empty'])
 
             # Deleting model 'Result'
             db.delete_table('wq_result')
 
     models = {
-        u'annotate.annotation': {
-            'Meta': {'object_name': 'Annotation', 'db_table': "'wq_annotation'"},
-            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']"}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'object_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['annotate.AnnotationType']"}),
-            'value': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'})
-        },
-        u'annotate.annotationtype': {
-            'Meta': {'object_name': 'AnnotationType', 'db_table': "'wq_annotationtype'"},
-            'contenttype': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']", 'null': 'True', 'blank': 'True'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'})
-        },
         u'auth.group': {
             'Meta': {'object_name': 'Group'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -198,7 +183,6 @@ class Migration(SchemaMigration):
         },
         u'vera.parameter': {
             'Meta': {'object_name': 'Parameter', 'db_table': "'wq_parameter'"},
-            'contenttype': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']", 'null': 'True', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'is_numeric': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
@@ -220,12 +204,11 @@ class Migration(SchemaMigration):
         },
         u'vera.result': {
             'Meta': {'object_name': 'Result', 'db_table': "'wq_result'"},
-            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'object_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
             'type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['vera.Parameter']"}),
             'value_numeric': ('django.db.models.fields.FloatField', [], {'null': 'True', 'blank': 'True'}),
-            'value_text': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'})
+            'value_text': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'report': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['vera.Report']"})
         },
         u'vera.site': {
             'Meta': {'object_name': 'Site', 'db_table': "'wq_site'"},

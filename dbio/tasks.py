@@ -17,8 +17,8 @@ Site = swapper.load_model('vera', 'Site')
 Event = swapper.load_model('vera', 'Event')
 Report = swapper.load_model('vera', 'Report')
 ReportStatus = swapper.load_model('vera', 'ReportStatus')
-Parameter = swapper.load_model('annotate', 'AnnotationType')
-Result = swapper.load_model('annotate', 'Annotation')
+Parameter = swapper.load_model('vera', 'Parameter')
+Result = swapper.load_model('vera', 'Result')
 
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
@@ -41,10 +41,6 @@ if hasattr(settings, 'WQ_DEFAULT_REPORT_STATUS'):
     )
 else:
     DEFAULT_STATUS = None
-
-if not CONTENT_TYPES[Parameter].is_identified:
-    raise Exception("AnnotationType should be swapped for an IdentifiedModel!"
-                    + "\n(HINT: set WQ_ANNOTATIONTYPE_MODEL='vera.Parameter')")
 
 PRIORITY = {
     'parameter': 1,

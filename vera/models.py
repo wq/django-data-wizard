@@ -5,7 +5,9 @@ from collections import OrderedDict
 
 MODELS = {
     model: swapper.is_swapped('vera', model) or model
-    for model in ('Site', 'Event', 'Report', 'ReportStatus')
+    for model in (
+        'Site', 'Event', 'Report', 'ReportStatus', 'Parameter', 'Result'
+    )
 }
 
 VALID_REPORT_ORDER = getattr(settings, "WQ_VALID_REPORT_ORDER", ('-entered',))
@@ -39,25 +41,26 @@ class BaseEvent(models.NaturalKeyModel):
     def vals(self):
         return OrderedDict([
             (a.type.natural_key()[0], a.value)
-            for a in self.annotations
+            for a in self.results
         ])
 
-    # Valid annotations for this event
+    # Valid results for this event
     @property
-    def annotations(self):
-        Annotation = swapper.load_model('annotate', 'Annotation')
-        AnnotationType = swapper.load_model('annotate', 'AnnotationType')
-        # ORDER BY annotation type (parameter), then valid report order
-        order = (nest_ordering('type', AnnotationType._meta.ordering)
+    def results(self):
+        Result = swapper.load_model('vera', 'Result')
+        Parameter = swapper.load_model('vera', 'Parameter')
+        # ORDER BY parameter, then valid report order
+        order = (nest_ordering('type', Parameter._meta.ordering)
                  + ['type__id']
                  + nest_ordering('report', VALID_REPORT_ORDER))
-        # DISTINCT ON annotation types, collapsing multiple reports into one
-        distinct = (nest_ordering('type', AnnotationType._meta.ordering, True)
+        # DISTINCT ON parameter, collapsing multiple reports into one
+        distinct = (nest_ordering('type', Parameter._meta.ordering, True)
                     + ['type__id'])
-        annots = Annotation.objects.filter(report__in=self.valid_reports)
-        if issubclass(Annotation, BaseResult):
-            annots = annots.filter(empty=False)
-        return annots.order_by(*order).distinct(*distinct)
+        results = Result.objects.filter(
+            report__in=self.valid_reports,
+            empty=False
+        ).order_by(*order).distinct(*distinct)
+        return results
 
     @property
     def is_valid(self):
@@ -82,18 +85,44 @@ class ValidReportManager(ReportManager):
         return qs.filter(status__is_valid=True).order_by(*VALID_REPORT_ORDER)
 
 
-class BaseReport(models.AnnotatedModel, models.RelatedModel):
+class BaseReport(models.RelatedModel):
     event = models.ForeignKey(MODELS['Event'])
     entered = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     status = models.ForeignKey(MODELS['ReportStatus'], null=True, blank=True)
 
+    objects = ReportManager()
+    valid_objects = ValidReportManager()
+
     @property
     def is_valid(self):
         return self.status and self.status.is_valid
 
-    objects = ReportManager()
-    valid_objects = ValidReportManager()
+    @property
+    def vals(self):
+        vals = OrderedDict()
+        for result in self.results.all():
+            vals[result.type.natural_key()[0]] = result.value
+        return vals
+
+    @vals.setter
+    def vals(self, vals):
+        Parameter = swapper.load_model('vera', 'Parameter')
+        keys = [(key,) for key in vals.keys()]
+        params, success = Parameter.objects.resolve_keys(keys)
+        if not success:
+            missing = [
+                name for name, params in params.items() if params is None
+            ]
+            raise TypeError(
+                "Could not identify one or more parameters: %s!"
+                % missing
+            )
+
+        for key, param in params.items():
+            result, is_new = self.results.get_or_create(type=param)
+            result.value = vals[key[0]]
+            result.save()
 
     def __unicode__(self):
         if self.pk is not None:
@@ -117,20 +146,10 @@ class BaseReportStatus(models.Model):
         abstract = True
 
 
-class ParameterManager(models.IdentifiedRelatedModelManager,
-                       models.AnnotationTypeManager):
-    pass
-
-
-class BaseParameter(models.IdentifiedRelatedModel, models.BaseAnnotationType):
+class BaseParameter(models.IdentifiedRelatedModel):
+    name = models.CharField(max_length=255)
     is_numeric = models.BooleanField(default=False)
     units = models.CharField(max_length=50, null=True, blank=True)
-
-    objects = ParameterManager()
-
-    @property
-    def annotated_model(self):
-        return swapper.load_model('vera', 'Report')
 
     def __unicode__(self):
         if self.units:
@@ -143,7 +162,9 @@ class BaseParameter(models.IdentifiedRelatedModel, models.BaseAnnotationType):
         ordering = ('name',)
 
 
-class BaseResult(models.BaseAnnotation):
+class BaseResult(models.Model):
+    type = models.ForeignKey(MODELS['Parameter'])
+    report = models.ForeignKey(MODELS['Report'], related_name='results')
     value_numeric = models.FloatField(null=True, blank=True)
     value_text = models.TextField(null=True, blank=True)
     empty = models.BooleanField(default=False, db_index=True)
@@ -176,7 +197,7 @@ class BaseResult(models.BaseAnnotation):
         abstract = True
         ordering = ('type',)
         index_together = [
-            ('type', 'object_id', 'empty'),
+            ('type', 'report', 'empty'),
         ]
 
 
@@ -220,23 +241,16 @@ class ReportStatus(BaseReportStatus):
         swappable = swapper.swappable_setting('vera', 'ReportStatus')
 
 
-# These will be inactive unless they are explicitly swapped for annotate's
-# equivalents
 class Parameter(BaseParameter):
     class Meta(BaseParameter.Meta):
         db_table = 'wq_parameter'
-        abstract = not (
-            swapper.is_swapped('annotate', 'AnnotationType')
-            == 'vera.Parameter'
-        )
+        swappable = swapper.swappable_setting('vera', 'Parameter')
 
 
 class Result(BaseResult):
     class Meta(BaseResult.Meta):
         db_table = 'wq_result'
-        abstract = not (
-            swapper.is_swapped('annotate', 'Annotation') == 'vera.Result'
-        )
+        swappable = swapper.swappable_setting('vera', 'Result')
 
 
 def nest_ordering(prefix, ordering, ignore_reverse=False):

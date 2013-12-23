@@ -1,21 +1,24 @@
 from wq.db.rest import app
 from rest_framework import serializers
-from wq.db.patterns.annotate.serializers import AnnotationSerializer
+from wq.db.patterns.base.serializers import TypedAttachmentSerializer
 from wq.db.rest.serializers import ModelSerializer
 
-from .models import Result
 from wq.db.patterns.base import swapper
 from wq.db.patterns.base.models import extract_nested_key
 Event = swapper.load_model('vera', 'Event')
-Annotation = swapper.load_model('annotate', 'Annotation')
+Parameter = swapper.load_model('vera', 'Parameter')
+Result = swapper.load_model('vera', 'Result')
 
 
-class ResultSerializer(AnnotationSerializer):
+class ResultSerializer(TypedAttachmentSerializer):
+    attachment_fields = ['id', 'value']
+    type_model = Parameter
     value = serializers.Field()
+    object_field = 'report'
 
     def to_native(self, obj):
         result = super(ResultSerializer, self).to_native(obj)
-        if hasattr(obj.type, 'units'):
+        if getattr(obj.type, 'units', None) is not None:
             result['units'] = obj.type.units
         return result
 
@@ -24,10 +27,8 @@ class ResultSerializer(AnnotationSerializer):
         obj.value = data['value']
         return obj
 
-    class Meta(AnnotationSerializer.Meta):
-        exclude = AnnotationSerializer.Meta.exclude + (
-            'value_text', 'value_numeric'
-        )
+    class Meta:
+        exclude = ('value_text', 'value_numeric')
 
 
 class EventSerializer(ModelSerializer):
@@ -38,8 +39,8 @@ class EventSerializer(ModelSerializer):
             *args, **kwargs
         )
         if self.opts.depth > 0:
-            Serializer = app.router.get_serializer_for_model(Annotation)
-            fields['annotations'] = Serializer(context=self.context)
+            Serializer = app.router.get_serializer_for_model(Result)
+            fields['results'] = Serializer(context=self.context)
         return fields
 
 
