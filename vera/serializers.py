@@ -20,6 +20,9 @@ class ResultSerializer(TypedAttachmentSerializer):
         result = super(ResultSerializer, self).to_native(obj)
         if getattr(obj.type, 'units', None) is not None:
             result['units'] = obj.type.units
+        has_parent = self.parent and hasattr(self.parent.opts, 'model')
+        if not has_parent:
+            result['report_id'] = obj.report.pk
         return result
 
     def from_native(self, data, files):
@@ -28,7 +31,8 @@ class ResultSerializer(TypedAttachmentSerializer):
         return obj
 
     class Meta:
-        exclude = ('value_text', 'value_numeric')
+        exclude = ('label', 'report_id', 'report_label',
+                   'value_text', 'value_numeric')
 
 
 class EventSerializer(ModelSerializer):

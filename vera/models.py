@@ -193,6 +193,9 @@ class BaseResult(models.Model):
         else:
             self.value_text = val
 
+    def __unicode__(self):
+        return "%s -> %s: %s" % (self.report, self.type, self.value)
+
     class Meta:
         abstract = True
         ordering = ('type',)
