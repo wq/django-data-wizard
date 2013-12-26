@@ -29,7 +29,7 @@ class BaseSite(models.NaturalKeyModel):
 
 
 class BaseEvent(models.NaturalKeyModel):
-    site = models.ForeignKey(MODELS['Site'])
+    site = models.ForeignKey(MODELS['Site'], null=True, blank=True)
 
     @property
     def valid_reports(self):
@@ -88,7 +88,7 @@ class ValidReportManager(ReportManager):
 class BaseReport(models.RelatedModel):
     event = models.ForeignKey(MODELS['Event'])
     entered = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
     status = models.ForeignKey(MODELS['ReportStatus'], null=True, blank=True)
 
     objects = ReportManager()
@@ -135,7 +135,8 @@ class BaseReport(models.RelatedModel):
         ordering = VALID_REPORT_ORDER
 
 
-class BaseReportStatus(models.Model):
+class BaseReportStatus(models.NaturalKeyModel):
+    slug = models.SlugField()
     name = models.CharField(max_length=255)
     is_valid = models.BooleanField(default=False)
 
@@ -144,6 +145,7 @@ class BaseReportStatus(models.Model):
 
     class Meta:
         abstract = True
+        unique_together = [['slug']]
 
 
 class BaseParameter(models.IdentifiedRelatedModel):

@@ -54,6 +54,7 @@ class Migration(SchemaMigration):
             # Adding model 'ReportStatus'
             db.create_table('wq_reportstatus', (
                 (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+                ('slug', self.gf('django.db.models.fields.SlugField')(max_length=50, db_index=True)),
                 ('name', self.gf('django.db.models.fields.CharField')(max_length=255)),
                 ('is_valid', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ))
@@ -114,7 +115,7 @@ class Migration(SchemaMigration):
             # Deleting model 'Parameter'
             db.delete_table('wq_parameter')
 
-        if swapper.is_swapped('vera', 'Result'):
+        if not swapper.is_swapped('vera', 'Result'):
             # Removing index on 'Result', fields ['type', 'report_id', 'empty']
             db.delete_index('wq_result', ['type_id', 'report_id', 'empty'])
 
@@ -200,7 +201,8 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'ReportStatus', 'db_table': "'wq_reportstatus'"},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'is_valid': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'slug': ('django.db.models.fields.SlugField', [], {'max_length': '50'})
         },
         u'vera.result': {
             'Meta': {'object_name': 'Result', 'db_table': "'wq_result'"},
