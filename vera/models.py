@@ -1,7 +1,10 @@
 from wq.db.patterns import models
 from wq.db.patterns.base import swapper
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.conf import settings
 from collections import OrderedDict
+from .compat import clone_field
 
 MODELS = {
     model: swapper.is_swapped('vera', model) or model
@@ -206,6 +209,106 @@ class BaseResult(models.Model):
         ]
 
 
+# Denormalize Events with Results from valid Reports
+class EventResultManager(models.Manager):
+    def set_for_event(self, event, delete=True):
+        self.filter(event=event).delete()
+        for result in event.results:
+            er = self.model(
+                event=event,
+                result=result
+            )
+            er.save()
+
+    def set_for_events(self, events, delete=True):
+        for event in events:
+            self.set_for_event(event, delete)
+
+    def set_all(self):
+        self.all().delete()
+        Event = swapper.load_model('vera', 'Event')
+        self.set_for_events(Event.objects.all(), delete=False)
+
+
+class BaseEventResult(models.Model):
+    """
+    Denormalized event-result pairs (for valid reports)
+    """
+    id = models.PositiveIntegerField(primary_key=True)
+    event = models.ForeignKey(MODELS['Event'])
+    result = models.ForeignKey(MODELS['Result'])
+    objects = EventResultManager()
+
+    def save(self, *args, **kwargs):
+        """
+        Denormalize all properties from the event and the result.
+        """
+        if self.event_id is None or self.result_id is None:
+            return
+        self.pk = self.result.pk
+
+        def set_value(src, name):
+            if field.primary_key:
+                return
+            obj = getattr(self, src)
+            setattr(self, src + '_' + name, getattr(obj, name))
+
+        for field in self.event._meta.fields:
+            set_value('event', field.name)
+        for field in self.result._meta.fields:
+            set_value('result', field.name)
+        super(BaseEventResult, self).save(*args, **kwargs)
+
+    class Meta:
+        abstract = True
+
+
+def create_eventresult_model(event_cls, result_cls, base=BaseEventResult):
+    """
+    **Here be magic**
+
+    EventResult needs to have all of the fields from Event and Result.
+    In order to DRY (and since either of these classes may be swapped), we
+    add the fields dynamically here.  If neither Event or Result are swapped,
+    this function will be called below, otherwise the user should call
+    this function in their models.py.
+    """
+
+    class Meta(base.Meta):
+        db_table = 'wq_eventresult'
+        unique_together = ('event_site', 'result_type')
+
+    attrs = {
+        'Meta': Meta,
+        '__module__': base.__module__,
+    }
+
+    def add_field(prefix, field):
+        if field.primary_key:
+            return
+        attrs[prefix + '_' + field.name] = clone_field(field)
+
+    for field in event_cls._meta.fields:
+        add_field('event', field)
+
+    for field in result_cls._meta.fields:
+        add_field('result', field)
+
+    EventResult = type(
+        'EventResult',
+        (base,),
+        attrs
+    )
+
+    @receiver(post_save, weak=False)
+    def handler(sender, instance=None, **kwargs):
+        events = find_events(instance)
+        if events:
+            EventResult.objects.set_for_events(events)
+
+    return EventResult
+
+
 # Default implementation of the above classes, can be swapped
 class Site(BaseSite):
     latitude = models.FloatField(null=True, blank=True)
@@ -258,6 +361,12 @@ class Result(BaseResult):
         swappable = swapper.swappable_setting('vera', 'Result')
 
 
+if swapper.is_swapped('vera', 'Event') or swapper.is_swapped('vera', 'Result'):
+    EventResult = None
+else:
+    EventResult = create_eventresult_model(Event, Result)
+
+
 def nest_ordering(prefix, ordering, ignore_reverse=False):
     nest_order = []
     for field in ordering:
@@ -268,3 +377,13 @@ def nest_ordering(prefix, ordering, ignore_reverse=False):
                 reverse = '-'
         nest_order.append(reverse + prefix + '__' + field)
     return nest_order
+
+
+def find_events(instance):
+    if isinstance(instance, BaseEvent):
+        return [instance]
+    if isinstance(instance, BaseReport):
+        return [instance.event]
+    if isinstance(instance, BaseResult):
+        return [instance.report.event]
+    return None
