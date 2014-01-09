@@ -1,6 +1,7 @@
 from wq.db.patterns import models
 import swapper
 from django.db.models.signals import post_save
+from django.core.exceptions import ImproperlyConfigured
 from django.dispatch import receiver
 from django.conf import settings
 from collections import OrderedDict
@@ -261,7 +262,8 @@ class BaseEventResult(models.Model):
         abstract = True
 
 
-def create_eventresult_model(event_cls, result_cls, base=BaseEventResult):
+def create_eventresult_model(event_cls, result_cls,
+                             base=BaseEventResult, swappable=False):
     """
     **Here be magic**
 
@@ -272,13 +274,24 @@ def create_eventresult_model(event_cls, result_cls, base=BaseEventResult):
     this function in their models.py.
     """
 
+    app = 'vera'
+    module = base.__module__
+    for cls in event_cls, result_cls, base:
+        if cls._meta.app_label != 'vera':
+            app = cls._meta.app_label
+            module = cls.__module__
+
     class Meta(base.Meta):
         db_table = 'wq_eventresult'
-        unique_together = ('event_site', 'result_type')
+        unique_together = ('event', 'result_type')
+        app_label = app
+
+    if swappable:
+        Meta.swappable = swappable
 
     attrs = {
         'Meta': Meta,
-        '__module__': base.__module__,
+        '__module__': module
     }
 
     def add_field(prefix, field):
@@ -359,10 +372,16 @@ class Result(BaseResult):
         swappable = swapper.swappable_setting('vera', 'Result')
 
 
-if swapper.is_swapped('vera', 'Event') or swapper.is_swapped('vera', 'Result'):
-    EventResult = None
-else:
-    EventResult = create_eventresult_model(Event, Result)
+EventResult = create_eventresult_model(
+    Event, Result, swappable=swapper.swappable_setting('vera', 'EventResult')
+)
+
+if (swapper.is_swapped('vera', 'Event')
+        and swapper.is_swapped('vera', 'Result')
+        and not swapper.is_swapped('vera', 'EventResult')):
+    raise ImproperlyConfigured(
+        "Event or Result was swapped but EventResult was not!"
+    )
 
 
 def nest_ordering(prefix, ordering, ignore_reverse=False):

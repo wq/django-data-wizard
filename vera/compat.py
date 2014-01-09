@@ -17,5 +17,7 @@ def clone_field(field):
 
     kwargs['null'] = field.null
     kwargs['blank'] = field.blank
+    if getattr(field, 'max_length', None):
+        kwargs['max_length'] = field.max_length
 
     return cls(*args, **kwargs)
