@@ -3,7 +3,7 @@ from rest_framework import serializers
 from wq.db.patterns.base.serializers import TypedAttachmentSerializer
 from wq.db.rest.serializers import ModelSerializer
 
-from wq.db.patterns.base import swapper
+import swapper
 from wq.db.patterns.base.models import extract_nested_key
 Event = swapper.load_model('vera', 'Event')
 Parameter = swapper.load_model('vera', 'Parameter')

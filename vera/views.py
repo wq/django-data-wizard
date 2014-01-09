@@ -1,5 +1,5 @@
 from wq.db.rest import app
-from wq.db.patterns.base import swapper
+import swapper
 from .serializers import EventSerializer, ReportSerializer, ResultSerializer
 
 Event = swapper.load_model('vera', 'Event')

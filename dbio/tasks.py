@@ -3,7 +3,7 @@ from xlrd import colname
 from collections import namedtuple
 from wq.io import load_file as load_file_io
 from wq.db.patterns.models import Identifier, Relationship, RelationshipType
-from wq.db.patterns.base import swapper
+import swapper
 from wq.db.contrib.files.models import File
 from wq.db.rest.caching import jc_backend
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range

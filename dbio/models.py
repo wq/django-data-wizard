@@ -1,7 +1,4 @@
 from wq.db.patterns import models
-from wq.db.patterns.base import swapper
-
-File = swapper.load_model('files', 'File')
 
 
 class MetaColumn(models.IdentifiedRelatedModel):

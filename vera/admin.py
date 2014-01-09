@@ -1,6 +1,6 @@
 from wq.db.patterns import admin
 from wq.db.patterns.models import Authority, RelationshipType
-from wq.db.patterns.base import swapper
+import swapper
 from django.conf import settings
 
 

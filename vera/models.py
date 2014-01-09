@@ -1,17 +1,15 @@
 from wq.db.patterns import models
-from wq.db.patterns.base import swapper
+import swapper
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from collections import OrderedDict
 from .compat import clone_field
 
-MODELS = {
-    model: swapper.is_swapped('vera', model) or model
-    for model in (
-        'Site', 'Event', 'Report', 'ReportStatus', 'Parameter', 'Result'
-    )
-}
+swapper.set_app_prefix('vera', 'WQ')
+MODELS = swapper.get_model_names(
+    'vera', ('Site', 'Event', 'Report', 'ReportStatus', 'Parameter', 'Result')
+)
 
 VALID_REPORT_ORDER = getattr(settings, "WQ_VALID_REPORT_ORDER", ('-entered',))
 # Base classes for Site-Event-Report-Attribute-Value pattern
