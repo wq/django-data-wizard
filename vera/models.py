@@ -238,6 +238,17 @@ class BaseEventResult(models.Model):
     result = models.ForeignKey(MODELS['Result'])
     objects = EventResultManager()
 
+    def __unicode__(self):
+        if self.result_value_numeric is not None:
+            value = self.result_value_numeric
+        else:
+            value = self.result_value_text
+        return "%s -> %s: %s" % (
+            self.event,
+            self.result_type,
+            value
+        )
+
     def save(self, *args, **kwargs):
         """
         Denormalize all properties from the event and the result.
