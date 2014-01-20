@@ -1,10 +1,12 @@
 from rest_framework.response import Response
 from rest_framework.decorators import link, action
 from wq.db.rest.views import ModelViewSet
-from .models import File
 from wq.db.contrib.dbio import tasks
 from wq.db.rest import app
 from celery.result import AsyncResult
+
+import swapper
+File = swapper.load_model('files', 'File')
 
 
 class FileViewSet(ModelViewSet):

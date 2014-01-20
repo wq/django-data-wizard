@@ -17,7 +17,6 @@ class ReportInline(admin.TabularInline):
 class ParameterAdmin(admin.IdentifiedModelAdmin):
     list_display = ('name', 'units')
     list_filter = ('units', 'is_numeric')
-    exclude = ('contenttype',)
 
 
 class ReportAdmin(admin.ModelAdmin):
