@@ -36,9 +36,7 @@ DATE_FIELDS = {
 }
 
 if hasattr(settings, 'WQ_DEFAULT_REPORT_STATUS'):
-    DEFAULT_STATUS = ReportStatus.objects.get(
-        pk=settings.WQ_DEFAULT_REPORT_STATUS
-    )
+    DEFAULT_STATUS = settings.WQ_DEFAULT_REPORT_STATUS
 else:
     DEFAULT_STATUS = None
 
@@ -292,7 +290,7 @@ def import_data(file, user):
         'event_key': {},
         'report_meta': {
             'user': user,
-            'status': DEFAULT_STATUS,
+            'status_id': DEFAULT_STATUS,
         },
         'param_vals': {}
     }

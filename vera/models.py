@@ -90,7 +90,12 @@ class ValidReportManager(ReportManager):
 class BaseReport(models.RelatedModel):
     event = models.ForeignKey(MODELS['Event'])
     entered = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+
+        # Needed for model swapping in tests
+        related_name="%(app_label)s_%(class)s",
+    )
     status = models.ForeignKey(MODELS['ReportStatus'], null=True, blank=True)
 
     objects = ReportManager()
@@ -322,7 +327,7 @@ def create_eventresult_model(event_cls, result_cls,
         attrs
     )
 
-    @receiver(post_save, weak=False)
+    @receiver(post_save, weak=False, dispatch_uid="eventresult_receiver")
     def handler(sender, instance=None, **kwargs):
         events = find_events(instance)
         if events:
