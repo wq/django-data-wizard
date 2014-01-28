@@ -23,7 +23,13 @@ setup(
     license='MIT',
     description='Implementation of the ERAV data integration model',
     long_description=long_description(),
-    install_requires=['wq==0.5.0', 'celery', 'redis', 'Pillow'],
+    install_requires=[
+        'wq==0.5.0',
+        'celery',
+        'redis',
+        'Pillow',
+        'python-dateutil'
+    ],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
