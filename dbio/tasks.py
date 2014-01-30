@@ -381,8 +381,11 @@ def import_data(file, user):
             if 'colnum' in col:
                 save_value(col, row[col['colnum']], record)
 
-        if len(record['event_key'].keys()) < len(EVENT_KEY):
-            raise Exception('Incomplete Record')
+        missing = set(EVENT_KEY) - set(record['event_key'].keys())
+        if missing:
+            raise Exception(
+                'Incomplete Record - missing %s' % ", ".join(missing)
+            )
 
         return Report.objects.create_report(
             EventKey(**record['event_key']),

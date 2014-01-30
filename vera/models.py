@@ -327,6 +327,9 @@ def create_eventresult_model(event_cls, result_cls,
         attrs
     )
 
+    # Disconnect any existing receiver
+    post_save.disconnect(dispatch_uid="eventresult_receiver")
+
     @receiver(post_save, weak=False, dispatch_uid="eventresult_receiver")
     def handler(sender, instance=None, **kwargs):
         events = find_events(instance)
