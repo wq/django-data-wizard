@@ -5,7 +5,9 @@
 Getting Started
 ===============
 
-    pip install vera
+```bash
+pip install vera
+```
 
 See [the documentation](http://wq.io/docs/) for more information. See <https://github.com/wq/vera> to report any issues. Note that the vera codebase is [contained within wq.db.contrib](https://github.com/wq/wq.db/blob/master/contrib/vera). The vera package simplifies the installation of additional third-party libraries needed for vera but not required by wq.db core.
 
