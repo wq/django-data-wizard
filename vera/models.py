@@ -395,8 +395,8 @@ EventResult = create_eventresult_model(
     Event, Result, swappable=swapper.swappable_setting('vera', 'EventResult')
 )
 
-if (swapper.is_swapped('vera', 'Event')
-        and swapper.is_swapped('vera', 'Result')
+if ((swapper.is_swapped('vera', 'Event')
+        or swapper.is_swapped('vera', 'Result'))
         and not swapper.is_swapped('vera', 'EventResult')):
     raise ImproperlyConfigured(
         "Event or Result was swapped but EventResult was not!"

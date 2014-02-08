@@ -238,15 +238,19 @@ def process_date_part(new_val, old_val, part):
         if (isinstance(time, float)
                 and time >= 100 and time <= 2400):
             time = str(time)
+        elif isinstance(time, basestring) and ":" in time:
+            time = time.replace(":", "")
+
+        if time.isdigit() and len(time) in (3, 4):
             if len(time) == 3:
                 time = datetime.time(
                     int(time[0]),
-                    int(time[1:2])
+                    int(time[1:])
                 )
             else:
                 time = datetime.time(
-                    int(time[0:1]),
-                    int(time[2:3])
+                    int(time[0:2]),
+                    int(time[2:])
                 )
         else:
             raise Exception("Expected time but got %s!" % time)
@@ -349,7 +353,8 @@ def import_data(file, user):
                 fld = Event._meta.get_field_by_name(
                     name
                 )[0].get_internal_type()
-                if (fld in DATE_FIELDS and isinstance(val, basestring)):
+                if (fld in DATE_FIELDS and isinstance(val, basestring)
+                        and part != 'time'):
                     from dateutil.parser import parse
                     val = parse(val)
                     if fld == 'DateField':
