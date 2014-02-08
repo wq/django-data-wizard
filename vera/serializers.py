@@ -52,7 +52,8 @@ class ReportSerializer(ModelSerializer):
     is_valid = serializers.Field()
 
     def from_native(self, data, files):
-        data = data.dict()
+        if hasattr(data, 'dict'):
+            data = data.dict()
         event_key = extract_nested_key(data, Event)
         if event_key:
             event, is_new = Event.objects.get_or_create_by_natural_key(
