@@ -243,15 +243,16 @@ class BaseEventResult(models.Model):
     result = models.ForeignKey(MODELS['Result'])
     objects = EventResultManager()
 
+    def result_value(self):
+        if self.result_type.is_numeric:
+            return self.result_value_numeric
+        return self.result_value_text
+
     def __unicode__(self):
-        if self.result_value_numeric is not None:
-            value = self.result_value_numeric
-        else:
-            value = self.result_value_text
         return "%s -> %s: %s" % (
             self.event,
             self.result_type,
-            value
+            self.result_value
         )
 
     def save(self, *args, **kwargs):
