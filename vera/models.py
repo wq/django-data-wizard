@@ -90,7 +90,7 @@ class ValidReportManager(ReportManager):
 
 class BaseReport(models.RelatedModel):
     event = models.ForeignKey(MODELS['Event'])
-    entered = models.DateTimeField()
+    entered = models.DateTimeField(blank=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
 
