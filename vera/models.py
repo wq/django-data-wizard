@@ -1,4 +1,5 @@
 from wq.db.patterns import models
+import datetime
 import swapper
 from django.db.models.signals import post_save
 from django.core.exceptions import ImproperlyConfigured
@@ -89,7 +90,7 @@ class ValidReportManager(ReportManager):
 
 class BaseReport(models.RelatedModel):
     event = models.ForeignKey(MODELS['Event'])
-    entered = models.DateTimeField(auto_now_add=True)
+    entered = models.DateTimeField()
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
 
@@ -130,6 +131,11 @@ class BaseReport(models.RelatedModel):
             result, is_new = self.results.get_or_create(type=param)
             result.value = vals[key[0]]
             result.save()
+
+    def save(self, *args, **kwargs):
+        if not self.entered:
+            self.entered = datetime.datetime.now()
+        super(BaseReport, self).save(*args, **kwargs)
 
     def __unicode__(self):
         if self.pk is not None:
