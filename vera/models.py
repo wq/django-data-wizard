@@ -265,12 +265,15 @@ class EventResultManager(models.Manager):
         result_filter = {
             'report__event__' + key: val for key, val in event_filter.items()
         }
+        ers = []
         for result in Result.objects.valid_results(**result_filter):
             er = self.model(
                 event=result.report.event,
                 result=result
             )
-            er.save()
+            er.denormalize()
+            ers.append(er)
+        self.bulk_create(ers)
 
     def set_all(self):
         """
@@ -301,11 +304,15 @@ class BaseEventResult(models.Model):
         )
 
     def save(self, *args, **kwargs):
+        if self.event_id is None or self.result_id is None:
+            return
+        self.denormalize()
+        super(BaseEventResult, self).save(*args, **kwargs)
+
+    def denormalize(self):
         """
         Denormalize all properties from the event and the result.
         """
-        if self.event_id is None or self.result_id is None:
-            return
         self.pk = self.result.pk
 
         def set_value(src, name):
@@ -318,7 +325,6 @@ class BaseEventResult(models.Model):
             set_value('event', field.name)
         for field in self.result._meta.fields:
             set_value('result', field.name)
-        super(BaseEventResult, self).save(*args, **kwargs)
 
     class Meta:
         abstract = True
