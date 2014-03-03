@@ -51,19 +51,7 @@ class BaseEvent(models.NaturalKeyModel):
     @property
     def results(self):
         Result = swapper.load_model('vera', 'Result')
-        Parameter = swapper.load_model('vera', 'Parameter')
-        # ORDER BY parameter, then valid report order
-        order = (nest_ordering('type', Parameter._meta.ordering)
-                 + ['type__id']
-                 + nest_ordering('report', VALID_REPORT_ORDER))
-        # DISTINCT ON parameter, collapsing multiple reports into one
-        distinct = (nest_ordering('type', Parameter._meta.ordering, True)
-                    + ['type__id'])
-        results = Result.objects.filter(
-            report__in=self.valid_reports,
-            empty=False
-        ).order_by(*order).distinct(*distinct)
-        return results
+        return Result.objects.valid_results(report__event=self)
 
     @property
     def is_valid(self):
@@ -177,12 +165,35 @@ class BaseParameter(models.IdentifiedRelatedModel):
         ordering = ('name',)
 
 
+class ResultManager(models.Manager):
+    def valid_results(self, **filter):
+        Parameter = swapper.load_model('vera', 'Parameter')
+
+        filter['report__status__is_valid'] = True
+        filter['empty'] = False
+
+        # DISTINCT ON event, then parameter, collapsing results from different
+        # reports into one
+        distinct = ['report__event__id'] + nest_ordering(
+            'type', Parameter._meta.ordering
+        ) + ['type__id']
+
+        # ORDER BY distinct fields, then valid report order
+        order = distinct + nest_ordering('report', VALID_REPORT_ORDER)
+
+        return self.filter(
+            **filter
+        ).order_by(*order).distinct(*distinct).select_related('report')
+
+
 class BaseResult(models.Model):
     type = models.ForeignKey(MODELS['Parameter'])
     report = models.ForeignKey(MODELS['Report'], related_name='results')
     value_numeric = models.FloatField(null=True, blank=True)
     value_text = models.TextField(null=True, blank=True)
     empty = models.BooleanField(default=False, db_index=True)
+
+    objects = ResultManager()
 
     def is_empty(self, value):
         if value is None:
@@ -222,7 +233,11 @@ class BaseResult(models.Model):
 # Denormalize Events with Results from valid Reports
 class EventResultManager(models.Manager):
     def set_for_event(self, event, delete=True):
-        self.filter(event=event).delete()
+        """
+        Update EventResult cache for the given event.
+        """
+        if delete:
+            self.filter(event=event).delete()
         for result in event.results:
             er = self.model(
                 event=event,
@@ -230,14 +245,38 @@ class EventResultManager(models.Manager):
             )
             er.save()
 
-    def set_for_events(self, events, delete=True):
-        for event in events:
-            self.set_for_event(event, delete)
+    def set_for_events(self, delete=True, **event_filter):
+        """
+        Update EventResult cache for the given events.  The event query should
+        be specified as query keyword arguments, rather than a queryset, so
+        that a JOIN can be used instead of retrieving the results for each
+        event separately.
+        """
+
+        # Delete existing EventResults (using denormalized Event fields)
+        if delete:
+            er_filter = {
+                'event_' + key: val for key, val in event_filter.items()
+            }
+            self.filter(**er_filter).delete()
+
+        # Filter results (using JOIN through Report to Event)
+        Result = swapper.load_model('vera', 'Result')
+        result_filter = {
+            'report__event__' + key: val for key, val in event_filter.items()
+        }
+        for result in Result.objects.valid_results(**result_filter):
+            er = self.model(
+                event=result.report.event,
+                result=result
+            )
+            er.save()
 
     def set_all(self):
-        self.all().delete()
-        Event = swapper.load_model('vera', 'Event')
-        self.set_for_events(Event.objects.all(), delete=False)
+        """
+        Reset the entire EventResult cache.
+        """
+        self.set_for_events()
 
 
 class BaseEventResult(models.Model):
@@ -339,9 +378,9 @@ def create_eventresult_model(event_cls, result_cls,
 
     @receiver(post_save, weak=False, dispatch_uid="eventresult_receiver")
     def handler(sender, instance=None, **kwargs):
-        events = find_events(instance)
-        if events:
-            EventResult.objects.set_for_events(events)
+        event = find_event(instance)
+        if event:
+            EventResult.objects.set_for_event(event)
 
     return EventResult
 
@@ -422,11 +461,11 @@ def nest_ordering(prefix, ordering, ignore_reverse=False):
     return nest_order
 
 
-def find_events(instance):
+def find_event(instance):
     if isinstance(instance, BaseEvent):
-        return [instance]
+        return instance
     if isinstance(instance, BaseReport):
-        return [instance.event]
+        return instance.event
     if isinstance(instance, BaseResult):
-        return [instance.report.event]
+        return instance.report.event
     return None
