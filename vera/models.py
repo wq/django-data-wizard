@@ -266,7 +266,10 @@ class EventResultManager(models.Manager):
             'report__event__' + key: val for key, val in event_filter.items()
         }
         ers = []
-        for result in Result.objects.valid_results(**result_filter):
+        results = Result.objects.valid_results(
+            **result_filter
+        ).select_related('report__event')
+        for result in results:
             er = self.model(
                 event=result.report.event,
                 result=result
@@ -315,16 +318,19 @@ class BaseEventResult(models.Model):
         """
         self.pk = self.result.pk
 
-        def set_value(src, name):
+        def set_value(src, field):
             if field.primary_key:
                 return
+            name = field.name
+            if field.rel:
+                name += "_id"
             obj = getattr(self, src)
             setattr(self, src + '_' + name, getattr(obj, name))
 
         for field in self.event._meta.fields:
-            set_value('event', field.name)
+            set_value('event', field)
         for field in self.result._meta.fields:
-            set_value('result', field.name)
+            set_value('result', field)
 
     class Meta:
         abstract = True
