@@ -294,6 +294,7 @@ class BaseEventResult(models.Model):
     result = models.ForeignKey(MODELS['Result'])
     objects = EventResultManager()
 
+    @property
     def result_value(self):
         if self.result_type.is_numeric:
             return self.result_value_numeric
