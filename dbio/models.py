@@ -3,6 +3,7 @@ from wq.db.patterns import models
 
 class MetaColumn(models.IdentifiedRelatedModel):
     DATA_TYPES = (
+        ('site', 'Site Metadata'),
         ('event', 'Event Metadata'),
         ('report', 'Report Metadata'),
         ('parameter', 'Parameter Metadata'),
@@ -72,3 +73,17 @@ class Range(models.Model):
 
     class Meta:
         db_table = 'wq_range'
+
+
+class IoModel(models.RelatedModel):
+    def load_io(self, **options):
+        raise NotImplementedError()
+
+    def already_parsed(self):
+        return self.relationships.filter(
+            type__name='Contains Column',
+            range__type='list'
+        ).exists()
+
+    class Meta:
+        abstract = True

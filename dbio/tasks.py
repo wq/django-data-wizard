@@ -1,15 +1,14 @@
 from celery import task, current_task
 from xlrd import colname
 from collections import namedtuple
-from wq.io import load_file as load_file_io
 from wq.db.patterns.models import Identifier, Relationship, RelationshipType
 import swapper
-from wq.db.contrib.files.models import File
 from wq.db.rest.caching import jc_backend
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
 import datetime
 from .signals import import_complete
+from .proxy_models import FileIoProxy
 
 from wq.db.rest.models import get_ct, get_object_id
 
@@ -24,7 +23,6 @@ EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
 
 CONTENT_TYPES = {
-    File: get_ct(File),
     Parameter: get_ct(Parameter),
     MetaColumn: get_ct(MetaColumn),
     UnknownItem: get_ct(UnknownItem),
@@ -47,13 +45,7 @@ PRIORITY = {
 }
 
 
-def load_file(file_obj):
-    filename = "%s/%s" % (settings.MEDIA_ROOT, file_obj.file.name)
-    options = load_file_options(file_obj)
-    return load_file_io(filename, options=options)
-
-
-def get_choices(file_obj):
+def get_choices(instance):
     def make_list(cls, name):
         rows = cls.objects.all()
         ct = CONTENT_TYPES[cls]
@@ -77,49 +69,22 @@ def get_choices(file_obj):
 
 
 @task
-def read_columns(file, user=None):
-    if already_parsed(file):
-        matched = load_columns(file)
+def read_columns(instance, user=None):
+    if instance.already_parsed():
+        matched = load_columns(instance)
     else:
-        matched = parse_columns(file)
+        matched = parse_columns(instance)
 
     for info in matched:
         if info.get('unknown', False):
-            info['types'] = get_choices(file)
+            info['types'] = get_choices(instance)
 
     return matched
 
 
-def already_parsed(file):
-    return file.relationships.filter(
-        type__name='Contains Column',
-        range__type='list'
-    ).exists()
-
-
-def load_file_options(file):
-    headers = file.relationships.filter(
-        type__name='Contains Column',
-        range__type='list'
-    )
-    if headers.exists():
-        header_row = headers[0].range_set.get(type='head').start_row
-        start_row = headers[0].range_set.get(type='list').start_row
-        return {
-            'header_row': header_row,
-            'start_row': start_row
-        }
-
-    templates = file.inverserelationships.filter(type__inverse_name='Template')
-    if templates.exists():
-        return load_file_options(templates[0].right)
-
-    return {}
-
-
-def load_columns(file):
-    rels = file.relationships.filter(type__name='Contains Column')
-    table = load_file(file)
+def load_columns(instance):
+    rels = instance.relationships.filter(type__name='Contains Column')
+    table = instance.load_io()
 
     matched = []
     for rel in rels:
@@ -160,33 +125,40 @@ def get_range_value(table, rng):
     return val
 
 
-def parse_columns(file):
-    table = load_file(file)
-    for r in table.extra_data:
-        row = table.extra_data[r]
-        for c in row:
-            if c + 1 in row and c - 1 not in row:
-                parse_column(
-                    file,
-                    name=row[c],
-                    head=[r, c, r, c],
-                    body=[r, c + 1, r, c + 1],
-                    body_type='value'
-                )
+def parse_columns(instance):
+    table = instance.load_io()
+    if table.tabular:
+        for r in table.extra_data:
+            row = table.extra_data[r]
+            for c in row:
+                if c + 1 in row and c - 1 not in row:
+                    parse_column(
+                        instance,
+                        name=row[c],
+                        head=[r, c, r, c],
+                        body=[r, c + 1, r, c + 1],
+                        body_type='value'
+                    )
 
     for i, name in enumerate(table.field_map.keys()):
+        if table.tabular:
+            header_row = table.header_row
+            start_row = table.start_row
+        else:
+            header_row = -1
+            start_row = 0
         parse_column(
-            file,
+            instance,
             name=name,
-            head=[table.header_row, i, table.start_row - 1, i],
-            body=[table.start_row, i, table.start_row + len(table), i],
+            head=[header_row, i, start_row - 1, i],
+            body=[start_row, i, start_row + len(table), i],
             body_type='list'
         )
 
-    return load_columns(file)
+    return load_columns(instance)
 
 
-def parse_column(file, name, head, body, body_type):
+def parse_column(instance, name, head, body, body_type):
     matches = list(Identifier.objects.filter_by_identifier(name))
     if len(matches) > 0:
         matches.sort(
@@ -199,12 +171,12 @@ def parse_column(file, name, head, body, body_type):
         ctype = CONTENT_TYPES[UnknownItem]
 
     reltype, is_new = RelationshipType.objects.get_or_create(
-        from_type=CONTENT_TYPES[File],
+        from_type=get_ct(instance),
         to_type=ctype,
         name='Contains Column',
         inverse_name='Column In'
     )
-    rel = file.relationships.create(
+    rel = instance.relationships.create(
         type=reltype,
         to_content_type=ctype,
         to_object_id=column.pk,
@@ -258,8 +230,8 @@ def process_date_part(new_val, old_val, part):
 
 
 @task
-def update_columns(file, user, post):
-    matched = read_columns(file)
+def update_columns(instance, user, post):
+    matched = read_columns(instance)
     for col in matched:
         if not col.get('unknown', False):
             continue
@@ -275,7 +247,7 @@ def update_columns(file, user, post):
         else:
             continue
 
-        item = file.relationships.get(pk=col['rel_id']).right
+        item = instance.relationships.get(pk=col['rel_id']).right
         if vid == 'new':
             obj = cls.objects.find(item.name)
             obj.contenttype = CONTENT_TYPES[Parameter]
@@ -287,36 +259,36 @@ def update_columns(file, user, post):
             )
 
         reltype, is_new = RelationshipType.objects.get_or_create(
-            from_type=CONTENT_TYPES[File],
+            from_type=get_ct(instance),
             to_type=CONTENT_TYPES[cls],
             name='Contains Column',
             inverse_name='Column In'
         )
-        rel = file.relationships.get(pk=col['rel_id'])
+        rel = instance.relationships.get(pk=col['rel_id'])
         rel.type = reltype
         rel.right = obj
         rel.save()
 
-    return read_columns(file)
+    return read_columns(instance)
 
 
 @task
-def reset(file, user):
-    file.relationships.all().delete()
+def reset(instance, user):
+    instance.relationships.all().delete()
 
 
 @task
-def import_data(file, user):
-    matched = read_columns(file)
-    table = load_file(file)
+def import_data(instance, user):
+    matched = read_columns(instance)
+    table = instance.load_io()
     if jc_backend:
         jc_backend.unpatch()
 
     for col in matched:
-        col['item'] = file.relationships.get(pk=col['rel_id']).right
+        col['item'] = instance.relationships.get(pk=col['rel_id']).right
         col['item_id'] = get_object_id(col['item'])
 
-    file_globals = {
+    instance_globals = {
         'event_key': {},
         'report_meta': {
             'user': user,
@@ -325,11 +297,12 @@ def import_data(file, user):
         'param_vals': {}
     }
 
+    # Set a default of None for any event key fields that are not required
     for field_name in EVENT_KEY:
         info = Event._meta.get_field_by_name(field_name)
         field = info[0]
         if field.null:
-            file_globals['event_key'][field_name] = None
+            instance_globals['event_key'][field_name] = None
 
     def save_value(col, val, obj):
         item = col['item']
@@ -381,12 +354,12 @@ def import_data(file, user):
 
     for col in matched:
         if 'value' in col:
-            save_value(col, col['value'], file_globals)
+            save_value(col, col['value'], instance_globals)
 
     def add_record(row):
         record = {
-            key: file_globals[key].copy()
-            for key in file_globals
+            key: instance_globals[key].copy()
+            for key in instance_globals
         }
         for col in matched:
             if 'colnum' in col:
@@ -408,8 +381,12 @@ def import_data(file, user):
     errors = []
     skipped = []
 
-    def rownum(i):
-        return i + table.start_row + 1
+    if table.tabular:
+        def rownum(i):
+            return i + table.start_row
+    else:
+        def rownum(i):
+            return i
 
     for i, row in enumerate(table):
         current_task.update_state(state='PROGRESS', meta={
@@ -422,12 +399,12 @@ def import_data(file, user):
             report = add_record(row)
         except Exception as e:
             skipreason = repr(e)
-            skipped.append({'row': rownum(i), 'reason': skipreason})
+            skipped.append({'row': rownum(i) + 1, 'reason': skipreason})
             report, is_new = SkippedRecord.objects.get_or_create(
                 reason=skipreason
             )
 
-        rel = file.create_relationship(
+        rel = instance.create_relationship(
             report,
             'Contains Row',
             'Row In'
@@ -435,9 +412,9 @@ def import_data(file, user):
         Range.objects.create(
             relationship=rel,
             type='row',
-            start_row=i + table.start_row,
+            start_row=rownum(i),
             start_column=0,
-            end_row=i + table.start_row,
+            end_row=rownum(i),
             end_column=len(row) - 1
         )
 
@@ -452,8 +429,9 @@ def import_data(file, user):
             from johnny.cache import invalidate
             invalidate(*[
                 cls._meta.db_table for cls in
-                (File, Site, Event, Report, Parameter, Result, Relationship)
+                (type(instance), Site, Event, Report,
+                 Parameter, Result, Relationship)
             ])
 
-    import_complete.send(sender=import_data, file=file, status=status)
+    import_complete.send(sender=import_data, instance=instance, status=status)
     return status

@@ -3,9 +3,10 @@ from rest_framework.decorators import link, action
 from wq.db.rest.views import ModelViewSet
 from wq.db.contrib.dbio import tasks
 from celery.result import AsyncResult
+from .proxy_models import FileIoProxy
 
 
-class FileViewSet(ModelViewSet):
+class IoViewSet(ModelViewSet):
     cached = False
 
     @link()
@@ -26,7 +27,9 @@ class FileViewSet(ModelViewSet):
 
     def run_task(self, name, async=False):
         response = self.retrieve(self.request, **self.kwargs)
-        task = getattr(tasks, name).delay(self.object, self.request.user)
+        task = getattr(tasks, name).delay(
+            self.get_instance(), self.request.user
+        )
         if async:
             response.data['task_id'] = task.task_id
         else:
@@ -42,7 +45,7 @@ class FileViewSet(ModelViewSet):
     def columns(self, request, *args, **kwargs):
         response = self.run_task('read_columns')
         result = tasks.update_columns.delay(
-            self.object, request.user, request.POST
+            self.get_instance(), request.user, request.POST
         )
         response.data['result'] = result.get()
         return response
@@ -56,3 +59,11 @@ class FileViewSet(ModelViewSet):
     @action()
     def data(self, request, *args, **kwargs):
         return self.run_task('import_data', async=True)
+
+    def get_instance(self):
+        return self.object
+
+
+class FileViewSet(IoViewSet):
+    def get_instance(self):
+        return FileIoProxy.objects.get(pk=self.object.pk)
