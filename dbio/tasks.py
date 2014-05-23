@@ -279,6 +279,9 @@ def reset(instance, user):
 
 @task
 def import_data(instance, user):
+    if not user.is_authenticated():
+        user = None
+
     matched = read_columns(instance)
     table = instance.load_io()
     if jc_backend:
