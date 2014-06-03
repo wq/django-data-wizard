@@ -75,11 +75,16 @@ def read_columns(instance, user=None):
     else:
         matched = parse_columns(instance)
 
+    has_unknown = False
     for info in matched:
         if info.get('unknown', False):
+            has_unknown = True
             info['types'] = get_choices(instance)
 
-    return matched
+    return {
+        'columns': matched,
+        'has_unknown': has_unknown,
+    }
 
 
 def load_columns(instance):
@@ -147,6 +152,7 @@ def parse_columns(instance):
         else:
             header_row = -1
             start_row = 0
+        name = table.clean_field_name(name)
         parse_column(
             instance,
             name=name,
@@ -231,7 +237,7 @@ def process_date_part(new_val, old_val, part):
 
 @task
 def update_columns(instance, user, post):
-    matched = read_columns(instance)
+    matched = read_columns(instance)['columns']
     for col in matched:
         if not col.get('unknown', False):
             continue
@@ -282,7 +288,7 @@ def import_data(instance, user):
     if not user.is_authenticated():
         user = None
 
-    matched = read_columns(instance)
+    matched = read_columns(instance)['columns']
     table = instance.load_io()
     if jc_backend:
         jc_backend.unpatch()

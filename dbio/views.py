@@ -60,6 +60,16 @@ class IoViewSet(ModelViewSet):
     def data(self, request, *args, **kwargs):
         return self.run_task('import_data', async=True)
 
+    @action()
+    def auto(self, request, *args, **kwargs):
+        response = self.run_task('read_columns')
+        if response.data['result']['has_unknown']:
+            self.action = 'columns'
+            return self.start(request, *args, **kwargs)
+        else:
+            self.action = 'data'
+            return self.data(request, *args, **kwargs)
+
     def get_instance(self):
         return self.object
 
