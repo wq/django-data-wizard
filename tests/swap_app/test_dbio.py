@@ -58,13 +58,14 @@ class DbioTestCase(APITestCase):
         # 2. Start import process
         response = self.client.get(url('start'))
         self.assertIn('result', response.data)
-        self.assertEqual(len(response.data['result']), 4)
+        self.assertIn('columns', response.data['result'])
+        self.assertEqual(len(response.data['result']['columns']), 4)
 
         # 3. Inspect unmatched columns, noting that
         #    - "site id" is an alias for site
         #    - "notes" is a previously unknown parameter
         post = {}
-        for col in response.data['result']:
+        for col in response.data['result']['columns']:
             if not col.get('unknown', False):
                 continue
             self.assertIn('types', col)
@@ -93,10 +94,8 @@ class DbioTestCase(APITestCase):
 
         # 4. Post selected options, verify that all columns are now known
         response = self.client.post(url('columns'), post)
-        unknown = [
-            col for col in response.data['result'] if col.get('unknown', False)
-        ]
-        self.assertFalse(unknown, "%s unknown columns remain" % len(unknown))
+        unknown = response.data['result']['unknown_count']
+        self.assertFalse(unknown, "%s unknown columns remain" % unknown)
 
         # 5. Start data import process, wait for completion
         response = self.client.post(url('data'))
