@@ -63,8 +63,7 @@ class IoViewSet(ModelViewSet):
     @action()
     def auto(self, request, *args, **kwargs):
         response = self.run_task('read_columns')
-        if response.data['result']['has_unknown']:
-            self.action = 'columns'
+        if response.data['result']['unknown_count']:
             return self.start(request, *args, **kwargs)
         else:
             self.action = 'data'

@@ -75,15 +75,15 @@ def read_columns(instance, user=None):
     else:
         matched = parse_columns(instance)
 
-    has_unknown = False
+    unknown_count = 0
     for info in matched:
         if info.get('unknown', False):
-            has_unknown = True
+            unknown_count += 1
             info['types'] = get_choices(instance)
 
     return {
         'columns': matched,
-        'has_unknown': has_unknown,
+        'unknown_count': unknown_count,
     }
 
 
