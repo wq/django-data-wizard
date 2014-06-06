@@ -3,7 +3,6 @@ from xlrd import colname
 from collections import namedtuple
 from wq.db.patterns.models import Identifier, Relationship, RelationshipType
 import swapper
-from wq.db.rest.caching import jc_backend
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
 import datetime
@@ -18,6 +17,14 @@ Report = swapper.load_model('vera', 'Report')
 ReportStatus = swapper.load_model('vera', 'ReportStatus')
 Parameter = swapper.load_model('vera', 'Parameter')
 Result = swapper.load_model('vera', 'Result')
+
+META_CLASSES = {
+    'site': Site,
+    'event': Event,
+    'report': Report,
+    'parameter': Parameter,
+    'result': Result,
+}
 
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
@@ -205,36 +212,6 @@ def parse_column(instance, name, head, body, body_type):
     )
 
 
-def process_date_part(new_val, old_val, part):
-    if part == 'date':
-        date, time = new_val, old_val
-    else:
-        date, time = old_val, new_val
-    if not isinstance(date, datetime.date):
-        raise Exception("Expected date but got %s!" % date)
-    if not isinstance(time, datetime.time):
-        if (isinstance(time, float)
-                and time >= 100 and time <= 2400):
-            time = str(time)
-        elif isinstance(time, basestring) and ":" in time:
-            time = time.replace(":", "")
-
-        if time.isdigit() and len(time) in (3, 4):
-            if len(time) == 3:
-                time = datetime.time(
-                    int(time[0]),
-                    int(time[1:])
-                )
-            else:
-                time = datetime.time(
-                    int(time[0:2]),
-                    int(time[2:])
-                )
-        else:
-            raise Exception("Expected time but got %s!" % time)
-    return datetime.datetime.combine(date, time)
-
-
 @task
 def update_columns(instance, user, post):
     matched = read_columns(instance)['columns']
@@ -285,107 +262,48 @@ def reset(instance, user):
 
 @task
 def import_data(instance, user):
-    if not user.is_authenticated():
-        user = None
+    """
+    Import all parseable data from the dataset instance's IO class.
+    """
 
-    matched = read_columns(instance)['columns']
+    # (Re-)Load data and column information
     table = instance.load_io()
-    if jc_backend:
-        jc_backend.unpatch()
-
+    matched = read_columns(instance)['columns']
     for col in matched:
         col['item'] = instance.relationships.get(pk=col['rel_id']).right
         col['item_id'] = get_object_id(col['item'])
 
+    # Set global defaults for metadata values
+    if not user.is_authenticated():
+        user = None
     instance_globals = {
-        'event_key': {},
+        # Metadata fields
+        'event_meta': {},
         'report_meta': {
             'user': user,
             'status_id': DEFAULT_STATUS,
         },
+        # result_meta, parameter_meta, and site_meta are defined on a
+        # case-by-case basis; see create_record() below
+
+        # Result values indexed by parameter (for "horizontal" tables)
         'param_vals': {}
     }
 
-    # Set a default of None for any event key fields that are not required
+    # Set default to None for any event key fields that are not required
     for field_name in EVENT_KEY:
         info = Event._meta.get_field_by_name(field_name)
         field = info[0]
         if field.null:
-            instance_globals['event_key'][field_name] = None
+            instance_globals['event_meta'][field_name] = None
 
-    def save_value(col, val, obj):
-        item = col['item']
-        if isinstance(item, Parameter):
-            if col['item_id'] in obj['param_vals']:
-                obj['param_vals'][col['item_id']] = "%s %s" % (
-                    obj['param_vals'][col['item_id']],
-                    val
-                )
-            else:
-                obj['param_vals'][col['item_id']] = val
-        elif isinstance(item, MetaColumn):
-            if val is None or val == '':
-                return
-            if item.type == 'event':
-                if '.' in item.name:
-                    name, part = item.name.split('.')
-                else:
-                    name, part = item.name, None
-
-                fld = Event._meta.get_field_by_name(
-                    name
-                )[0].get_internal_type()
-                if (fld in DATE_FIELDS and isinstance(val, basestring)
-                        and part != 'time'):
-                    from dateutil.parser import parse
-                    val = parse(val)
-                    if fld == 'DateField':
-                        val = val.date()
-
-                # Handle date & time being separate columns
-                if obj['event_key'].get(name, None) is not None:
-                    if not part:
-                        raise Exception(
-                            'Multiple columns found for %s' % name
-                        )
-                    if part not in ('date', 'time'):
-                        raise Exception(
-                            'Unexpected multi-column field name: %s.%s!' % (
-                                name, part
-                            )
-                        )
-                    other_val = obj['event_key'][name]
-                    val = process_date_part(val, other_val, part)
-
-                obj['event_key'][name] = val
-            elif item.type == 'report':
-                obj['report_meta'][item.name] = val
-
+    # Set any global defaults defined within data themselves (usually as extra
+    # cells above the headers in a spreadsheet)
     for col in matched:
         if 'value' in col:
             save_value(col, col['value'], instance_globals)
 
-    def add_record(row):
-        record = {
-            key: instance_globals[key].copy()
-            for key in instance_globals
-        }
-        for col in matched:
-            if 'colnum' in col:
-                save_value(col, row[col['colnum']], record)
-
-        missing = set(EVENT_KEY) - set(record['event_key'].keys())
-        if missing:
-            raise Exception(
-                'Incomplete Record - missing %s' % ", ".join(missing)
-            )
-
-        return Report.objects.create_report(
-            EventKey(**record['event_key']),
-            record['param_vals'],
-            **record['report_meta']
-        )
-
+    # Loop through table rows and add each record
     rows = len(table)
     errors = []
     skipped = []
@@ -398,21 +316,27 @@ def import_data(instance, user):
             return i
 
     for i, row in enumerate(table):
+        # Update state (for status() on view)
         current_task.update_state(state='PROGRESS', meta={
             'current': i + 1,
             'total': rows,
             'skipped': skipped
         })
+
+        # Create report, capturing any errors
         skipreason = None
         try:
-            report = add_record(row)
+            report = create_report(row, instance_globals, matched)
         except Exception as e:
+            # Log error in database
             skipreason = repr(e)
             skipped.append({'row': rownum(i) + 1, 'reason': skipreason})
             report, is_new = SkippedRecord.objects.get_or_create(
                 reason=skipreason
             )
 
+        # Record relationship between data source and resulting report (or
+        # skipped record), including specific cell range.
         rel = instance.create_relationship(
             report,
             'Contains Row',
@@ -427,20 +351,203 @@ def import_data(instance, user):
             end_column=len(row) - 1
         )
 
+    # Send completion signal (in case any server handlers are registered)
     status = {
         'current': i + 1,
         'total': rows,
         'skipped': skipped
     }
-    if jc_backend:
-        jc_backend.patch()
-        if rows and rows > len(skipped):
-            from johnny.cache import invalidate
-            invalidate(*[
-                cls._meta.db_table for cls in
-                (type(instance), Site, Event, Report,
-                 Parameter, Result, Relationship)
-            ])
-
     import_complete.send(sender=import_data, instance=instance, status=status)
+
+    # Return status (thereby updating task state for status() on view)
     return status
+
+
+def create_report(row, instance_globals, matched):
+    """
+    Create actual report instance from parsed values.
+    """
+
+    # Copy global values to record hash
+    record = {
+        key: instance_globals[key].copy()
+        for key in instance_globals
+    }
+
+    # In some spreadsheets (i.e. "horizontal" tables), multiple columns
+    # indicate parameter names and each row only contains result values.  In
+    # others (i.e. "vertical" tables), each row lists both the parameter name
+    # and the value.  See http://wq.io/docs/dbio#horizontal-vs-vertical
+
+    # Parse metadata & "horizontal" table parameter values
+    for col in matched:
+        if 'colnum' in col:
+            save_value(col, row[col['colnum']], record)
+
+    # Handle "vertical" table values (parsed as metadata by save_value())
+    if 'result_meta' in record and 'parameter_meta' in record:
+        # FIXME: handle other parameter & result metadata
+        parameter_id = record['parameter_meta']['id']
+        result_value = record['result_meta']['value']
+        record['param_vals'][parameter_id] = result_value
+
+    if 'site_meta' in record:
+        # FIXME: Handle site metadata and set event_meta site if applicable.
+        pass
+
+    # Ensure complete Event natural key (http://wq.io/docs/erav#natural-key)
+    missing = set(EVENT_KEY) - set(record['event_meta'].keys())
+    if missing:
+        raise Exception(
+            'Incomplete Record - missing %s' % ", ".join(missing)
+        )
+
+    # Create report instance
+    report = Report.objects.create_report(
+        EventKey(**record['event_meta']),
+        record['param_vals'],
+        **record['report_meta']
+    )
+    return report
+
+
+def save_value(col, val, obj):
+    """
+    For each cell in each row, use parsed col(umn) information to determine how
+    to apply the cell val(ue) to the obj(ect hash).
+    """
+    item = col['item']
+    if isinstance(item, Parameter):
+        # Parameter value in a "horizontal" table
+        save_parameter_value(col, val, obj)
+    elif isinstance(item, MetaColumn):
+        # Metadata value in either a "horizontal" or "vertical" table
+        save_metadata_value(col, val, obj)
+
+
+def save_parameter_value(col, val, obj):
+    """
+    This column was identified as a parameter; update param_vals with the
+    cell value from this row.
+    """
+    parameter_id = col['item_id']
+    vals = obj['param_vals']
+
+    # Hack: if there are two (or more) columns pointing to the same
+    # parameter, join both values together with a space.
+    if parameter_id in vals:
+        val = "%s %s" % (vals[parameter_id], val)
+
+    vals[parameter_id] = val
+
+
+def save_metadata_value(col, val, obj):
+    """
+    This column was identified as a metadata field; update the metadata
+    for the related object with the cell value from this row.
+    """
+
+    # Skip empty values
+    if val is None or val == '':
+        return
+
+    # Assign metadata property based on meta_field (MetaColumn.name).
+    item = col['item']
+    meta_key = '%s_meta' % item.type
+    meta_cls = META_CLASSES[item.type]
+    meta_field = item.name
+    if item.type == 'result':
+        meta_datatype = None
+    else:
+        meta_datatype = meta_cls._meta.get_field_by_name(
+            meta_field,
+        )[0].get_internal_type()
+
+    # Event and report metadata are defined whether this is a "horizontal" or
+    # "vertical" table.  On the other hand, parameter/result meta are unique to
+    # "vertical" tables and are thus not included by default.  In either case,
+    # site metadata is also not expected.
+    if meta_key not in obj:
+        # This is one of parameter, result, or site meta.
+        obj[meta_key] = {}
+
+    # A meta_field value of '[field].[part]' indicates a value is split across
+    # multiple columns.  For example, a spreadsheet could contain two columns
+    # (date and time) that would be merged into a single "observed" field on a
+    # custom Event class.  There would then be two MetaColumns values, with
+    # names of "observed.date" and "observed.time" respectively.
+    if '.' in meta_field:
+        meta_field, part = meta_field.split('.')
+    else:
+        part = None
+
+    # Automatically parse date values as such
+    if (meta_datatype in DATE_FIELDS and isinstance(val, basestring)
+            and part != 'time'):
+        from dateutil.parser import parse
+        val = parse(val)
+        if meta_datatype == 'DateField':
+            val = val.date()
+
+    # If field is already set by an earlier column, this value might be the
+    # second half of a date/time pair.
+    if obj[meta_key].get(meta_field, None) is not None:
+        if not part:
+            raise Exception(
+                'Multiple columns found for %s' % meta_field
+            )
+        if part not in ('date', 'time'):
+            raise Exception(
+                'Unexpected multi-column field name: %s.%s!' % (
+                    meta_field, part
+                )
+            )
+        other_val = obj[meta_key][meta_field]
+        val = process_date_part(val, other_val, part)
+
+    # Save value to parsed record
+    obj[meta_key][meta_field] = val
+
+
+def process_date_part(new_val, old_val, part):
+    """
+    Combine separate date & time columns into a single value.
+    """
+
+    if part == 'date':
+        date, time = new_val, old_val
+    else:
+        date, time = old_val, new_val
+
+    # Date should already be a valid date (see parse in save_metadata_value)
+    if not isinstance(date, datetime.date):
+        raise Exception("Expected date but got %s!" % date)
+
+    # Try some extra hacks to convert time values
+    if not isinstance(time, datetime.time):
+        if (isinstance(time, float)
+                and time >= 100 and time <= 2400):
+            # "Numeric" time (hour * 100 + minutes)
+            time = str(time)
+        elif isinstance(time, basestring) and ":" in time:
+            # Take out semicolon for isdigit() code below
+            time = time.replace(":", "")
+
+        # FIXME: what about seconds?
+        if time.isdigit() and len(time) in (3, 4):
+            if len(time) == 3:
+                # 300 -> time(3, 0)
+                time = datetime.time(
+                    int(time[0]),
+                    int(time[1:])
+                )
+            else:
+                # 1200 -> time(12, 0)
+                time = datetime.time(
+                    int(time[0:2]),
+                    int(time[2:])
+                )
+        else:
+            # Meh, it was worth a shot
+            raise Exception("Expected time but got %s!" % time)
+    return datetime.datetime.combine(date, time)
