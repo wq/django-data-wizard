@@ -7,8 +7,6 @@ from .proxy_models import FileIoProxy
 
 
 class IoViewSet(ModelViewSet):
-    cached = False
-
     @link()
     def status(self, request, *args, **kwargs):
         taskid = request.GET.get('task', None)
