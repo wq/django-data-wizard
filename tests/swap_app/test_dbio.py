@@ -106,11 +106,14 @@ class DbioTestCase(APITestCase):
             sleep(1)
             response = self.client.get(url('status'), {'task': task})
             res = response.data
+            if res.get('status', None) == "PENDING":
+                print "Waiting..."
+                continue
             for key in ('status', 'total', 'current', 'skipped'):
                 self.assertIn(key, res)
             if res['status'] == "SUCCESS" or res['total'] == res['current']:
                 done = True
-                self.assertFalse(response.data['skipped'])
+                self.assertFalse(res['skipped'])
 
         # 6. Import complete -verify data exists in database
         self.assertEqual(EventResult.objects.count(), 6)
