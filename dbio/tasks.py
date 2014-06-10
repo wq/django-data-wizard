@@ -1,6 +1,6 @@
 from celery import task, current_task
 from xlrd import colname
-from collections import namedtuple
+from collections import namedtuple, Counter
 from wq.db.patterns.models import Identifier, Relationship, RelationshipType
 import swapper
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
@@ -77,21 +77,41 @@ def get_choices(instance):
 
 @task
 def read_columns(instance, user=None):
-    if instance.already_parsed():
-        matched = load_columns(instance)
-    else:
-        matched = parse_columns(instance)
-
+    matched = get_columns(instance)
     unknown_count = 0
     for info in matched:
-        if info.get('unknown', False):
+        if info['type'] == 'unknown':
             unknown_count += 1
+            # Add some useful context items for client
+            info['unknown'] = True
             info['types'] = get_choices(instance)
 
     return {
         'columns': matched,
         'unknown_count': unknown_count,
     }
+
+
+# FIXME: These functions might make more sense as methods on IoModel
+def get_columns(instance):
+    if instance.already_parsed():
+        return load_columns(instance)
+    else:
+        return parse_columns(instance)
+
+
+def get_id_columns(instance):
+    matched = get_columns(instance)
+    id_columns = []
+    for col in matched:
+        if 'colnum' not in col:
+            continue
+        if col['type'] in ('parameter_value', 'unknown'):
+            continue
+        if col['field_name'] != 'id':
+            continue
+        id_columns.append(col)
+    return id_columns
 
 
 def load_columns(instance):
@@ -106,7 +126,14 @@ def load_columns(instance):
             'rel_id': rel.pk,
         }
         if isinstance(item, UnknownItem):
-            info['unknown'] = True
+            info['type'] = "unknown"
+            info['value'] = item.name
+        elif isinstance(item, Parameter):
+            info['type'] = "parameter_value"
+            info['parameter_id'] = get_object_id(item)
+        elif isinstance(item, MetaColumn):
+            info['type'] = item.type
+            info['field_name'] = item.name
 
         if rel.range_set.filter(type='list').exists():
             col = rel.range_set.get(type='list').start_column
@@ -214,9 +241,9 @@ def parse_column(instance, name, head, body, body_type):
 
 @task
 def update_columns(instance, user, post):
-    matched = read_columns(instance)['columns']
+    matched = get_columns(instance)
     for col in matched:
-        if not col.get('unknown', False):
+        if col['type'] != 'unknown':
             continue
         val = post.get('rel_%s' % col['rel_id'], None)
         if not val:
@@ -230,15 +257,14 @@ def update_columns(instance, user, post):
         else:
             continue
 
-        item = instance.relationships.get(pk=col['rel_id']).right
         if vid == 'new':
-            obj = cls.objects.find(item.name)
+            obj = cls.objects.find(col['value'])
             obj.contenttype = CONTENT_TYPES[Parameter]
             obj.save()
         else:
             obj = cls.objects.get_by_identifier(vid)
             obj.identifiers.create(
-                name=item.name
+                name=col['value']
             )
 
         reltype, is_new = RelationshipType.objects.get_or_create(
@@ -256,6 +282,80 @@ def update_columns(instance, user, post):
 
 
 @task
+def read_row_identifiers(instance, user):
+    id_columns = get_id_columns(instance)
+    ids = {}
+    for col in id_columns:
+        ids[col['type']] = Counter()
+
+    for row in instance.load_io():
+        for col in id_columns:
+            counter = ids[col['type']]
+            val = row[col['colnum']]
+            counter[val] += 1
+
+    idgroups = []
+    unknown_ids = 0
+    for idtype in ids:
+        cls = META_CLASSES[idtype]
+        idinfo = {
+            'type_id': idtype,
+            'type_label': idtype.capitalize(),
+            'ids': []
+        }
+        for id in ids[idtype]:
+            try:
+                obj = cls.objects.get_by_natural_key(id)
+            except cls.DoesNotExist:
+                obj = None
+
+            info = {
+                'value': id,
+                'count': ids[idtype][id],
+            }
+            if obj is not None:
+                info['match'] = unicode(obj)
+            else:
+                info['ident_id'] = unknown_ids
+                unknown_ids += 1
+                info['unknown'] = True
+                info['choices'] = [{
+                    'id': get_object_id(obj),
+                    'label': unicode(obj),
+                } for obj in cls.objects.all()]
+                info['choices'].insert(0, {
+                    'id': 'new',
+                    'label': "New %s" % idinfo['type_label'],
+                })
+
+            idinfo['ids'].append(info)
+        idinfo['ids'].sort(key=lambda info: info['value'])
+        idgroups.append(idinfo)
+    return {
+        'unknown_count': unknown_ids,
+        'types': idgroups,
+    }
+
+
+@task
+def update_row_identifiers(instance, user, post):
+    id_types = set(col['type'] for col in get_id_columns(instance))
+    unknown_count = int(post.get('unknown_count', 0))
+    for i in range(0, unknown_count):
+        ident_value = post.get('ident_%s_value' % i, None)
+        ident_type = post.get('ident_%s_type' % i, None)
+        ident_id = post.get('ident_%s_id' % i, None)
+        if ident_value and ident_type and ident_id:
+            cls = META_CLASSES[ident_type]
+            if ident_id == 'new':
+                cls.objects.find(ident_value)
+            else:
+                obj = cls.objects.get_by_identifier(ident_id)
+                obj.identifiers.create(name=ident_value)
+    return read_row_identifiers(instance, user)
+
+
+@task
 def reset(instance, user):
     instance.relationships.all().delete()
 
@@ -268,10 +368,7 @@ def import_data(instance, user):
 
     # (Re-)Load data and column information
     table = instance.load_io()
-    matched = read_columns(instance)['columns']
-    for col in matched:
-        col['item'] = instance.relationships.get(pk=col['rel_id']).right
-        col['item_id'] = get_object_id(col['item'])
+    matched = get_columns(instance)
 
     # Set global defaults for metadata values
     if not user.is_authenticated():
@@ -392,8 +489,9 @@ def create_report(row, instance_globals, matched):
         record['param_vals'][parameter_id] = result_value
 
     if 'site_meta' in record:
-        # FIXME: Handle site metadata and set event_meta site if applicable.
-        pass
+        # FIXME: Handle other site metadata
+        site_id = record['site_meta']['id']
+        record['event_meta']['site'] = site_id
 
     # Ensure complete Event natural key (http://wq.io/docs/erav#natural-key)
     missing = set(EVENT_KEY) - set(record['event_meta'].keys())
@@ -416,11 +514,10 @@ def save_value(col, val, obj):
     For each cell in each row, use parsed col(umn) information to determine how
     to apply the cell val(ue) to the obj(ect hash).
     """
-    item = col['item']
-    if isinstance(item, Parameter):
+    if col['type'] == "parameter_value":
         # Parameter value in a "horizontal" table
         save_parameter_value(col, val, obj)
-    elif isinstance(item, MetaColumn):
+    elif col['type'] != "unknown":
         # Metadata value in either a "horizontal" or "vertical" table
         save_metadata_value(col, val, obj)
 
@@ -430,7 +527,7 @@ def save_parameter_value(col, val, obj):
     This column was identified as a parameter; update param_vals with the
     cell value from this row.
     """
-    parameter_id = col['item_id']
+    parameter_id = col['parameter_id']
     vals = obj['param_vals']
 
     # Hack: if there are two (or more) columns pointing to the same
@@ -452,11 +549,10 @@ def save_metadata_value(col, val, obj):
         return
 
     # Assign metadata property based on meta_field (MetaColumn.name).
-    item = col['item']
-    meta_key = '%s_meta' % item.type
-    meta_cls = META_CLASSES[item.type]
-    meta_field = item.name
-    if item.type == 'result':
+    meta_key = '%s_meta' % col['type']
+    meta_cls = META_CLASSES[col['type']]
+    meta_field = col['field_name']
+    if col['type'] == 'result':
         meta_datatype = None
     else:
         meta_datatype = meta_cls._meta.get_field_by_name(

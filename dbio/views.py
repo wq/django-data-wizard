@@ -48,6 +48,21 @@ class IoViewSet(ModelViewSet):
         response.data['result'] = result.get()
         return response
 
+    @link()
+    def ids(self, request, *args, **kwargs):
+        response = self.run_task('read_row_identifiers')
+        return response
+
+    @action()
+    def updateids(self, request, *args, **kwargs):
+        response = self.run_task('read_row_identifiers')
+        self.action = 'ids'
+        result = tasks.update_row_identifiers.delay(
+            self.get_instance(), request.user, request.POST
+        )
+        response.data['result'] = result.get()
+        return response
+
     @action()
     def reset(self, request, *args, **kwargs):
         self.task = 'retrieve'
@@ -60,12 +75,18 @@ class IoViewSet(ModelViewSet):
 
     @action()
     def auto(self, request, *args, **kwargs):
-        response = self.run_task('read_columns')
+        response = self.start(request, *args, **kwargs)
         if response.data['result']['unknown_count']:
-            return self.start(request, *args, **kwargs)
-        else:
-            self.action = 'data'
-            return self.data(request, *args, **kwargs)
+            self.action = 'columns'
+            return response
+
+        response = self.ids(request, *args, **kwargs)
+        if response.data['result']['unknown_count']:
+            self.action = 'ids'
+            return response
+
+        self.action = 'data'
+        return self.data(request, *args, **kwargs)
 
     def get_instance(self):
         return self.object
