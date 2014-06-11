@@ -1,6 +1,6 @@
 from celery import task, current_task
 from xlrd import colname
-from collections import namedtuple, Counter
+from collections import namedtuple, Counter, OrderedDict
 from wq.db.patterns.models import Identifier, Relationship, RelationshipType
 import swapper
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
@@ -100,18 +100,19 @@ def get_columns(instance):
         return parse_columns(instance)
 
 
-def get_id_columns(instance):
+def get_meta_columns(instance):
     matched = get_columns(instance)
-    id_columns = []
+    cols = OrderedDict()
     for col in matched:
         if 'colnum' not in col:
             continue
         if col['type'] in ('parameter_value', 'unknown'):
             continue
-        if col['field_name'] != 'id':
+        if col['type'] in ('event', 'report', 'result'):
             continue
-        id_columns.append(col)
-    return id_columns
+        cols.setdefault(col['type'], [])
+        cols[col['type']].append(col)
+    return cols
 
 
 def load_columns(instance):
@@ -283,38 +284,47 @@ def update_columns(instance, user, post):
 
 @task
 def read_row_identifiers(instance, user):
-    id_columns = get_id_columns(instance)
+    coltypes = get_meta_columns(instance)
     ids = {}
-    for col in id_columns:
-        ids[col['type']] = Counter()
+    for mtype in coltypes:
+        ids[mtype] = Counter()
 
     for row in instance.load_io():
-        for col in id_columns:
-            counter = ids[col['type']]
-            val = row[col['colnum']]
-            counter[val] += 1
+        for mtype, cols in coltypes.items():
+            counter = ids[mtype]
+            meta = OrderedDict()
+            for col in cols:
+                meta[col['field_name']] = row[col['colnum']]
+            key = tuple(meta.items())
+            counter[key] += 1
 
     idgroups = []
     unknown_ids = 0
-    for idtype in ids:
-        cls = META_CLASSES[idtype]
+    for mtype in ids:
+        cls = META_CLASSES[mtype]
         idinfo = {
-            'type_id': idtype,
-            'type_label': idtype.capitalize(),
+            'type_id': mtype,
+            'type_label': mtype.capitalize(),
             'ids': []
         }
-        for id in ids[idtype]:
+        for key, count in ids[mtype].items():
+            meta = OrderedDict(key)
             try:
-                obj = cls.objects.get_by_natural_key(id)
+                obj = cls.objects.get_by_natural_key(meta['id'])
             except cls.DoesNotExist:
                 obj = None
 
             info = {
-                'value': id,
-                'count': ids[idtype][id],
+                'value': meta['id'],
+                'count': count,
+                'meta': [{
+                    'name': k,
+                    'value': v
+                } for k, v in meta.items() if k != 'id']
             }
             if obj is not None:
                 info['match'] = unicode(obj)
+                # FIXME: Confirm that metadata hasn't changed
             else:
                 info['ident_id'] = unknown_ids
                 unknown_ids += 1
@@ -339,19 +349,49 @@ def read_row_identifiers(instance, user):
 
 @task
 def update_row_identifiers(instance, user, post):
-    id_types = set(col['type'] for col in get_id_columns(instance))
+    coltypes = get_meta_columns(instance)
     unknown_count = int(post.get('unknown_count', 0))
     for i in range(0, unknown_count):
         ident_value = post.get('ident_%s_value' % i, None)
         ident_type = post.get('ident_%s_type' % i, None)
         ident_id = post.get('ident_%s_id' % i, None)
         if ident_value and ident_type and ident_id:
+            if ident_type not in coltypes:
+                raise Exception("Unexpected type %s!" % ident_type)
             cls = META_CLASSES[ident_type]
             if ident_id == 'new':
-                cls.objects.find(ident_value)
+                # Create new object (with primary identifier)
+                obj = cls.objects.find(ident_value)
+
+                # Set additional metadata fields on new object
+                for col in coltypes[ident_type]:
+                    if col['field_name'] == "id":
+                        continue
+
+                    formname = 'ident_%s_%s' % (i, col['field_name'])
+                    val = post.get(formname, None)
+                    if not val:
+                        continue
+
+                    setattr(obj, col['field_name'], val)
+
+                    # If present, also apply "name" attribute to identifier
+                    if col['field_name'] == "name":
+                        ident = obj.primary_identifier
+                        ident.name = val
+                        ident.slug = ident_value
+                        ident.save()
+                obj.save()
             else:
+                # Add new identifier to existing object for future reference
                 obj = cls.objects.get_by_identifier(ident_id)
-                obj.identifiers.create(name=ident_value)
+                name = post.get('ident_%s_name' % i, None)
+                if not name:
+                    name = ident_value
+                obj.identifiers.create(name=name, slug=ident_value)
+
+                # FIXME: Update existing metadata?
+
     return read_row_identifiers(instance, user)
 
 
