@@ -104,7 +104,7 @@ def get_meta_columns(instance):
     matched = get_columns(instance)
     cols = OrderedDict()
     for col in matched:
-        if 'colnum' not in col:
+        if 'colnum' not in col or not col['type']:
             continue
         if col['type'] in ('parameter_value', 'unknown'):
             continue
@@ -585,7 +585,7 @@ def save_metadata_value(col, val, obj):
     """
 
     # Skip empty values
-    if val is None or val == '':
+    if val is None or val == '' or not col['type']:
         return
 
     # Assign metadata property based on meta_field (MetaColumn.name).

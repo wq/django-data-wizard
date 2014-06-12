@@ -11,7 +11,7 @@ class MetaColumn(models.IdentifiedRelatedModel):
     )
 
     name = models.CharField(max_length=255)
-    type = models.CharField(max_length=10, choices=DATA_TYPES)
+    type = models.CharField(max_length=10, choices=DATA_TYPES, blank=True)
 
     def __unicode__(self):
         name = super(MetaColumn, self).__unicode__()
