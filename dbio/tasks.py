@@ -7,9 +7,10 @@ from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
 import datetime
 from .signals import import_complete
-from .proxy_models import FileIoProxy
 
 from wq.db.rest.models import get_ct, get_object_id
+
+import wq.db.contrib.vera.models
 
 Site = swapper.load_model('vera', 'Site')
 Event = swapper.load_model('vera', 'Event')
@@ -592,12 +593,6 @@ def save_metadata_value(col, val, obj):
     meta_key = '%s_meta' % col['type']
     meta_cls = META_CLASSES[col['type']]
     meta_field = col['field_name']
-    if col['type'] == 'result':
-        meta_datatype = None
-    else:
-        meta_datatype = meta_cls._meta.get_field_by_name(
-            meta_field,
-        )[0].get_internal_type()
 
     # Event and report metadata are defined whether this is a "horizontal" or
     # "vertical" table.  On the other hand, parameter/result meta are unique to
@@ -616,6 +611,14 @@ def save_metadata_value(col, val, obj):
         meta_field, part = meta_field.split('.')
     else:
         part = None
+
+    # Determine Django field type (for metadata models only)
+    if col['type'] == 'result':
+        meta_datatype = None
+    else:
+        meta_datatype = meta_cls._meta.get_field_by_name(
+            meta_field,
+        )[0].get_internal_type()
 
     # Automatically parse date values as such
     if (meta_datatype in DATE_FIELDS and isinstance(val, basestring)

@@ -3,7 +3,6 @@ from rest_framework.decorators import link, action
 from wq.db.rest.views import ModelViewSet
 from wq.db.contrib.dbio import tasks
 from celery.result import AsyncResult
-from .proxy_models import FileIoProxy
 
 
 class IoViewSet(ModelViewSet):
@@ -90,8 +89,3 @@ class IoViewSet(ModelViewSet):
 
     def get_instance(self):
         return self.object
-
-
-class FileViewSet(IoViewSet):
-    def get_instance(self):
-        return FileIoProxy.objects.get(pk=self.object.pk)
