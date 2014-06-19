@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import link, action
 from wq.db.rest.views import ModelViewSet
 from wq.db.contrib.dbio import tasks
+from wq.io.exceptions import IoException
 from celery.result import AsyncResult
 
 
@@ -30,7 +31,11 @@ class IoViewSet(ModelViewSet):
         if async:
             response.data['task_id'] = task.task_id
         else:
-            response.data['result'] = task.get()
+            try:
+                response.data['result'] = task.get()
+            except IoException as e:
+                response.data['error'] = repr(e)
+
         return response
 
     @link()
@@ -74,18 +79,7 @@ class IoViewSet(ModelViewSet):
 
     @action()
     def auto(self, request, *args, **kwargs):
-        response = self.start(request, *args, **kwargs)
-        if response.data['result']['unknown_count']:
-            self.action = 'columns'
-            return response
-
-        response = self.ids(request, *args, **kwargs)
-        if response.data['result']['unknown_count']:
-            self.action = 'ids'
-            return response
-
-        self.action = 'data'
-        return self.data(request, *args, **kwargs)
+        return self.run_task('auto_import', async=True)
 
     def get_instance(self):
         return self.object

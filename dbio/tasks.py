@@ -53,6 +53,55 @@ PRIORITY = {
 }
 
 
+@task
+def auto_import(instance, user):
+    """
+    Walk through all the steps necessary to interpret and import data from an
+    IO.  Meant to be called asynchronously.  Automatically suspends import if
+    any additional input is needed from the user.
+    """
+    # Preload IO to catch any load errors early
+    status = {
+        'message': "Loading Data...",
+        'current': 1,
+        'total': 4,
+    }
+    current_task.update_state(state='PROGRESS', meta=status)
+    table = instance.load_io()
+
+    # Parse columns
+    status.update(
+        message="Parsing Columns...",
+        current=2,
+    )
+    current_task.update_state(state='PROGRESS', meta=status)
+    result = read_columns(instance, user)
+    if result['unknown_count']:
+        result['action'] = "columns"
+        result['message'] = "Input Needed"
+        return result
+
+    # Parse row identifiers
+    status.update(
+        message="Parsing Identifiers...",
+        current=3,
+    )
+    current_task.update_state(state='PROGRESS', meta=status)
+    result = read_row_identifiers(instance, user)
+    if result['unknown_count']:
+        result['action'] = "ids"
+        result['message'] = "Input Needed"
+        return result
+
+    status.update(
+        message="Importing Data...",
+        current=4,
+    )
+
+    # The rest is the same as import_data
+    return do_import(instance, user)
+
+
 def get_choices(instance):
     def make_list(cls, name):
         rows = cls.objects.all()
@@ -406,6 +455,10 @@ def import_data(instance, user):
     """
     Import all parseable data from the dataset instance's IO class.
     """
+    return do_import(instance, user)
+
+
+def do_import(instance, user):
 
     # (Re-)Load data and column information
     table = instance.load_io()
