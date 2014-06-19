@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import link, action
 from wq.db.rest.views import ModelViewSet
 from wq.db.contrib.dbio import tasks
-from wq.io.exceptions import IoException
+from wq.io.exceptions import *
 from celery.result import AsyncResult
 
 
@@ -20,7 +20,7 @@ class IoViewSet(ModelViewSet):
         if result.state in ('PROGRESS', 'SUCCESS'):
             response.update(result.result)
         elif result.state == 'FAILURE':
-            response['error'] = repr(result.result)
+            response['error'] = str(result.result)
         return Response(response)
 
     def run_task(self, name, async=False):
@@ -34,7 +34,7 @@ class IoViewSet(ModelViewSet):
             try:
                 response.data['result'] = task.get()
             except IoException as e:
-                response.data['error'] = repr(e)
+                response.data['error'] = str(e)
 
         return response
 
