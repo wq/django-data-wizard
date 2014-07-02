@@ -6,7 +6,7 @@ import swapper
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
 import datetime
-from .signals import import_complete
+from .signals import import_complete, new_metadata
 
 from wq.db.rest.models import get_ct, get_object_id
 
@@ -312,9 +312,10 @@ def update_columns(instance, user, post):
             obj = cls.objects.find(col['value'])
             obj.contenttype = CONTENT_TYPES[Parameter]
             obj.save()
+            ident = obj.primary_identifier
         else:
             obj = cls.objects.get_by_identifier(vid)
-            obj.identifiers.create(
+            ident = obj.identifiers.create(
                 name=col['value']
             )
 
@@ -328,6 +329,13 @@ def update_columns(instance, user, post):
         rel.type = reltype
         rel.right = obj
         rel.save()
+
+        new_metadata.send(
+            sender=update_columns,
+            instance=instance,
+            object=obj,
+            identifier=ident,
+        )
 
     return read_columns(instance)
 
@@ -379,10 +387,11 @@ def read_row_identifiers(instance, user):
                 info['ident_id'] = unknown_ids
                 unknown_ids += 1
                 info['unknown'] = True
+                choices = instance.get_id_choices(cls)
                 info['choices'] = [{
                     'id': get_object_id(obj),
                     'label': unicode(obj),
-                } for obj in cls.objects.all()]
+                } for obj in choices]
                 info['choices'].insert(0, {
                     'id': 'new',
                     'label': "New %s" % idinfo['type_label'],
@@ -412,6 +421,7 @@ def update_row_identifiers(instance, user, post):
             if ident_id == 'new':
                 # Create new object (with primary identifier)
                 obj = cls.objects.find(ident_value)
+                ident = obj.primary_identifier
 
                 # Set additional metadata fields on new object
                 for col in coltypes[ident_type]:
@@ -427,7 +437,6 @@ def update_row_identifiers(instance, user, post):
 
                     # If present, also apply "name" attribute to identifier
                     if col['field_name'] == "name":
-                        ident = obj.primary_identifier
                         ident.name = val
                         ident.slug = ident_value
                         ident.save()
@@ -438,9 +447,16 @@ def update_row_identifiers(instance, user, post):
                 name = post.get('ident_%s_name' % i, None)
                 if not name:
                     name = ident_value
-                obj.identifiers.create(name=name, slug=ident_value)
+                ident = obj.identifiers.create(name=name, slug=ident_value)
 
                 # FIXME: Update existing metadata?
+
+            new_metadata.send(
+                sender=update_row_identifiers,
+                instance=instance,
+                object=obj,
+                identifier=ident,
+            )
 
     return read_row_identifiers(instance, user)
 
