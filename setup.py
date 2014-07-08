@@ -30,7 +30,7 @@ def parse_markdown_readme():
 
 setup(
     name='vera',
-    version='0.6.0',
+    version='0.6.1',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
     url='http://wq.io/vera',
@@ -38,7 +38,7 @@ setup(
     description='Implementation of the ERAV data integration model',
     long_description=parse_markdown_readme(),
     install_requires=[
-        'wq==0.6.0',
+        'wq==0.6.1',
         'celery',
         'redis',
         'Pillow',
