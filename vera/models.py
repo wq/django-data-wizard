@@ -1,9 +1,9 @@
 from wq.db.patterns import models
-import datetime
 import swapper
 from django.db.models.signals import post_save
 from django.core.exceptions import ImproperlyConfigured
 from django.dispatch import receiver
+from django.utils.timezone import now
 from django.conf import settings
 from collections import OrderedDict
 from .compat import clone_field
@@ -122,7 +122,7 @@ class BaseReport(models.RelatedModel):
 
     def save(self, *args, **kwargs):
         if not self.entered:
-            self.entered = datetime.datetime.now()
+            self.entered = now()
         super(BaseReport, self).save(*args, **kwargs)
 
     def __unicode__(self):
