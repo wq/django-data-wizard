@@ -387,7 +387,7 @@ def read_row_identifiers(instance, user):
                 info['ident_id'] = unknown_ids
                 unknown_ids += 1
                 info['unknown'] = True
-                choices = instance.get_id_choices(cls)
+                choices = instance.get_id_choices(cls, meta)
                 info['choices'] = [{
                     'id': get_object_id(obj),
                     'label': unicode(obj),

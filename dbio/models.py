@@ -85,7 +85,7 @@ class IoModel(models.RelatedModel):
             range__type='list'
         ).exists()
 
-    def get_id_choices(self, model):
+    def get_id_choices(self, model, meta):
         return model.objects.all()
 
     class Meta:
