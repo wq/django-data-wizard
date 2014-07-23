@@ -125,7 +125,7 @@ class BaseReport(models.RelatedModel):
             self.entered = now()
         super(BaseReport, self).save(*args, **kwargs)
 
-    def __unicode__(self):
+    def __str__(self):
         if self.pk is not None:
             return "%s according to %s" % (self.event, self.user)
         else:
@@ -141,7 +141,7 @@ class BaseReportStatus(models.NaturalKeyModel):
     name = models.CharField(max_length=255)
     is_valid = models.BooleanField(default=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -154,9 +154,9 @@ class BaseParameter(models.IdentifiedRelatedModel):
     is_numeric = models.BooleanField(default=False)
     units = models.CharField(max_length=50, null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         if self.units:
-            return u"%s (%s)" % (self.name, self.units)
+            return "%s (%s)" % (self.name, self.units)
         else:
             return self.name
 
@@ -198,7 +198,7 @@ class BaseResult(models.Model):
     def is_empty(self, value):
         if value is None:
             return True
-        if isinstance(value, basestring) and len(value.strip()) == 0:
+        if isinstance(value, str) and len(value.strip()) == 0:
             return True
         return False
 
@@ -219,7 +219,7 @@ class BaseResult(models.Model):
         else:
             self.value_text = val
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s -> %s: %s" % (self.report, self.type, self.value)
 
     class Meta:
@@ -300,7 +300,7 @@ class BaseEventResult(models.Model):
             return self.result_value_numeric
         return self.result_value_text
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s -> %s: %s" % (
             self.event,
             self.result_type,
@@ -403,7 +403,7 @@ class Site(BaseSite):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s, %s" % (round(self.latitude, 3), round(self.longitude, 3))
 
     class Meta(BaseSite.Meta):
@@ -415,7 +415,7 @@ class Site(BaseSite):
 class Event(BaseEvent):
     date = models.DateField()
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s on %s" % (self.site, self.date)
 
     class Meta(BaseEvent.Meta):

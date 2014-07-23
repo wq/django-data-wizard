@@ -108,7 +108,7 @@ def get_choices(instance):
         ct = CONTENT_TYPES[cls]
         result = [{
             'url': '%s/%s' % (ct.urlbase, get_object_id(row)),
-            'label': unicode(row)
+            'label': str(row)
         } for row in rows]
         result.insert(0, {
             'url': '%s/new' % ct.urlbase,
@@ -173,7 +173,7 @@ def load_columns(instance):
     for rel in rels:
         item = rel.right
         info = {
-            'match': unicode(item),
+            'match': str(item),
             'rel_id': rel.pk,
         }
         if isinstance(item, UnknownItem):
@@ -188,7 +188,7 @@ def load_columns(instance):
 
         if rel.range_set.filter(type='list').exists():
             col = rel.range_set.get(type='list').start_column
-            info['name'] = table.field_map.keys()[col].replace('\n', ' - ')
+            info['name'] = list(table.field_map.keys())[col].replace('\n', ' - ')
             info['column'] = colname(col)
             info['colnum'] = col
 
@@ -208,10 +208,10 @@ def get_range_value(table, rng):
     if rng.start_row == rng.end_row and rng.start_column == rng.end_column:
         return table.extra_data.get(rng.start_row, {}).get(rng.start_column)
 
-    val = u""
+    val = ""
     for r in range(rng.start_row, rng.end_row + 1):
         for c in range(rng.start_column, rng.end_column + 1):
-            val += unicode(table.extra_data.get(r, {}).get(c, ""))
+            val += str(table.extra_data.get(r, {}).get(c, ""))
     return val
 
 
@@ -381,7 +381,7 @@ def read_row_identifiers(instance, user):
                 } for k, v in meta.items() if k != 'id']
             }
             if obj is not None:
-                info['match'] = unicode(obj)
+                info['match'] = str(obj)
                 # FIXME: Confirm that metadata hasn't changed
             else:
                 info['ident_id'] = unknown_ids
@@ -390,7 +390,7 @@ def read_row_identifiers(instance, user):
                 choices = instance.get_id_choices(cls, meta)
                 info['choices'] = [{
                     'id': get_object_id(obj),
-                    'label': unicode(obj),
+                    'label': str(obj),
                 } for obj in choices]
                 info['choices'].insert(0, {
                     'id': 'new',
@@ -690,7 +690,7 @@ def save_metadata_value(col, val, obj):
         )[0].get_internal_type()
 
     # Automatically parse date values as such
-    if (meta_datatype in DATE_FIELDS and isinstance(val, basestring)
+    if (meta_datatype in DATE_FIELDS and isinstance(val, str)
             and part != 'time'):
         from dateutil.parser import parse
         val = parse(val)
@@ -737,7 +737,7 @@ def process_date_part(new_val, old_val, part):
                 and time >= 100 and time <= 2400):
             # "Numeric" time (hour * 100 + minutes)
             time = str(time)
-        elif isinstance(time, basestring) and ":" in time:
+        elif isinstance(time, str) and ":" in time:
             # Take out semicolon for isdigit() code below
             time = time.replace(":", "")
 

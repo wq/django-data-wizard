@@ -13,8 +13,8 @@ class MetaColumn(models.IdentifiedRelatedModel):
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=10, choices=DATA_TYPES, blank=True)
 
-    def __unicode__(self):
-        name = super(MetaColumn, self).__unicode__()
+    def __str__(self):
+        name = super(MetaColumn, self).__str__()
         return "%s (%s)" % (name, self.get_type_display())
 
     class Meta:
@@ -24,7 +24,7 @@ class MetaColumn(models.IdentifiedRelatedModel):
 class UnknownItem(models.IdentifiedRelatedModel):
     name = models.CharField(max_length=255)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -34,7 +34,7 @@ class UnknownItem(models.IdentifiedRelatedModel):
 class SkippedRecord(models.Model):
     reason = models.TextField()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.reason
 
     class Meta:
@@ -55,7 +55,7 @@ class Range(models.Model):
     start_column = models.IntegerField()
     end_column = models.IntegerField()
 
-    def __unicode__(self):
+    def __str__(self):
         if self.start_row == self.end_row:
             row = "Row %s" % self.start_row
         else:
