@@ -64,6 +64,7 @@ def auto_import(instance, user):
     # Preload IO to catch any load errors early
     status = {
         'message': "Loading Data...",
+        'stage': 'meta',
         'current': 1,
         'total': 4,
     }
@@ -402,6 +403,37 @@ def read_row_identifiers(instance, user):
             idinfo['ids'].append(info)
         idinfo['ids'].sort(key=lambda info: info['value'])
         idgroups.append(idinfo)
+
+    if not unknown_ids:
+        # Create relationships after all IDs are resolved.
+
+        # FIXME: parse_columns() always creates relationships, using
+        # UnknownItem to stand in for unknown column identifiers.
+        # Use UnknownItem here as well?
+
+        from_type = get_ct(instance)
+
+        for idinfo in idgroups:
+            cls = META_CLASSES[idinfo['type_id']]
+            to_type = get_ct(cls)
+            reltype, is_new = RelationshipType.objects.get_or_create(
+                from_type=from_type,
+                to_type=to_type,
+                name='Contains Identifier',
+                inverse_name='Identifier In'
+            )
+            for info in idinfo['ids']:
+                obj = cls.objects.get_by_natural_key(info['value'])
+                rel, isnew = instance.relationships.get_or_create(
+                    type=reltype,
+                    to_content_type=to_type,
+                    to_object_id=obj.pk,
+                    from_content_type=from_type,
+                    from_object_id=instance.pk,
+                )
+
+                # FIXME: create equivalent of Range objects here?
+
     return {
         'unknown_count': unknown_ids,
         'types': idgroups,
@@ -527,6 +559,8 @@ def do_import(instance, user):
     for i, row in enumerate(table):
         # Update state (for status() on view)
         current_task.update_state(state='PROGRESS', meta={
+            'message': "Importing Data...",
+            'stage': 'data',
             'current': i + 1,
             'total': rows,
             'skipped': skipped
