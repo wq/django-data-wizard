@@ -2,13 +2,19 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
-from django.conf import settings
+import swapper
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        swapper.dependency('auth', 'User'),
+        swapper.dependency('vera', 'Event'),
+        swapper.dependency('vera', 'Report'),
+        swapper.dependency('vera', 'ReportStatus'),
+        swapper.dependency('vera', 'Parameter'),
+        swapper.dependency('vera', 'Site'),
+        swapper.dependency('vera', 'Result'),
     ]
 
     operations = [
@@ -21,7 +27,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'wq_event',
                 'ordering': ('-date',),
-                'swappable': 'WQ_EVENT_MODEL',
+                'swappable': swapper.swappable_setting('vera', 'Event'),
                 'abstract': False,
             },
             bases=(models.Model,),
@@ -34,11 +40,11 @@ class Migration(migrations.Migration):
                 ('result_value_numeric', models.FloatField(null=True, blank=True)),
                 ('result_value_text', models.TextField(null=True, blank=True)),
                 ('result_empty', models.BooleanField(default=False)),
-                ('event', models.ForeignKey(to=settings.WQ_EVENT_MODEL)),
+                ('event', models.ForeignKey(to=swapper.get_model_name('vera', 'Event'))),
             ],
             options={
                 'db_table': 'wq_eventresult',
-                'swappable': 'WQ_EVENTRESULT_MODEL',
+                'swappable': swapper.swappable_setting('vera', 'EventResult'),
                 'abstract': False,
             },
             bases=(models.Model,),
@@ -54,7 +60,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'wq_parameter',
                 'ordering': ('name',),
-                'swappable': 'WQ_PARAMETER_MODEL',
+                'swappable': swapper.swappable_setting('vera', 'Parameter'),
                 'abstract': False,
             },
             bases=(models.Model,),
@@ -64,12 +70,12 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False, auto_created=True, verbose_name='ID')),
                 ('entered', models.DateTimeField(blank=True)),
-                ('event', models.ForeignKey(to=settings.WQ_EVENT_MODEL)),
+                ('event', models.ForeignKey(to=swapper.get_model_name('vera', 'Event'))),
             ],
             options={
                 'db_table': 'wq_report',
                 'ordering': ('-entered',),
-                'swappable': 'WQ_REPORT_MODEL',
+                'swappable': swapper.swappable_setting('vera', 'Report'),
                 'abstract': False,
             },
             bases=(models.Model,),
@@ -85,7 +91,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'wq_reportstatus',
                 'verbose_name_plural': 'report statuses',
-                'swappable': 'WQ_REPORTSTATUS_MODEL',
+                'swappable': swapper.swappable_setting('vera', 'ReportStatus'),
                 'abstract': False,
             },
             bases=(models.Model,),
@@ -97,13 +103,13 @@ class Migration(migrations.Migration):
                 ('value_numeric', models.FloatField(null=True, blank=True)),
                 ('value_text', models.TextField(null=True, blank=True)),
                 ('empty', models.BooleanField(default=False, db_index=True)),
-                ('report', models.ForeignKey(to=settings.WQ_REPORT_MODEL, related_name='results')),
-                ('type', models.ForeignKey(to=settings.WQ_PARAMETER_MODEL)),
+                ('report', models.ForeignKey(to=swapper.get_model_name('vera', 'Report'), related_name='results')),
+                ('type', models.ForeignKey(to=swapper.get_model_name('vera', 'Parameter'))),
             ],
             options={
                 'ordering': ('type',),
                 'db_table': 'wq_result',
-                'swappable': 'WQ_RESULT_MODEL',
+                'swappable': swapper.swappable_setting('vera', 'Result'),
                 'abstract': False,
             },
             bases=(models.Model,),
@@ -117,7 +123,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'wq_site',
-                'swappable': 'WQ_SITE_MODEL',
+                'swappable': swapper.swappable_setting('vera', 'Site'),
                 'abstract': False,
             },
             bases=(models.Model,),
@@ -137,37 +143,37 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='report',
             name='status',
-            field=models.ForeignKey(to=settings.WQ_REPORTSTATUS_MODEL, null=True, blank=True),
+            field=models.ForeignKey(to=swapper.get_model_name('vera', 'ReportStatus'), null=True, blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='report',
             name='user',
-            field=models.ForeignKey(related_name='vera_report', to=settings.AUTH_USER_MODEL, null=True, blank=True),
+            field=models.ForeignKey(related_name='vera_report', to=swapper.get_model_name('auth', 'User'), null=True, blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='eventresult',
             name='event_site',
-            field=models.ForeignKey(to=settings.WQ_SITE_MODEL, null=True, blank=True),
+            field=models.ForeignKey(to=swapper.get_model_name('vera', 'Site'), null=True, blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='eventresult',
             name='result',
-            field=models.ForeignKey(to=settings.WQ_RESULT_MODEL),
+            field=models.ForeignKey(to=swapper.get_model_name('vera', 'Result')),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='eventresult',
             name='result_report',
-            field=models.ForeignKey(to=settings.WQ_REPORT_MODEL),
+            field=models.ForeignKey(to=swapper.get_model_name('vera', 'Report')),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='eventresult',
             name='result_type',
-            field=models.ForeignKey(to=settings.WQ_PARAMETER_MODEL),
+            field=models.ForeignKey(to=swapper.get_model_name('vera', 'Parameter')),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -177,7 +183,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='site',
-            field=models.ForeignKey(to=settings.WQ_SITE_MODEL, null=True, blank=True),
+            field=models.ForeignKey(to=swapper.get_model_name('vera', 'Site'), null=True, blank=True),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
