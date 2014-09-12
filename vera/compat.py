@@ -3,10 +3,12 @@ from django.db import models
 
 def clone_field(field):
     """
-    Incomplete backport of field.clone (coming in Django 1.7 and South 2)
+    Incomplete backport of field.clone in Django 1.7.
     """
-    if hasattr(field, 'clone'):
-        return field.clone()
+
+#    FIXME: field.clone() doesn't work if called before models settle
+#    if hasattr(field, 'clone'):
+#        return field.clone()
 
     cls = type(field)
     args = tuple()
