@@ -1,10 +1,14 @@
 from wq.db.patterns import models
 from wq.db.contrib.vera.models import BaseSite, BaseReport
 
+from django.conf import settings
+
 
 class Site(models.IdentifiedModel, BaseSite):
-    pass
+    class Meta:
+        abstract = not settings.SWAP
 
 
 class Report(BaseReport):
-    pass
+    class Meta:
+        abstract = not settings.SWAP

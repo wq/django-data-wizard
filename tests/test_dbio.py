@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from rest_framework.test import APITestCase
 from rest_framework import status
 import datetime
@@ -7,15 +9,23 @@ from time import sleep
 from django.contrib.auth.models import User
 from wq.db.contrib.vera.models import ReportStatus, Parameter
 from wq.db.contrib.dbio.models import MetaColumn
+
+import unittest
+
 import swapper
 Site = swapper.load_model("vera", "Site")
 Event = swapper.load_model("vera", "Event")
 Report = swapper.load_model("vera", "Report")
 EventResult = swapper.load_model("vera", "EventResult")
 
+from django.conf import settings
+
 
 class DbioTestCase(APITestCase):
     def setUp(self):
+        if not settings.SWAP:
+            return
+
         from wq.db.contrib.dbio.tasks import EVENT_KEY
         self.site = Site.objects.find("Site 1")
         self.user = User.objects.create(username='testuser', is_superuser=True)
@@ -41,13 +51,14 @@ class DbioTestCase(APITestCase):
         meta2.name = 'site'
         meta2.save()
 
+    @unittest.skipUnless(settings.SWAP, "requires swapped models")
     def test_dbio(self):
         """
         Test the full dbio import process, from initial upload thru data import
         """
         # 1. Upload file
         filename = os.path.join(os.path.dirname(__file__), 'testdata.csv')
-        with open(filename) as f:
+        with open(filename, 'rb') as f:
             response = self.client.post('/files.json', {'file': f})
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             fileid = response.data['id']
@@ -107,7 +118,7 @@ class DbioTestCase(APITestCase):
             response = self.client.get(url('status'), {'task': task})
             res = response.data
             if res.get('status', None) == "PENDING":
-                print "Waiting..."
+                print("Waiting...")
                 continue
             for key in ('status', 'total', 'current', 'skipped'):
                 self.assertIn(key, res)
