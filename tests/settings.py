@@ -2,6 +2,8 @@ import os
 
 SECRET_KEY = '1234'
 
+MIDDLEWARE_CLASSES = tuple()
+
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.auth',
