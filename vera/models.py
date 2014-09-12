@@ -4,6 +4,7 @@ from django.db.models.signals import post_save
 from django.core.exceptions import ImproperlyConfigured
 from django.dispatch import receiver
 from django.utils.timezone import now
+from django.utils.six import string_types
 from django.conf import settings
 from collections import OrderedDict
 from .compat import clone_field
@@ -198,7 +199,7 @@ class BaseResult(models.Model):
     def is_empty(self, value):
         if value is None:
             return True
-        if isinstance(value, str) and len(value.strip()) == 0:
+        if isinstance(value, string_types) and len(value.strip()) == 0:
             return True
         return False
 

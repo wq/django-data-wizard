@@ -5,6 +5,7 @@ from wq.db.patterns.models import Identifier, Relationship, RelationshipType
 import swapper
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
+from django.utils.six import string_types
 import datetime
 from .signals import import_complete, new_metadata
 
@@ -168,6 +169,7 @@ def get_meta_columns(instance):
 def load_columns(instance):
     rels = instance.relationships.filter(type__name='Contains Column')
     table = instance.load_io()
+    cols = list(table.field_map.keys())
 
     matched = []
     for rel in rels:
@@ -188,7 +190,7 @@ def load_columns(instance):
 
         if rel.range_set.filter(type='list').exists():
             col = rel.range_set.get(type='list').start_column
-            info['name'] = list(table.field_map.keys())[col].replace('\n', ' - ')
+            info['name'] = cols[col].replace('\n', ' - ')
             info['column'] = colname(col)
             info['colnum'] = col
 
@@ -690,7 +692,7 @@ def save_metadata_value(col, val, obj):
         )[0].get_internal_type()
 
     # Automatically parse date values as such
-    if (meta_datatype in DATE_FIELDS and isinstance(val, str)
+    if (meta_datatype in DATE_FIELDS and isinstance(val, string_types)
             and part != 'time'):
         from dateutil.parser import parse
         val = parse(val)
@@ -737,7 +739,7 @@ def process_date_part(new_val, old_val, part):
                 and time >= 100 and time <= 2400):
             # "Numeric" time (hour * 100 + minutes)
             time = str(time)
-        elif isinstance(time, str) and ":" in time:
+        elif isinstance(time, string_types) and ":" in time:
             # Take out semicolon for isdigit() code below
             time = time.replace(":", "")
 
