@@ -10,4 +10,4 @@ if hasattr(django, 'setup'):
     django.setup()
 
 from django.core.management import call_command
-call_command('syncdb', noinput=True)
+call_command('syncdb', interactive=False)
