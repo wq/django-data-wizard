@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', "tests.settings")
 
@@ -8,6 +10,8 @@ setup_test_environment()
 import django
 if hasattr(django, 'setup'):
     django.setup()
+
+from .celery import app as celery_app
 
 from django.core.management import call_command
 call_command('syncdb', interactive=False)
