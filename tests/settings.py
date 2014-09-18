@@ -19,7 +19,6 @@ INSTALLED_APPS = (
     'wq.db.contrib.dbio',
     'tests.rest_app',
     'tests.patterns_app',
-    'tests.vera_app',
 )
 
 DATABASES = {
