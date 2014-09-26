@@ -11,7 +11,7 @@ from .signals import import_complete, new_metadata
 
 from wq.db.rest.models import get_ct, get_object_id
 
-import wq.db.contrib.vera.models
+import wq.db.contrib.vera.models  # noqa
 
 Site = swapper.load_model('vera', 'Site')
 Event = swapper.load_model('vera', 'Event')
