@@ -33,7 +33,9 @@ class BaseSite(models.NaturalKeyModel):
 
 
 class BaseEvent(models.NaturalKeyModel):
-    site = models.ForeignKey(MODELS['Site'], null=True, blank=True)
+    site = models.ForeignKey(
+        MODELS['Site'], null=True, blank=True, related_name="event_set",
+    )
 
     @property
     def valid_reports(self):
@@ -78,7 +80,7 @@ class ValidReportManager(ReportManager):
 
 
 class BaseReport(models.RelatedModel):
-    event = models.ForeignKey(MODELS['Event'])
+    event = models.ForeignKey(MODELS['Event'], related_name="report_set")
     entered = models.DateTimeField(blank=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
