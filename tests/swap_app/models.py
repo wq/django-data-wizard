@@ -9,6 +9,6 @@ class Site(models.IdentifiedModel, BaseSite):
         abstract = not settings.SWAP
 
 
-class Report(BaseReport):
+class Record(BaseReport):
     class Meta:
         abstract = not settings.SWAP

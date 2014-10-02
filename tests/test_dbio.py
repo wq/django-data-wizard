@@ -127,6 +127,8 @@ class DbioTestCase(APITestCase):
                 self.assertFalse(res['skipped'])
 
         # 6. Import complete -verify data exists in database
+        for event in Event.objects.all():
+            self.assertTrue(event.is_valid)
         self.assertEqual(EventResult.objects.count(), 6)
         param = Parameter.objects.find('temperature')
         er = EventResult.objects.get(

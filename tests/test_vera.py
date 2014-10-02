@@ -146,6 +146,7 @@ class VeraTestCase(APITestCase):
             status=self.valid
         )
         event = Event.objects.get_by_natural_key(*event_key)
+        self.assertTrue(event.is_valid)
         ers = EventResult.objects.filter(event=event)
         self.assertEqual(ers.count(), 2)
         self.assertEqual(
