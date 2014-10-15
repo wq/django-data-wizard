@@ -7,6 +7,7 @@ MIDDLEWARE_CLASSES = tuple()
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.auth',
+    'social.apps.django_app.default',
     'wq.db.rest',
     'wq.db.rest.auth',
     'wq.db.patterns.identify',
