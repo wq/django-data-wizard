@@ -37,6 +37,12 @@ setup(
     license='MIT',
     description='Implementation of the ERAV data integration model',
     long_description=parse_markdown_readme(),
+    packages=[
+        'vera',
+        'vera.migrations',
+        'dbio',
+        'dbio.migrations',
+    ],
     install_requires=[
         'wq.db',
         'wq.io',
