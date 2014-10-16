@@ -9,6 +9,7 @@ INSTALLED_APPS = (
     'django.contrib.auth',
     'wq.db.rest',
     'wq.db.rest.auth',
+    'wq.db.patterns.annotate',
     'wq.db.patterns.identify',
     'wq.db.patterns.relate',
     'wq.db.contrib.files',

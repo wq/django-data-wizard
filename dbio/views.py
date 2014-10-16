@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.decorators import link, action
 from wq.db.rest.views import ModelViewSet
-from wq.db.contrib.dbio import tasks
+from dbio import tasks
 from wq.io.exceptions import *
 from celery.result import AsyncResult
 

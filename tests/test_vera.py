@@ -3,7 +3,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth.models import User
 import datetime
-from wq.db.contrib.vera.models import (
+from vera.models import (
     Event, Report, ReportStatus, Site, Parameter, EventResult
 )
 from django.conf import settings

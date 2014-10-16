@@ -1,5 +1,5 @@
 from wq.db.patterns import models
-from wq.db.contrib.vera.models import BaseSite, BaseReport
+from vera.models import BaseSite, BaseReport
 
 from django.conf import settings
 

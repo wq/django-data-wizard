@@ -7,8 +7,8 @@ import os
 from time import sleep
 
 from django.contrib.auth.models import User
-from wq.db.contrib.vera.models import ReportStatus, Parameter
-from wq.db.contrib.dbio.models import MetaColumn
+from vera.models import ReportStatus, Parameter
+from dbio.models import MetaColumn
 
 import unittest
 
@@ -26,7 +26,7 @@ class DbioTestCase(APITestCase):
         if not settings.SWAP:
             return
 
-        from wq.db.contrib.dbio.tasks import EVENT_KEY
+        from dbio.tasks import EVENT_KEY
         self.site = Site.objects.find("Site 1")
         self.user = User.objects.create(username='testuser', is_superuser=True)
         self.client.force_authenticate(user=self.user)
