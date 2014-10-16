@@ -11,8 +11,8 @@ env:
    - DJANGO="django==1.7"   DJANGO_SETTINGS_MODULE="tests.settings"
    - DJANGO="django==1.7"   DJANGO_SETTINGS_MODULE="tests.swap_settings"
 before_script:
- - createdb -Upostgres wqdb_test
- - psql -Upostgres wqdb_test -c "CREATE EXTENSION postgis;"
+ - createdb -Upostgres vera_test
+ - psql -Upostgres vera_test -c "CREATE EXTENSION postgis;"
 install:
  - pip install $DJANGO
  - pip install $DRF

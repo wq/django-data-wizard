@@ -38,7 +38,8 @@ setup(
     description='Implementation of the ERAV data integration model',
     long_description=parse_markdown_readme(),
     install_requires=[
-        'wq==0.6.2',
+        'wq.db',
+        'wq.io',
         'celery',
         'redis',
         'Pillow',
@@ -54,5 +55,6 @@ setup(
         'Framework :: Django',
         'Topic :: Scientific/Engineering :: GIS',
         'Topic :: Database :: Database Engines/Servers',
-    ]
+    ],
+    test_suite='tests',
 )
