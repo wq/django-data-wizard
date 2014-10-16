@@ -63,4 +63,10 @@ setup(
         'Topic :: Database :: Database Engines/Servers',
     ],
     test_suite='tests',
+    tests_require=[
+        'psycopg2',
+        'celery',
+        'redis',
+        'python-dateutil',
+    ],
 )
