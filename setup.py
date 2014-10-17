@@ -30,7 +30,7 @@ def parse_markdown_readme():
 
 setup(
     name='dbio',
-    version='0.6.2',
+    version='0.7.0-dev',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
     url='http://wq.io/dbio',
@@ -49,12 +49,15 @@ setup(
         'python-dateutil'
     ],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: JavaScript',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
         'Framework :: Django',
         'Topic :: Scientific/Engineering :: GIS',
         'Topic :: Database :: Database Engines/Servers',
