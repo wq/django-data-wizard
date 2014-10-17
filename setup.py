@@ -29,17 +29,15 @@ def parse_markdown_readme():
 
 
 setup(
-    name='vera',
+    name='dbio',
     version='0.6.2',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
-    url='http://wq.io/vera',
+    url='http://wq.io/dbio',
     license='MIT',
-    description='Implementation of the ERAV data integration model',
+    description='Django Batch Import Orchestrator',
     long_description=parse_markdown_readme(),
     packages=[
-        'vera',
-        'vera.migrations',
         'dbio',
         'dbio.migrations',
     ],
@@ -48,7 +46,6 @@ setup(
         'wq.io',
         'celery',
         'redis',
-        'Pillow',
         'python-dateutil'
     ],
     classifiers=[
@@ -65,8 +62,6 @@ setup(
     test_suite='tests',
     tests_require=[
         'psycopg2',
-        'celery',
-        'redis',
-        'python-dateutil',
+        'vera',
     ],
 )

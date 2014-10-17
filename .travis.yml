@@ -6,18 +6,20 @@ env:
   global:
    - DRF="djangorestframework==2.4.2"
    - WQDB="git+https://github.com/wq/wq.db.git"
+   - VERA="git+https://github.com/wq/vera.git"
   matrix:
    - DJANGO="django==1.6.7" DJANGO_SETTINGS_MODULE="tests.settings"
    - DJANGO="django==1.6.7" DJANGO_SETTINGS_MODULE="tests.swap_settings"
    - DJANGO="django==1.7"   DJANGO_SETTINGS_MODULE="tests.settings"
    - DJANGO="django==1.7"   DJANGO_SETTINGS_MODULE="tests.swap_settings"
 before_script:
- - createdb -Upostgres vera_test
- - psql -Upostgres vera_test -c "CREATE EXTENSION postgis;"
+ - createdb -Upostgres dbio_test
+ - psql -Upostgres dbio_test -c "CREATE EXTENSION postgis;"
 install:
  - pip install $DJANGO
  - pip install $DRF
  - pip install $WQDB
+ - pip install $VERA
 script:
  - python setup.py test
 services:
