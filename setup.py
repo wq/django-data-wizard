@@ -63,5 +63,6 @@ setup(
     tests_require=[
         'psycopg2',
         'vera',
+        'Pillow',
     ],
 )
