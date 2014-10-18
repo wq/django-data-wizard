@@ -90,3 +90,37 @@ class IoModel(models.RelatedModel):
 
     class Meta:
         abstract = True
+
+
+class IoFile(IoModel):
+    def load_io(self, **options):
+        from wq.io import load_file
+        from django.conf import settings
+        filename = "%s/%s" % (settings.MEDIA_ROOT, self.file.name)
+        if not options:
+            options = self.load_file_options()
+        return load_file(filename, options=options)
+
+    def load_file_options(self):
+        headers = self.relationships.filter(
+            type__name='Contains Column',
+            range__type='list'
+        )
+        if headers.exists():
+            header_row = headers[0].range_set.get(type='head').start_row
+            start_row = headers[0].range_set.get(type='list').start_row
+            return {
+                'header_row': header_row,
+                'start_row': start_row
+            }
+
+        templates = self.inverserelationships.filter(
+            type__inverse_name='Template'
+        )
+        if templates.exists():
+            template = templates[0].right
+            return template.load_file_options()
+        return {}
+
+    class Meta:
+        abstract = True

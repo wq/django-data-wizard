@@ -1,1 +1,3 @@
 README.rst
+*.egg*
+__pycache__
