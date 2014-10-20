@@ -6,6 +6,7 @@ env:
   global:
    - DRF="djangorestframework==2.4.2"
    - WQDB="git+https://github.com/wq/wq.db.git"
+   - WQIO="git+https://github.com/wq/wq.io.git"
    - VERA="git+https://github.com/wq/vera.git"
   matrix:
    - DJANGO="django==1.6.7" DJANGO_SETTINGS_MODULE="tests.settings"
@@ -19,6 +20,7 @@ install:
  - pip install $DJANGO
  - pip install $DRF
  - pip install $WQDB
+ - pip install $WQIO
  - pip install $VERA
 script:
  - python setup.py test
