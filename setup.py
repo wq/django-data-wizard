@@ -2,7 +2,7 @@ from os.path import join, dirname
 from setuptools import setup
 
 LONG_DESCRIPTION = """
-Reference implementation of the ERAV model, an extention to EAV with support for maintaining multiple versions of an entity with different provenance.
+Interactive web-based wizard to facilitate importing structured data into Django models.
 """
 
 
@@ -29,17 +29,17 @@ def parse_markdown_readme():
 
 
 setup(
-    name='dbio',
-    version='0.7.0-dev',
+    name='data-wizard',
+    version='0.8.0-dev',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
-    url='http://wq.io/dbio',
+    url='http://wq.io/django-data-wizard',
     license='MIT',
-    description='Django Batch Import Orchestrator',
+    description='Django Data Wizard',
     long_description=parse_markdown_readme(),
     packages=[
-        'dbio',
-        'dbio.migrations',
+        'data_wizard',
+        'data_wizard.migrations',
     ],
     install_requires=[
         'wq.db',

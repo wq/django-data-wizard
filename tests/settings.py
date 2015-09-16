@@ -14,14 +14,14 @@ INSTALLED_APPS = (
     'wq.db.patterns.relate',
     'wq.db.contrib.files',
     'vera',
-    'dbio',
+    'data_wizard',
     'tests.file_app',
 )
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'dbio_test',
+        'NAME': 'data_wizard_test',
         'USER': 'postgres',
     }
 }

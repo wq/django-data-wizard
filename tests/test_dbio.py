@@ -7,7 +7,7 @@ from time import sleep
 
 from django.contrib.auth.models import User
 from vera.models import ReportStatus, Parameter
-from dbio.models import MetaColumn
+from data_wizard.models import MetaColumn
 
 import unittest
 
