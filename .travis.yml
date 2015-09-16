@@ -14,8 +14,8 @@ env:
    - DJANGO="django==1.8.4"
    - DJANGO="django==1.8.4" LINT=1
 before_script:
- - createdb -Upostgres dbio_test
- - psql -Upostgres dbio_test -c "CREATE EXTENSION postgis;"
+ - createdb -Upostgres data_wizard_test
+ - psql -Upostgres data_wizard_test -c "CREATE EXTENSION postgis;"
 install:
  - pip install $DJANGO
  - pip install $DRF
