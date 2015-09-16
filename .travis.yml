@@ -1,18 +1,18 @@
 language: python
+sudo: false
 python:
  - "2.7"
  - "3.4"
 env:
   global:
-   - DRF="djangorestframework==2.4.2"
+   - DRF="djangorestframework==3.2.3"
    - WQDB="git+https://github.com/wq/wq.db.git"
    - WQIO="git+https://github.com/wq/wq.io.git"
    - VERA="git+https://github.com/wq/vera.git"
   matrix:
-   - DJANGO="django==1.6.7" DJANGO_SETTINGS_MODULE="tests.settings"
-   - DJANGO="django==1.6.7" DJANGO_SETTINGS_MODULE="tests.swap_settings"
-   - DJANGO="django==1.7"   DJANGO_SETTINGS_MODULE="tests.settings"
-   - DJANGO="django==1.7"   DJANGO_SETTINGS_MODULE="tests.swap_settings"
+   - DJANGO="django==1.7.10"
+   - DJANGO="django==1.8.4"
+   - DJANGO="django==1.8.4" LINT=1
 before_script:
  - createdb -Upostgres dbio_test
  - psql -Upostgres dbio_test -c "CREATE EXTENSION postgis;"
@@ -22,7 +22,8 @@ install:
  - pip install $WQDB
  - pip install $WQIO
  - pip install $VERA
+ - pip install flake8
 script:
- - python setup.py test
+ - ./runtests.sh
 services:
  - redis-server

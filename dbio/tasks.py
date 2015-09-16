@@ -1,7 +1,7 @@
 from celery import task, current_task
 from xlrd import colname
 from collections import namedtuple, Counter, OrderedDict
-from wq.db.patterns.models import Identifier, Relationship, RelationshipType
+from wq.db.patterns.models import Identifier, RelationshipType
 import swapper
 from .models import MetaColumn, UnknownItem, SkippedRecord, Range
 from django.conf import settings
@@ -69,7 +69,7 @@ def auto_import(instance, user):
         'total': 4,
     }
     current_task.update_state(state='PROGRESS', meta=status)
-    table = instance.load_io()
+    instance.load_io()
 
     # Parse columns
     status.update(
@@ -392,9 +392,9 @@ def read_row_identifiers(instance, user):
                 info['unknown'] = True
                 choices = instance.get_id_choices(cls, meta)
                 info['choices'] = [{
-                    'id': get_object_id(obj),
-                    'label': str(obj),
-                } for obj in choices]
+                    'id': get_object_id(choice),
+                    'label': str(choice),
+                } for choice in choices]
                 info['choices'].insert(0, {
                     'id': 'new',
                     'label': "New %s" % idinfo['type_label'],
@@ -546,7 +546,6 @@ def do_import(instance, user):
 
     # Loop through table rows and add each record
     rows = len(table)
-    errors = []
     skipped = []
 
     if table.tabular:

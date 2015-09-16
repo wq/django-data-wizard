@@ -2,7 +2,6 @@ from __future__ import print_function
 
 from rest_framework.test import APITestCase
 from rest_framework import status
-import datetime
 import os
 from time import sleep
 
@@ -26,7 +25,6 @@ class DbioTestCase(APITestCase):
         if not settings.SWAP:
             return
 
-        from dbio.tasks import EVENT_KEY
         self.site = Site.objects.find("Site 1")
         self.user = User.objects.create(username='testuser', is_superuser=True)
         self.client.force_authenticate(user=self.user)

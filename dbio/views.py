@@ -1,13 +1,13 @@
 from rest_framework.response import Response
-from rest_framework.decorators import link, action
+from rest_framework.decorators import detail_route
 from wq.db.rest.views import ModelViewSet
 from dbio import tasks
-from wq.io.exceptions import *
+from wq.io.exceptions import IoException
 from celery.result import AsyncResult
 
 
 class IoViewSet(ModelViewSet):
-    @link()
+    @detail_route()
     def status(self, request, *args, **kwargs):
         taskid = request.GET.get('task', None)
         if not taskid:
@@ -26,7 +26,7 @@ class IoViewSet(ModelViewSet):
     def run_task(self, name, async=False):
         response = self.retrieve(self.request, **self.kwargs)
         task = getattr(tasks, name).delay(
-            self.get_instance(), self.request.user
+            self.get_object(), self.request.user
         )
         if async:
             response.data['task_id'] = task.task_id
@@ -38,48 +38,45 @@ class IoViewSet(ModelViewSet):
 
         return response
 
-    @link()
+    @detail_route()
     def start(self, request, *args, **kwargs):
         self.action = 'columns'
         return self.run_task('read_columns')
 
-    @action()
+    @detail_route(methods=['post'])
     def columns(self, request, *args, **kwargs):
         response = self.run_task('read_columns')
         result = tasks.update_columns.delay(
-            self.get_instance(), request.user, request.POST
+            self.get_object(), request.user, request.POST
         )
         response.data['result'] = result.get()
         return response
 
-    @link()
+    @detail_route()
     def ids(self, request, *args, **kwargs):
         response = self.run_task('read_row_identifiers')
         return response
 
-    @action()
+    @detail_route(methods=['post'])
     def updateids(self, request, *args, **kwargs):
         response = self.run_task('read_row_identifiers')
         self.action = 'ids'
         result = tasks.update_row_identifiers.delay(
-            self.get_instance(), request.user, request.POST
+            self.get_object(), request.user, request.POST
         )
         response.data['result'] = result.get()
         return response
 
-    @action()
+    @detail_route(methods=['post'])
     def reset(self, request, *args, **kwargs):
         self.task = 'retrieve'
         response = self.run_task('reset')
         return response
 
-    @action()
+    @detail_route(methods=['post'])
     def data(self, request, *args, **kwargs):
         return self.run_task('import_data', async=True)
 
-    @action()
+    @detail_route(methods=['post'])
     def auto(self, request, *args, **kwargs):
         return self.run_task('auto_import', async=True)
-
-    def get_instance(self):
-        return self.object

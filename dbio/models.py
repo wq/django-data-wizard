@@ -1,7 +1,8 @@
-from wq.db.patterns import models
+from django.db import models
+from wq.db.patterns import models as patterns
 
 
-class MetaColumn(models.IdentifiedRelatedModel):
+class MetaColumn(patterns.IdentifiedRelatedModel):
     DATA_TYPES = (
         ('site', 'Site Metadata'),
         ('event', 'Event Metadata'),
@@ -21,7 +22,7 @@ class MetaColumn(models.IdentifiedRelatedModel):
         db_table = 'wq_metacolumn'
 
 
-class UnknownItem(models.IdentifiedRelatedModel):
+class UnknownItem(patterns.IdentifiedRelatedModel):
     name = models.CharField(max_length=255)
 
     def __str__(self):
@@ -48,7 +49,7 @@ class Range(models.Model):
         ('list', 'Data series'),
         ('row', 'Individual Record'),
     )
-    relationship = models.ForeignKey(models.Relationship)
+    relationship = models.ForeignKey(patterns.Relationship)
     type = models.CharField(max_length=10, choices=RANGE_TYPES)
     start_row = models.IntegerField()
     end_row = models.IntegerField(null=True, blank=True)
@@ -75,7 +76,7 @@ class Range(models.Model):
         db_table = 'wq_range'
 
 
-class IoModel(models.RelatedModel):
+class IoModel(patterns.RelatedModel):
     def load_io(self, **options):
         raise NotImplementedError()
 

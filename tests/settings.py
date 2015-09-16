@@ -37,4 +37,4 @@ CELERY_RESULT_BACKEND = 'redis://localhost/0'
 
 SWAP = False
 
-from wq.db.rest.settings import *
+from wq.db.default_settings import *  # noqa
