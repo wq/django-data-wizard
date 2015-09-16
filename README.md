@@ -2,6 +2,11 @@
 
 The unique feature of Django Data Wizard is that it allows novice users to map spreadsheet columns to database fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
 
+Django Data Wizard supports any format supported by [wq.io].  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based data loaders.
+
+
+> *Note:* Django Data Wizard was formerly known as the **dbio** contrib module in [wq.db].  The implementation has been extracted from wq.db and renamed to avoid confusion with other similar libraries.
+
 <!--
 [![Latest PyPI Release](https://img.shields.io/pypi/v/data-wizard.svg)](https://pypi.python.org/pypi/data-wizard)
 [![Release Notes](https://img.shields.io/github/release/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/releases)
@@ -20,3 +25,8 @@ The unique feature of Django Data Wizard is that it allows novice users to map s
 [ERAV]: https://wq.io/docs/erav
 [vera]: https://wq.io/vera
 [#3]: https://github.com/wq/django-data-wizard/issues/3
+[wq.io]: https://wq.io/wq.io
+[wq.db]: https://wq.io/wq.db
+[custom wq.io class]: https://wq.io/docs/custom-io
+[Climata Viewer]: https://github.com/heigeo/climata-viewer
+[climata]: https://github.com/heigeo/climata
