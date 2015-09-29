@@ -1,9 +1,10 @@
-from wq.db.patterns import admin
+from django.contrib import admin
+from wq.db.patterns import admin as patterns
 from wq.db.patterns.models import Relationship
 from .models import MetaColumn, Range
 
 
-class MetaColumnAdmin(admin.IdentifiedModelAdmin):
+class MetaColumnAdmin(patterns.IdentifiedModelAdmin):
     list_filter = ['type']
 
 
