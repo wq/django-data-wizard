@@ -15,7 +15,6 @@ INSTALLED_APPS = (
     'wq.db.contrib.files',
     'vera',
     'data_wizard',
-    'tests.file_app',
 )
 
 DATABASES = {
