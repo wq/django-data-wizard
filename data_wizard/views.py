@@ -6,7 +6,7 @@ from wq.io.exceptions import IoException
 from celery.result import AsyncResult
 
 
-class IoViewSet(ModelViewSet):
+class RunViewSet(ModelViewSet):
     @detail_route()
     def status(self, request, *args, **kwargs):
         taskid = request.GET.get('task', None)

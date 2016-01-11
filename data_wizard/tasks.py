@@ -1,13 +1,13 @@
 from celery import task, current_task
 from xlrd import colname
 from collections import namedtuple, Counter, OrderedDict
-from wq.db.patterns.models import Identifier, RelationshipType
 import swapper
-from .models import MetaColumn, UnknownItem, SkippedRecord, Range
+from .models import Identifier
 from django.conf import settings
 from django.utils.six import string_types
 import datetime
 from .signals import import_complete, new_metadata
+import json
 
 from wq.db.rest.models import get_ct, get_object_id
 
@@ -33,8 +33,6 @@ EventKey = namedtuple('EventKey', EVENT_KEY)
 
 CONTENT_TYPES = {
     Parameter: get_ct(Parameter),
-    MetaColumn: get_ct(MetaColumn),
-    UnknownItem: get_ct(UnknownItem),
 }
 
 DATE_FIELDS = {
@@ -48,14 +46,15 @@ else:
     DEFAULT_STATUS = None
 
 PRIORITY = {
-    'parameter': 1,
-    'meta column': 2,
-    'unknown item': 3,
+    'instance': 1,
+    'meta': 2,
+    'unresolved': 3,
+    'unknown': 4,
 }
 
 
 @task
-def auto_import(instance, user):
+def auto_import(run, user):
     """
     Walk through all the steps necessary to interpret and import data from an
     IO.  Meant to be called asynchronously.  Automatically suspends import if
@@ -69,7 +68,7 @@ def auto_import(instance, user):
         'total': 4,
     }
     current_task.update_state(state='PROGRESS', meta=status)
-    instance.load_io()
+    run.load_io()
 
     # Parse columns
     status.update(
@@ -77,7 +76,7 @@ def auto_import(instance, user):
         current=2,
     )
     current_task.update_state(state='PROGRESS', meta=status)
-    result = read_columns(instance, user)
+    result = read_columns(run, user)
     if result['unknown_count']:
         result['action'] = "columns"
         result['message'] = "Input Needed"
@@ -89,7 +88,7 @@ def auto_import(instance, user):
         current=3,
     )
     current_task.update_state(state='PROGRESS', meta=status)
-    result = read_row_identifiers(instance, user)
+    result = read_row_identifiers(run, user)
     if result['unknown_count']:
         result['action'] = "ids"
         result['message'] = "Input Needed"
@@ -101,42 +100,56 @@ def auto_import(instance, user):
     )
 
     # The rest is the same as import_data
-    return do_import(instance, user)
+    return do_import(run, user)
 
 
-def get_choices(instance):
+def get_choices(run):
     def make_list(cls, name):
         rows = cls.objects.all()
         ct = CONTENT_TYPES[cls]
         result = [{
-            'url': '%s/%s' % (ct.urlbase, get_object_id(row)),
-            'label': str(row)
-        } for row in rows]
-        result.insert(0, {
-            'url': '%s/new' % ct.urlbase,
+            'id': '%s/new' % ct.urlbase,
             'label': "New %s" % name,
-        })
+        }]
+        result += [{
+            'id': '%s/%s' % (ct.urlbase, row.slug),
+            'label': str(row),
+        } for row in rows]
         return {
             'name': name,
             'choices': result
         }
 
-    return [
-        make_list(MetaColumn, "Metadata Column"),
+    meta_choices = set()
+    for m in Identifier.objects.filter(resolved=True, field__isnull=False):
+        assert(m.type == 'meta')
+        mid = '%s.%s' % (m.content_type.model, m.field)
+        mlabel = ('%s %s' % (m.content_type.name, m.field)).title()
+        meta_choices.add((mid, mlabel))
+    meta_choices = sorted(meta_choices, key=lambda d: d[1])
+    choices = [
+        {
+            'name': 'Metadata',
+            'choices': [{
+                'id': key,
+                'label': label
+            } for key, label in meta_choices],
+        },
         make_list(Parameter, "Parameter")
     ]
+    return choices
 
 
 @task
-def read_columns(instance, user=None):
-    matched = get_columns(instance)
+def read_columns(run, user=None):
+    matched = get_columns(run)
     unknown_count = 0
     for info in matched:
         if info['type'] == 'unknown':
             unknown_count += 1
             # Add some useful context items for client
             info['unknown'] = True
-            info['types'] = get_choices(instance)
+            info['types'] = get_choices(run)
 
     return {
         'columns': matched,
@@ -144,93 +157,94 @@ def read_columns(instance, user=None):
     }
 
 
-# FIXME: These functions might make more sense as methods on IoModel
-def get_columns(instance):
-    if instance.already_parsed():
-        return load_columns(instance)
+# FIXME: These functions might make more sense as methods on Run
+def get_columns(run):
+    if run.already_parsed():
+        return load_columns(run)
     else:
-        return parse_columns(instance)
+        return parse_columns(run)
 
 
-def get_meta_columns(instance):
-    matched = get_columns(instance)
+def get_meta_columns(run):
+    matched = get_columns(run)
     cols = OrderedDict()
     for col in matched:
-        if 'colnum' not in col or not col['type']:
+        if 'colnum' not in col or col['type'] != 'meta':
             continue
-        if col['type'] in ('parameter_value', 'unknown'):
+        if col['model'] in ('event', 'report', 'result'):
             continue
-        if col['type'] in ('event', 'report', 'result'):
-            continue
-        cols.setdefault(col['type'], [])
-        cols[col['type']].append(col)
+        cols.setdefault(col['model'], [])
+        cols[col['model']].append(col)
     return cols
 
 
-def load_columns(instance):
-    rels = instance.relationships.filter(type__name='Contains Column')
-    table = instance.load_io()
+def load_columns(run):
+    table = run.load_io()
     cols = list(table.field_map.keys())
-
     matched = []
-    for rel in rels:
-        item = rel.right
+    for rng in run.range_set.all():
+        ident = rng.identifier
         info = {
-            'match': str(item),
-            'rel_id': rel.pk,
+            'match': str(ident),
+            'rel_id': rng.pk,
+            'type': ident.type,
         }
-        if isinstance(item, UnknownItem):
-            info['type'] = "unknown"
-            info['value'] = item.name
-        elif isinstance(item, Parameter):
-            info['type'] = "parameter_value"
-            info['parameter_id'] = get_object_id(item)
-        elif isinstance(item, MetaColumn):
-            info['type'] = item.type
-            info['field_name'] = item.name
 
-        if rel.range_set.filter(type='list').exists():
-            col = rel.range_set.get(type='list').start_column
+        if ident.type == 'meta':
+            info['field_name'] = rng.identifier.field
+            info['model'] = ident.content_type.model
+        elif ident.type == 'instance':
+            info['%s_id' % ident.content_type.model] = get_object_id(
+                ident.content_object
+            )
+        else:
+            info['value'] = ident.name
+
+        if rng.type == 'list':
+            col = rng.start_col
             info['name'] = cols[col].replace('\n', ' - ')
             info['column'] = colname(col)
             info['colnum'] = col
 
-        elif rel.range_set.filter(type='value').exists():
-            info['name'] = get_range_value(table, rel.range_set.get(
-                type='head'
-            ))
-            info['value'] = get_range_value(table, rel.range_set.get(
-                type='value'
-            ))
+        elif rng.type == 'value':
+            info['name'] = get_range_value(
+                table, rng, rng.header_col, rng.start_col - 1
+            )
+            info['value'] = get_range_value(
+                table, rng, rng.start_col, rng.end_col
+            )
         matched.append(info)
     matched.sort(key=lambda info: info.get('colnum', -1))
     return matched
 
 
-def get_range_value(table, rng):
-    if rng.start_row == rng.end_row and rng.start_column == rng.end_column:
-        return table.extra_data.get(rng.start_row, {}).get(rng.start_column)
+def get_range_value(table, rng, scol, ecol):
+    if rng.start_row == rng.end_row and scol == ecol:
+        return table.extra_data.get(rng.start_row, {}).get(scol)
 
     val = ""
     for r in range(rng.start_row, rng.end_row + 1):
-        for c in range(rng.start_column, rng.end_column + 1):
+        for c in range(scol, ecol + 1):
             val += str(table.extra_data.get(r, {}).get(c, ""))
     return val
 
 
-def parse_columns(instance):
-    table = instance.load_io()
+def parse_columns(run):
+    table = run.load_io()
     if table.tabular:
         for r in table.extra_data:
             row = table.extra_data[r]
             for c in row:
                 if c + 1 in row and c - 1 not in row:
                     parse_column(
-                        instance,
-                        name=row[c],
-                        head=[r, c, r, c],
-                        body=[r, c + 1, r, c + 1],
-                        body_type='value'
+                        run,
+                        row[c],
+                        type='value',
+                        start_row=r,
+                        end_row=r,
+                        header_col=c,
+                        start_col=c + 1,
+                        end_col=c + 1,
                     )
 
     for i, name in enumerate(table.field_map.keys()):
@@ -242,60 +256,38 @@ def parse_columns(instance):
             start_row = 0
         name = table.clean_field_name(name)
         parse_column(
-            instance,
+            run,
             name=name,
-            head=[header_row, i, start_row - 1, i],
-            body=[start_row, i, start_row + len(table), i],
-            body_type='list'
+            type='list',
+            header_row=header_row,
+            start_row=start_row,
+            end_row=start_row + len(table),
+            start_col=i,
+            end_col=i,
         )
 
-    return load_columns(instance)
+    return load_columns(run)
 
 
-def parse_column(instance, name, head, body, body_type):
-    matches = list(Identifier.objects.filter_by_identifier(name))
+def parse_column(run, name, **kwargs):
+    matches = list(Identifier.objects.filter(name__iexact=name))
     if len(matches) > 0:
         matches.sort(
-            key=lambda ident: PRIORITY.get(ident.content_type.name, 0)
+            key=lambda ident: PRIORITY.get(ident.type, 0)
         )
-        column = matches[0].content_object
-        ctype = matches[0].content_type
+        ident = matches[0]
     else:
-        column = UnknownItem.objects.find(name)
-        ctype = CONTENT_TYPES[UnknownItem]
+        ident = Identifier.objects.create(name=name)
 
-    reltype, is_new = RelationshipType.objects.get_or_create(
-        from_type=get_ct(instance),
-        to_type=ctype,
-        name='Contains Column',
-        inverse_name='Column In'
-    )
-    rel = instance.relationships.create(
-        type=reltype,
-        to_content_type=ctype,
-        to_object_id=column.pk,
-    )
-    Range.objects.create(
-        relationship=rel,
-        type='head',
-        start_row=head[0],
-        start_column=head[1],
-        end_row=head[2],
-        end_column=head[3]
-    )
-    Range.objects.create(
-        relationship=rel,
-        type=body_type,
-        start_row=body[0],
-        start_column=body[1],
-        end_row=body[2],
-        end_column=body[3]
+    run.range_set.create(
+        identifier=ident,
+        **kwargs
     )
 
 
 @task
-def update_columns(instance, user, post):
-    matched = get_columns(instance)
+def update_columns(run, user, post):
+    matched = get_columns(run)
     for col in matched:
         if col['type'] != 'unknown':
             continue
@@ -303,94 +295,137 @@ def update_columns(instance, user, post):
         if not val:
             continue
 
-        vtype, vid = val.split('/')
-        if vtype == 'parameters':
-            cls = Parameter
-        elif vtype == 'metacolumns':
-            cls = MetaColumn
-        else:
-            continue
+        ident = run.range_set.get(pk=col['rel_id']).identifier
+        assert(ident.content_type_id is None)
+        assert(ident.object_id is None)
+        assert(ident.field is None)
 
-        if vid == 'new':
-            obj = cls.objects.find(col['value'])
-            obj.contenttype = CONTENT_TYPES[Parameter]
-            obj.save()
-            ident = obj.primary_identifier
-        else:
-            obj = cls.objects.get_by_identifier(vid)
-            ident = obj.identifiers.create(
-                name=col['value']
-            )
+        if '/' in val:
+            vtype, vid = val.split('/')
+            if vtype == 'parameters':
+                cls = Parameter
+            else:
+                continue
 
-        reltype, is_new = RelationshipType.objects.get_or_create(
-            from_type=get_ct(instance),
-            to_type=CONTENT_TYPES[cls],
-            name='Contains Column',
-            inverse_name='Column In'
-        )
-        rel = instance.relationships.get(pk=col['rel_id'])
-        rel.type = reltype
-        rel.right = obj
-        rel.save()
+            if vid == 'new':
+                obj = cls.objects.find(col['value'])
+            else:
+                obj = cls.objects.get_by_identifier(vid)
+
+            ident.content_type = CONTENT_TYPES[cls]
+            ident.object_id = obj.pk
+        elif '.' in val:
+            parts = val.split('.')
+            cname = parts[0]
+            field = '.'.join(parts[1:])
+            ident.content_type = get_ct(cname)
+            ident.field = field
+
+        ident.save()
 
         new_metadata.send(
             sender=update_columns,
-            instance=instance,
-            object=obj,
+            run=run,
             identifier=ident,
         )
 
-    return read_columns(instance)
+    return read_columns(run)
 
 
 @task
-def read_row_identifiers(instance, user):
-    coltypes = get_meta_columns(instance)
+def read_row_identifiers(run, user):
+    if run.range_set.filter(type='data').exists():
+        return load_row_identifiers(run)
+    else:
+        return parse_row_identifiers(run)
+
+
+def parse_row_identifiers(run, user):
+    coltypes = get_meta_columns(run)
     ids = {}
     for mtype in coltypes:
         ids[mtype] = Counter()
 
-    for row in instance.load_io():
+    for row in run.load_io():
         for mtype, cols in coltypes.items():
             counter = ids[mtype]
             meta = OrderedDict()
             for col in cols:
                 meta[col['field_name']] = row[col['colnum']]
+            assert('id' in meta)
             key = tuple(meta.items())
             counter[key] += 1
 
-    idgroups = []
-    unknown_ids = 0
     for mtype in ids:
         cls = META_CLASSES[mtype]
-        idinfo = {
-            'type_id': mtype,
-            'type_label': mtype.capitalize(),
-            'ids': []
-        }
+        ct = get_ct(cls)
         for key, count in ids[mtype].items():
             meta = OrderedDict(key)
-            try:
-                obj = cls.objects.get_by_natural_key(meta['id'])
-            except cls.DoesNotExist:
-                obj = None
+            ident = Identifier.objects.filter(
+                name__iexact=meta['id'],
+                content_type=ct
+            ).first()
+            if ident:
+                # FIXME: assert that meta matches any ident.meta?
+                pass
+            else:
+                try:
+                    obj = cls.objects.get_by_natural_key(meta['id'])
+                except cls.DoesNotExist:
+                    obj = None
+                    other_meta = meta.copy()
+                    other_meta.pop('id')
+                    other_meta = json.dumps(other_meta)
+                else:
+                    # FIXME: assert that meta matches fields on obj?
+                    other_meta = None
+                ident = Identifier.objects.create(
+                    name=meta['id'],
+                    content_type=ct,
+                    object_id=obj.pk if obj else None,
+                    meta=other_meta,
+                )
 
+            run.range_set.create(
+                type='data',
+                identifier=ident,
+                count=count,
+            )
+
+
+def load_row_identifiers(run, user):
+    ids = {}
+    for rng in run.range_set.filter(type='data'):
+        ident = rng.identifier
+        ids.setdefault(rng.content_type, {})
+        ids[rng.content_type][ident] = rng.count
+
+    unknown_ids = []
+    idgroups = []
+    for mtype in ids:
+        idinfo = {
+            'type_id': mtype.model,
+            'type_label': mtype.name.title(),
+            'ids': []
+        }
+        for ident, count in ids[mtype].items():
+            meta = json.loads(ident.meta) if ident.meta else {}
             info = {
-                'value': meta['id'],
+                'value': ident.name,
                 'count': count,
                 'meta': [{
                     'name': k,
                     'value': v
-                } for k, v in meta.items() if k != 'id']
+                } for k, v in meta.items()]
             }
-            if obj is not None:
-                info['match'] = str(obj)
-                # FIXME: Confirm that metadata hasn't changed
+            if ident.object_id is not None:
+                info['match'] = str(ident.content_object)
             else:
-                info['ident_id'] = unknown_ids
+                assert(ident.type == 'unresolved')
                 unknown_ids += 1
+                info['ident_id'] = ident.pk
                 info['unknown'] = True
-                choices = instance.get_id_choices(cls, meta)
+                choices = run.get_loader().get_id_choices(cls, meta)
                 info['choices'] = [{
                     'id': get_object_id(choice),
                     'label': str(choice),
@@ -404,36 +439,6 @@ def read_row_identifiers(instance, user):
         idinfo['ids'].sort(key=lambda info: info['value'])
         idgroups.append(idinfo)
 
-    if not unknown_ids:
-        # Create relationships after all IDs are resolved.
-
-        # FIXME: parse_columns() always creates relationships, using
-        # UnknownItem to stand in for unknown column identifiers.
-        # Use UnknownItem here as well?
-
-        from_type = get_ct(instance)
-
-        for idinfo in idgroups:
-            cls = META_CLASSES[idinfo['type_id']]
-            to_type = get_ct(cls)
-            reltype, is_new = RelationshipType.objects.get_or_create(
-                from_type=from_type,
-                to_type=to_type,
-                name='Contains Identifier',
-                inverse_name='Identifier In'
-            )
-            for info in idinfo['ids']:
-                obj = cls.objects.get_by_natural_key(info['value'])
-                rel, isnew = instance.relationships.get_or_create(
-                    type=reltype,
-                    to_content_type=to_type,
-                    to_object_id=obj.pk,
-                    from_content_type=from_type,
-                    from_object_id=instance.pk,
-                )
-
-                # FIXME: create equivalent of Range objects here?
-
     return {
         'unknown_count': unknown_ids,
         'types': idgroups,
@@ -441,58 +446,41 @@ def read_row_identifiers(instance, user):
 
 
 @task
-def update_row_identifiers(instance, user, post):
-    coltypes = get_meta_columns(instance)
-    unknown_count = int(post.get('unknown_count', 0))
-    for i in range(0, unknown_count):
-        ident_value = post.get('ident_%s_value' % i, None)
-        ident_type = post.get('ident_%s_type' % i, None)
-        ident_id = post.get('ident_%s_id' % i, None)
-        if ident_value and ident_type and ident_id:
-            if ident_type not in coltypes:
-                raise Exception("Unexpected type %s!" % ident_type)
-            cls = META_CLASSES[ident_type]
-            if ident_id == 'new':
-                # Create new object (with primary identifier)
-                obj = cls.objects.find(ident_value)
-                ident = obj.primary_identifier
+def update_row_identifiers(run, user, post):
+    unknown = run.range_set.filter(
+        type='data',
+        identifier__resolved=False,
+    )
+    for ident in unknown:
+        ident_id = post.get('ident_%s_id' % ident.pk, None)
+        if not ident_id:
+            continue
+        if ident_id == 'new':
+            # Create new object (with primary identifier)
+            cls = ident.content_type.model_class()
+            obj = cls.objects.find(ident.name)
+            meta = json.loads(ident.meta) if ident.meta else {}
 
+            if meta:
                 # Set additional metadata fields on new object
-                for col in coltypes[ident_type]:
-                    if col['field_name'] == "id":
-                        continue
-
-                    formname = 'ident_%s_%s' % (i, col['field_name'])
-                    val = post.get(formname, None)
-                    if not val:
-                        continue
-
-                    setattr(obj, col['field_name'], val)
-
-                    # If present, also apply "name" attribute to identifier
-                    if col['field_name'] == "name":
-                        ident.name = val
-                        ident.slug = ident_value
-                        ident.save()
+                for col, val in meta.items():
+                    setattr(obj, col, val)
                 obj.save()
-            else:
-                # Add new identifier to existing object for future reference
-                obj = cls.objects.get_by_identifier(ident_id)
-                name = post.get('ident_%s_name' % i, None)
-                if not name:
-                    name = ident_value
-                ident = obj.identifiers.create(name=name, slug=ident_value)
+        else:
+            # Add new identifier to existing object for future reference
+            obj = cls.objects.get_by_identifier(ident_id)
 
-                # FIXME: Update existing metadata?
+        ident.object_id = obj.pk
+        ident.save()
 
-            new_metadata.send(
-                sender=update_row_identifiers,
-                instance=instance,
-                object=obj,
-                identifier=ident,
-            )
+        new_metadata.send(
+            sender=update_row_identifiers,
+            run=run,
+            object=obj,
+            identifier=ident,
+        )
 
-    return read_row_identifiers(instance, user)
+    return read_row_identifiers(run, user)
 
 
 @task
@@ -501,23 +489,26 @@ def reset(instance, user):
 
 
 @task
-def import_data(instance, user):
+def import_data(run, user):
     """
     Import all parseable data from the dataset instance's IO class.
     """
-    return do_import(instance, user)
+    result = do_import(run, user)
+    # FIXME: Shouldn't this happen automatically?
+    current_task.update_state(state='SUCCESS', meta=result)
+    return result
 
 
-def do_import(instance, user):
+def do_import(run, user):
 
     # (Re-)Load data and column information
-    table = instance.load_io()
-    matched = get_columns(instance)
+    table = run.load_io()
+    matched = get_columns(run)
 
     # Set global defaults for metadata values
     if not user.is_authenticated():
         user = None
-    instance_globals = {
+    run_globals = {
         # Metadata fields
         'event_meta': {},
         'report_meta': {
@@ -536,13 +527,13 @@ def do_import(instance, user):
         info = Event._meta.get_field_by_name(field_name)
         field = info[0]
         if field.null:
-            instance_globals['event_meta'][field_name] = None
+            run_globals['event_meta'][field_name] = None
 
     # Set any global defaults defined within data themselves (usually as extra
     # cells above the headers in a spreadsheet)
     for col in matched:
         if 'value' in col:
-            save_value(col, col['value'], instance_globals)
+            save_value(col, col['value'], run_globals)
 
     # Loop through table rows and add each record
     rows = len(table)
@@ -566,31 +557,25 @@ def do_import(instance, user):
         })
 
         # Create report, capturing any errors
-        skipreason = None
         try:
-            report = create_report(row, instance_globals, matched)
+            report = create_report(row, run_globals, matched)
         except Exception as e:
-            # Log error in database
-            skipreason = repr(e)
-            skipped.append({'row': rownum(i) + 1, 'reason': skipreason})
-            report, is_new = SkippedRecord.objects.get_or_create(
-                reason=skipreason
-            )
+            # Note exception in database
+            report = None
+            success = False
+            fail_reason = repr(e)
+            skipped.append({'row': rownum(i) + 1, 'reason': fail_reason})
+        else:
+            success = True
+            fail_reason = None
 
         # Record relationship between data source and resulting report (or
         # skipped record), including specific cell range.
-        rel = instance.create_relationship(
-            report,
-            'Contains Row',
-            'Row In'
-        )
-        Range.objects.create(
-            relationship=rel,
-            type='row',
-            start_row=rownum(i),
-            start_column=0,
-            end_row=rownum(i),
-            end_column=len(row) - 1
+        run.record_set.create(
+            row=rownum(i),
+            content_object=report,
+            success=success,
+            fail_reason=fail_reason
         )
 
     # Send completion signal (in case any server handlers are registered)
@@ -599,7 +584,7 @@ def do_import(instance, user):
         'total': rows,
         'skipped': skipped
     }
-    import_complete.send(sender=import_data, instance=instance, status=status)
+    import_complete.send(sender=import_data, run=run, status=status)
 
     # Return status (thereby updating task state for status() on view)
     return status
@@ -659,7 +644,7 @@ def save_value(col, val, obj):
     For each cell in each row, use parsed col(umn) information to determine how
     to apply the cell val(ue) to the obj(ect hash).
     """
-    if col['type'] == "parameter_value":
+    if col['type'] == "instance":
         # Parameter value in a "horizontal" table
         save_parameter_value(col, val, obj)
     elif col['type'] != "unknown":
@@ -690,12 +675,12 @@ def save_metadata_value(col, val, obj):
     """
 
     # Skip empty values
-    if val is None or val == '' or not col['type']:
+    if val is None or val == '' or not col['model']:
         return
 
     # Assign metadata property based on meta_field (MetaColumn.name).
-    meta_key = '%s_meta' % col['type']
-    meta_cls = META_CLASSES[col['type']]
+    meta_key = '%s_meta' % col['model']
+    meta_cls = META_CLASSES[col['model']]
     meta_field = col['field_name']
 
     # Event and report metadata are defined whether this is a "horizontal" or
@@ -717,7 +702,7 @@ def save_metadata_value(col, val, obj):
         part = None
 
     # Determine Django field type (for metadata models only)
-    if col['type'] == 'result':
+    if col['model'] == 'result':
         meta_datatype = None
     else:
         meta_datatype = meta_cls._meta.get_field_by_name(

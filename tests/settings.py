@@ -29,11 +29,11 @@ DATABASES = {
 ROOT_URLCONF = "tests.urls"
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "media")
 
-WQ_FILE_MODEL = "file_app.File"
 WQ_DEFAULT_REPORT_STATUS = 100
 
 CELERY_ALWAYS_EAGER = True
 CELERY_RESULT_BACKEND = 'redis://localhost/0'
+CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 
 SWAP = False
 
