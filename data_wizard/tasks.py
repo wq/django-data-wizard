@@ -80,6 +80,7 @@ def auto_import(run, user):
     if result['unknown_count']:
         result['action'] = "columns"
         result['message'] = "Input Needed"
+        current_task.update_state(state='SUCCESS', meta=result)
         return result
 
     # Parse row identifiers
@@ -92,6 +93,7 @@ def auto_import(run, user):
     if result['unknown_count']:
         result['action'] = "ids"
         result['message'] = "Input Needed"
+        current_task.update_state(state='SUCCESS', meta=result)
         return result
 
     status.update(
@@ -318,7 +320,7 @@ def update_columns(run, user, post):
             parts = val.split('.')
             cname = parts[0]
             field = '.'.join(parts[1:])
-            ident.content_type = get_ct(cname)
+            ident.content_type = get_ct(META_CLASSES[cname])
             ident.field = field
 
         ident.save()
@@ -333,20 +335,25 @@ def update_columns(run, user, post):
 
 
 @task
-def read_row_identifiers(run, user):
+def read_row_identifiers(run, user=None):
     if run.range_set.filter(type='data').exists():
         return load_row_identifiers(run)
     else:
         return parse_row_identifiers(run)
 
 
-def parse_row_identifiers(run, user):
+def parse_row_identifiers(run):
     coltypes = get_meta_columns(run)
     ids = {}
     for mtype in coltypes:
         ids[mtype] = Counter()
 
-    for row in run.load_io():
+    start_col = 1e10
+    start_row = 1e10
+    end_col = -1
+    end_row = -1
+    table = run.load_io()
+    for i, row in enumerate(table):
         for mtype, cols in coltypes.items():
             counter = ids[mtype]
             meta = OrderedDict()
@@ -355,6 +362,14 @@ def parse_row_identifiers(run, user):
             assert('id' in meta)
             key = tuple(meta.items())
             counter[key] += 1
+
+            start_col = min(col['colnum'], start_col)
+            end_col = min(col['colnum'], end_col)
+            rownum = i
+            if table.tabular:
+                rownum += table.start_row
+            start_row = min(start_row, rownum)
+            end_row = max(end_row, rownum)
 
     for mtype in ids:
         cls = META_CLASSES[mtype]
@@ -389,18 +404,23 @@ def parse_row_identifiers(run, user):
             run.range_set.create(
                 type='data',
                 identifier=ident,
+                start_col=start_col,
+                end_col=end_col,
+                start_row=start_row,
+                end_row=end_row,
                 count=count,
             )
+    return load_row_identifiers(run)
 
 
-def load_row_identifiers(run, user):
+def load_row_identifiers(run):
     ids = {}
     for rng in run.range_set.filter(type='data'):
         ident = rng.identifier
-        ids.setdefault(rng.content_type, {})
-        ids[rng.content_type][ident] = rng.count
+        ids.setdefault(ident.content_type, {})
+        ids[ident.content_type][ident] = rng.count
 
-    unknown_ids = []
+    unknown_ids = 0
     idgroups = []
     for mtype in ids:
         idinfo = {
@@ -425,7 +445,9 @@ def load_row_identifiers(run, user):
                 unknown_ids += 1
                 info['ident_id'] = ident.pk
                 info['unknown'] = True
-                choices = run.get_loader().get_id_choices(cls, meta)
+                choices = run.get_id_choices(
+                    ident.content_type.model_class(), meta
+                )
                 info['choices'] = [{
                     'id': get_object_id(choice),
                     'label': str(choice),
@@ -451,13 +473,14 @@ def update_row_identifiers(run, user, post):
         type='data',
         identifier__resolved=False,
     )
-    for ident in unknown:
+    for rng in unknown:
+        ident = rng.identifier
+        cls = ident.content_type.model_class()
         ident_id = post.get('ident_%s_id' % ident.pk, None)
         if not ident_id:
             continue
         if ident_id == 'new':
             # Create new object (with primary identifier)
-            cls = ident.content_type.model_class()
             obj = cls.objects.find(ident.name)
             meta = json.loads(ident.meta) if ident.meta else {}
 
@@ -494,8 +517,6 @@ def import_data(run, user):
     Import all parseable data from the dataset instance's IO class.
     """
     result = do_import(run, user)
-    # FIXME: Shouldn't this happen automatically?
-    current_task.update_state(state='SUCCESS', meta=result)
     return result
 
 
@@ -585,6 +606,9 @@ def do_import(run, user):
         'skipped': skipped
     }
     import_complete.send(sender=import_data, run=run, status=status)
+
+    # FIXME: Shouldn't this happen automatically?
+    current_task.update_state(state='SUCCESS', meta=status)
 
     # Return status (thereby updating task state for status() on view)
     return status

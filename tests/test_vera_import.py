@@ -27,7 +27,7 @@ class SwapTestCase(APITestCase):
         if not settings.SWAP:
             return
 
-        self.site = Site.objects.find("Site 1")
+        self.site = Site.objects.find("Site #1")
         self.user = User.objects.create(username='testuser', is_superuser=True)
         self.client.force_authenticate(user=self.user)
         self.valid = ReportStatus.objects.create(
@@ -45,22 +45,22 @@ class SwapTestCase(APITestCase):
             content_object=param1,
         )
 
-        event_ct = ContentType.objects.get_for_model(Event)
         Identifier.objects.create(
             name='Date',
-            content_type=event_ct,
+            content_type=ContentType.objects.get_for_model(Event),
             field='date'
         )
         Identifier.objects.create(
             name='Site',
-            content_type=event_ct,
-            field='site'
+            content_type=ContentType.objects.get_for_model(Site),
+            field='id',
         )
 
     @unittest.skipUnless(settings.SWAP, "requires swapped models")
-    def test_dbio(self):
+    def test_manual(self):
         """
-        Test the full dbio import process, from initial upload thru data import
+        Test the full data_wizard import process, from initial upload thru data
+        import - using the non-auto API.
         """
         # 1. Upload file
         filename = os.path.join(os.path.dirname(__file__), 'testdata.csv')
@@ -104,7 +104,7 @@ class SwapTestCase(APITestCase):
                 col_id = "parameters/new"
                 type_name = "Parameter"
             elif col['name'] == "site id":
-                col_id = "event.site"
+                col_id = "site.id"
                 type_name = "Metadata"
 
             found = False
@@ -123,7 +123,28 @@ class SwapTestCase(APITestCase):
         unknown = response.data['result']['unknown_count']
         self.assertFalse(unknown, "%s unknown columns remain" % unknown)
 
-        # 5. Start data import process, wait for completion
+        # 5. Check site identifiers
+        response = self.client.get(url('ids'))
+        res = response.data['result']
+        self.assertEqual(res['unknown_count'], 1)
+        self.assertEqual(len(res['types']), 1)
+        self.assertEqual(len(res['types'][0]['ids']), 1)
+        idinfo = res['types'][0]['ids'][0]
+        self.assertTrue(idinfo['unknown'])
+        self.assertEqual(idinfo['count'], 3)
+        self.assertEqual(len(idinfo['choices']), 2)
+        for choice in idinfo['choices']:
+            if choice['id'] != 'new':
+                site_id = choice['id']
+
+        # 6. Post selected options, verify that all identifiers are now known
+        post = {
+            'ident_%s_id' % idinfo['ident_id']: site_id
+        }
+        response = self.client.post(url('updateids'), post)
+        self.assertFalse(response.data['result']['unknown_count'])
+
+        # 7. Start data import process, wait for completion
         response = self.client.post(url('data'))
         self.assertIn("task_id", response.data)
         task = response.data['task_id']
@@ -142,7 +163,80 @@ class SwapTestCase(APITestCase):
                 done = True
                 self.assertFalse(res['skipped'])
 
-        # 6. Import complete -verify data exists in database
+        # 8. Import complete -verify data exists in database
+        for event in Event.objects.all():
+            self.assertTrue(event.is_valid)
+        self.assertEqual(EventResult.objects.count(), 6)
+        param = Parameter.objects.find('temperature')
+        er = EventResult.objects.get(
+            result_type=param, event_date='2014-01-07'
+        )
+        self.assertEqual(er.result_value_numeric, 1.0)
+
+        param = Parameter.objects.find('notes')
+        er = EventResult.objects.get(
+            result_type=param, event_date='2014-01-06'
+        )
+        self.assertEqual(er.result_value_text, "Test Note 2")
+
+    @unittest.skipUnless(settings.SWAP, "requires swapped models")
+    def test_auto(self):
+        """
+        Test the full data_wizard import process, from initial upload thru data
+        import - using the auto API.
+        """
+        # 0. Ensure all necessary identifiers are already matched
+        Identifier.objects.create(
+            name='notes',
+            content_object=Parameter.objects.find('notes')
+        )
+        Identifier.objects.create(
+            name='site id',
+            content_type=ContentType.objects.get_for_model(Site),
+            field='id'
+        )
+        Identifier.objects.create(
+            name='site 1',
+            content_object=self.site,
+        )
+
+        # 1. Upload file
+        filename = os.path.join(os.path.dirname(__file__), 'testdata.csv')
+        with open(filename, 'rb') as f:
+            response = self.client.post('/files.json', {'file': f})
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            fileid = response.data['id']
+
+        run = Run.objects.create(
+            user=self.user,
+            content_type=ContentType.objects.get_for_model(File),
+            object_id=fileid,
+        )
+
+        def url(action):
+            return '/datawizard/%s/%s.json' % (run.pk, action)
+
+        # 2. Trigger auto-import
+        response = self.client.post(url('auto'))
+        self.assertIn("task_id", response.data)
+        task = response.data['task_id']
+
+        print()
+        done = False
+        while not done:
+            sleep(1)
+            response = self.client.get(url('status'), {'task': task})
+            res = response.data
+            if res.get('status', None) in ("PENDING", "PROGRESS"):
+                print(res)
+                continue
+            for key in ('status', 'total', 'current', 'skipped'):
+                self.assertIn(key, res)
+            if res['status'] == "SUCCESS" or res['total'] == res['current']:
+                done = True
+                self.assertFalse(res['skipped'])
+
+        # 3. Import complete -verify data exists in database
         for event in Event.objects.all():
             self.assertTrue(event.is_valid)
         self.assertEqual(EventResult.objects.count(), 6)

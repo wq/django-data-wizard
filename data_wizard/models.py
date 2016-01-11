@@ -26,6 +26,10 @@ class Run(models.Model):
         loader = Loader(self)
         return loader.load_io()
 
+    def get_id_choices(self, model, meta):
+        loader = Loader(self)
+        return loader.get_id_choices(model, meta)
+
     def already_parsed(self):
         return self.range_set.count()
 
