@@ -42,7 +42,9 @@ class RunLog(models.Model):
 
 class Identifier(models.Model):
     name = models.CharField(max_length=255)
-    content_type = models.ForeignKey(ContentType, null=True, blank=True)
+    content_type = models.ForeignKey(
+        ContentType, null=True, blank=True, related_name='+',
+    )
 
     field = models.CharField(max_length=255, null=True, blank=True)
 
