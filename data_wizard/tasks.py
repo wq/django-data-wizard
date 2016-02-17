@@ -735,8 +735,8 @@ def save_metadata_value(col, val, obj):
         )[0].get_internal_type()
 
     # Automatically parse date values as such
-    if (meta_datatype in DATE_FIELDS and isinstance(val, string_types)
-            and part != 'time'):
+    if (meta_datatype in DATE_FIELDS and isinstance(val, string_types) and
+            part != 'time'):
         from dateutil.parser import parse
         val = parse(val)
         if meta_datatype == 'DateField':
@@ -778,8 +778,8 @@ def process_date_part(new_val, old_val, part):
 
     # Try some extra hacks to convert time values
     if not isinstance(time, datetime.time):
-        if (isinstance(time, float)
-                and time >= 100 and time <= 2400):
+        if (isinstance(time, float) and
+                time >= 100 and time <= 2400):
             # "Numeric" time (hour * 100 + minutes)
             time = str(time)
         elif isinstance(time, string_types) and ":" in time:

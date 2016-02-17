@@ -13,13 +13,12 @@ from tests.file_app.models import File
 
 import unittest
 
+from django.conf import settings
 import swapper
 Site = swapper.load_model("vera", "Site")
 Event = swapper.load_model("vera", "Event")
 Report = swapper.load_model("vera", "Report")
 EventResult = swapper.load_model("vera", "EventResult")
-
-from django.conf import settings
 
 
 class SwapTestCase(APITestCase):
