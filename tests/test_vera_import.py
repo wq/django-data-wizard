@@ -179,10 +179,6 @@ class SwapTestCase(APITestCase):
         self.assertEqual(er.result_value_text, "Test Note 2")
 
         # 9. Check logs
-        run = Run.objects.get(pk=run.pk)
-        self.assertEqual(run.imported_rows, 3)
-        self.assertEqual(run.loader, 'data_wizard.loaders.FileLoader')
-
         steps = [log.event for log in run.log.all()]
         self.assertEqual(steps, [
             'parse_columns',
@@ -192,6 +188,7 @@ class SwapTestCase(APITestCase):
             'do_import',
             'import_complete',
         ])
+        self.check_data(run)
 
     @unittest.skipUnless(settings.SWAP, "requires swapped models")
     def test_auto(self):
@@ -210,7 +207,7 @@ class SwapTestCase(APITestCase):
             field='id'
         )
         Identifier.objects.create(
-            name='site 1',
+            name='Site 1',
             content_object=self.site,
         )
 
@@ -267,10 +264,6 @@ class SwapTestCase(APITestCase):
         self.assertEqual(er.result_value_text, "Test Note 2")
 
         # 4. Check logs
-        run = Run.objects.get(pk=run.pk)
-        self.assertEqual(run.imported_rows, 3)
-        self.assertEqual(run.loader, 'data_wizard.loaders.FileLoader')
-
         steps = [log.event for log in run.log.all()]
         self.assertEqual(steps, [
             'auto_import',
@@ -278,4 +271,33 @@ class SwapTestCase(APITestCase):
             'parse_row_identifiers',
             'do_import',
             'import_complete',
+        ])
+        self.check_data(run)
+
+    def check_data(self, run):
+        run = Run.objects.get(pk=run.pk)
+        self.assertEqual(run.record_count, 3)
+        self.assertEqual(run.loader, 'data_wizard.loaders.FileLoader')
+
+        ranges = [
+            str(rng).replace("Run for File object contains ", "")
+            for rng in run.range_set.all()
+        ]
+        self.assertEqual(ranges, [
+            "Data Column 'Date -> Meta: event.date' at Rows 1-3, Column 0",
+            "Data Column 'site id -> Meta: site.id' at Rows 1-3, Column 1",
+            "Data Column 'Temperature -> parameter: Temperature (C)'"
+            " at Rows 1-3, Column 2",
+            "Data Column 'notes -> parameter: notes' at Rows 1-3, Column 3",
+            "Cell value 'Site 1 -> site: Site #1' at Rows 1-3, Column 1",
+        ])
+
+        records = [
+            str(record).replace("Run for File object imported ", "")
+            for record in run.record_set.all()
+        ]
+        self.assertEqual(records, [
+            "'Site 1 on 2014-01-05 according to testuser' at row 1",
+            "'Site 1 on 2014-01-06 according to testuser' at row 2",
+            "'Site 1 on 2014-01-07 according to testuser' at row 3",
         ])

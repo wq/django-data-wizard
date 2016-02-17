@@ -262,7 +262,7 @@ def parse_columns(run):
             type='list',
             header_row=header_row,
             start_row=start_row,
-            end_row=start_row + len(table),
+            end_row=start_row + len(table) - 1,
             start_col=i,
             end_col=i,
         )
@@ -365,12 +365,16 @@ def parse_row_identifiers(run):
             counter[key] += 1
 
             start_col = min(col['colnum'], start_col)
-            end_col = min(col['colnum'], end_col)
+            end_col = max(col['colnum'], end_col)
             rownum = i
             if table.tabular:
                 rownum += table.start_row
             start_row = min(start_row, rownum)
             end_row = max(end_row, rownum)
+    assert(start_col < 1e10)
+    assert(start_row < 1e10)
+    assert(end_col > -1)
+    assert(end_row > -1)
 
     for mtype in ids:
         cls = META_CLASSES[mtype]
@@ -604,7 +608,7 @@ def do_import(run, user):
         'skipped': skipped
     }
     run.add_event('import_complete')
-    run.imported_rows = rows
+    run.record_count = rows
     run.save()
     import_complete.send(sender=import_data, run=run, status=status)
 

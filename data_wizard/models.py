@@ -14,7 +14,7 @@ Loader = import_from_string(LOADER_PATH, 'DATA_WIZARD_LOADER')
 class Run(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     template = models.ForeignKey('self', null=True, blank=True)
-    imported_rows = models.IntegerField(null=True, blank=True)
+    record_count = models.IntegerField(null=True, blank=True)
     loader = models.CharField(max_length=255, default=LOADER_PATH)
 
     content_type = models.ForeignKey(ContentType, null=True, blank=True)
@@ -69,7 +69,13 @@ class Identifier(models.Model):
 
     def __str__(self):
         if self.type == 'instance':
-            return "%s: %s" % (self.content_type, self.content_object)
+            return "%s -> %s: %s" % (
+                self.name, self.content_type, self.content_object
+            )
+        elif self.type == 'meta':
+            return "%s -> Meta: %s.%s" % (
+                self.name, self.content_type.model, self.field
+            )
         else:
             return "%s: %s" % (self.type.title(), self.name)
 
@@ -139,8 +145,13 @@ class Range(models.Model):
         elif self.type == "value" and self.header_col != self.start_col - 1:
             header = " (header starts in Column %s)" % self.header_col
 
-        return "%s contains %s at %s, %s%s" % (
-            self.run, self.identifier, row, col, header
+        return "{run} contains {type} '{ident}' at {row}, {col}{head}".format(
+            run=self.run,
+            type=self.get_type_display(),
+            ident=self.identifier,
+            row=row,
+            col=col,
+            head=header
         )
 
 
@@ -155,4 +166,15 @@ class Record(models.Model):
     fail_reason = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return self.reason
+        if self.success:
+            return "{run} imported '{obj}' at row {row}".format(
+                run=self.run,
+                obj=self.content_object,
+                row=self.row,
+            )
+        else:
+            return "{run} failed at row {row}: {fail_reason}".format(
+                run=self.run,
+                row=self.row,
+                fail_reason=self.fail_reason,
+            )
