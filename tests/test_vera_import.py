@@ -9,7 +9,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from vera.models import ReportStatus, Parameter
 from data_wizard.models import Identifier, Run
-from tests.file_app.models import File
 
 import unittest
 
@@ -68,11 +67,14 @@ class SwapTestCase(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             fileid = response.data['id']
 
-        run = Run.objects.create(
-            user=self.user,
-            content_type=ContentType.objects.get_for_model(File),
-            object_id=fileid,
+        response = self.client.post('/datawizard.json', {
+            'content_type_id': 'file_app.file',
+            'object_id': fileid,
+        })
+        self.assertEqual(
+            response.status_code, status.HTTP_201_CREATED, response.data
         )
+        run = Run.objects.get(pk=response.data['id'])
 
         def url(action):
             return '/datawizard/%s/%s.json' % (run.pk, action)
@@ -219,11 +221,14 @@ class SwapTestCase(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             fileid = response.data['id']
 
-        run = Run.objects.create(
-            user=self.user,
-            content_type=ContentType.objects.get_for_model(File),
-            object_id=fileid,
+        response = self.client.post('/datawizard.json', {
+            'content_type_id': 'file_app.file',
+            'object_id': fileid,
+        })
+        self.assertEqual(
+            response.status_code, status.HTTP_201_CREATED, response.data
         )
+        run = Run.objects.get(pk=response.data['id'])
 
         def url(action):
             return '/datawizard/%s/%s.json' % (run.pk, action)
