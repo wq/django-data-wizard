@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from vera.models import ReportStatus, Parameter
 from data_wizard.models import Identifier, Run
-from wq.db.contrib.files.models import File
+from tests.file_app.models import File
 
 import unittest
 
@@ -179,6 +179,21 @@ class SwapTestCase(APITestCase):
         )
         self.assertEqual(er.result_value_text, "Test Note 2")
 
+        # 9. Check logs
+        run = Run.objects.get(pk=run.pk)
+        self.assertEqual(run.imported_rows, 3)
+        self.assertEqual(run.loader, 'data_wizard.loaders.FileLoader')
+
+        steps = [log.event for log in run.log.all()]
+        self.assertEqual(steps, [
+            'parse_columns',
+            'update_columns',
+            'parse_row_identifiers',
+            'update_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])
+
     @unittest.skipUnless(settings.SWAP, "requires swapped models")
     def test_auto(self):
         """
@@ -251,3 +266,17 @@ class SwapTestCase(APITestCase):
             result_type=param, event_date='2014-01-06'
         )
         self.assertEqual(er.result_value_text, "Test Note 2")
+
+        # 4. Check logs
+        run = Run.objects.get(pk=run.pk)
+        self.assertEqual(run.imported_rows, 3)
+        self.assertEqual(run.loader, 'data_wizard.loaders.FileLoader')
+
+        steps = [log.event for log in run.log.all()]
+        self.assertEqual(steps, [
+            'auto_import',
+            'parse_columns',
+            'parse_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])

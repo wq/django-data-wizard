@@ -14,6 +14,8 @@ Loader = import_from_string(LOADER_PATH, 'DATA_WIZARD_LOADER')
 class Run(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     template = models.ForeignKey('self', null=True, blank=True)
+    imported_rows = models.IntegerField(null=True, blank=True)
+    loader = models.CharField(max_length=255, default=LOADER_PATH)
 
     content_type = models.ForeignKey(ContentType, null=True, blank=True)
     object_id = models.PositiveIntegerField(null=True, blank=True)
@@ -33,11 +35,22 @@ class Run(models.Model):
     def already_parsed(self):
         return self.range_set.count()
 
+    def add_event(self, name):
+        self.log.create(
+            event=name
+        )
+
 
 class RunLog(models.Model):
-    run = models.ForeignKey(Run)
+    run = models.ForeignKey(Run, related_name='log')
     event = models.CharField(max_length=100)
     date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return "%s: %s at %s" % (self.run, self.event, self.date)
+
+    class Meta:
+        ordering = ('date',)
 
 
 class Identifier(models.Model):

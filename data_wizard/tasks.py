@@ -31,9 +31,6 @@ META_CLASSES = {
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
 
-CONTENT_TYPES = {
-    Parameter: get_ct(Parameter),
-}
 
 DATE_FIELDS = {
     'DateTimeField': datetime.datetime,
@@ -60,6 +57,7 @@ def auto_import(run, user):
     IO.  Meant to be called asynchronously.  Automatically suspends import if
     any additional input is needed from the user.
     """
+    run.add_event('auto_import')
     # Preload IO to catch any load errors early
     status = {
         'message': "Loading Data...",
@@ -108,7 +106,7 @@ def auto_import(run, user):
 def get_choices(run):
     def make_list(cls, name):
         rows = cls.objects.all()
-        ct = CONTENT_TYPES[cls]
+        ct = get_ct(cls)
         result = [{
             'id': '%s/new' % ct.urlbase,
             'label': "New %s" % name,
@@ -232,6 +230,7 @@ def get_range_value(table, rng, scol, ecol):
 
 
 def parse_columns(run):
+    run.add_event('parse_columns')
     table = run.load_io()
     if table.tabular:
         for r in table.extra_data:
@@ -289,6 +288,7 @@ def parse_column(run, name, **kwargs):
 
 @task
 def update_columns(run, user, post):
+    run.add_event('update_columns')
     matched = get_columns(run)
     for col in matched:
         if col['type'] != 'unknown':
@@ -314,7 +314,7 @@ def update_columns(run, user, post):
             else:
                 obj = cls.objects.get_by_identifier(vid)
 
-            ident.content_type = CONTENT_TYPES[cls]
+            ident.content_type = get_ct(cls)
             ident.object_id = obj.pk
         elif '.' in val:
             parts = val.split('.')
@@ -343,6 +343,7 @@ def read_row_identifiers(run, user=None):
 
 
 def parse_row_identifiers(run):
+    run.add_event('parse_row_identifiers')
     coltypes = get_meta_columns(run)
     ids = {}
     for mtype in coltypes:
@@ -469,6 +470,7 @@ def load_row_identifiers(run):
 
 @task
 def update_row_identifiers(run, user, post):
+    run.add_event('update_row_identifiers')
     unknown = run.range_set.filter(
         type='data',
         identifier__resolved=False,
@@ -507,11 +509,6 @@ def update_row_identifiers(run, user, post):
 
 
 @task
-def reset(instance, user):
-    instance.relationships.all().delete()
-
-
-@task
 def import_data(run, user):
     """
     Import all parseable data from the dataset instance's IO class.
@@ -521,6 +518,7 @@ def import_data(run, user):
 
 
 def do_import(run, user):
+    run.add_event('do_import')
 
     # (Re-)Load data and column information
     table = run.load_io()
@@ -605,6 +603,9 @@ def do_import(run, user):
         'total': rows,
         'skipped': skipped
     }
+    run.add_event('import_complete')
+    run.imported_rows = rows
+    run.save()
     import_complete.send(sender=import_data, run=run, status=status)
 
     # FIXME: Shouldn't this happen automatically?

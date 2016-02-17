@@ -68,12 +68,6 @@ class RunViewSet(ModelViewSet):
         return response
 
     @detail_route(methods=['post'])
-    def reset(self, request, *args, **kwargs):
-        self.task = 'retrieve'
-        response = self.run_task('reset')
-        return response
-
-    @detail_route(methods=['post'])
     def data(self, request, *args, **kwargs):
         return self.run_task('import_data', async=True)
 
