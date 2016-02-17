@@ -181,6 +181,7 @@ class SwapTestCase(APITestCase):
         # 9. Check logs
         steps = [log.event for log in run.log.all()]
         self.assertEqual(steps, [
+            'created',
             'parse_columns',
             'update_columns',
             'parse_row_identifiers',
@@ -266,6 +267,7 @@ class SwapTestCase(APITestCase):
         # 4. Check logs
         steps = [log.event for log in run.log.all()]
         self.assertEqual(steps, [
+            'created',
             'auto_import',
             'parse_columns',
             'parse_row_identifiers',

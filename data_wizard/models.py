@@ -24,6 +24,12 @@ class Run(models.Model):
     def __str__(self):
         return "Run for %s" % self.content_object
 
+    def save(self, *args, **kwargs):
+        is_new = not self.id
+        super(Run, self).save(*args, **kwargs)
+        if is_new:
+            self.add_event('created')
+
     def load_io(self):
         loader = Loader(self)
         return loader.load_io()
