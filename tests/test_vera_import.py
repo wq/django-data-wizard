@@ -167,6 +167,7 @@ class SwapTestCase(APITestCase):
         # 8. Import complete -verify data exists in database
         for event in Event.objects.all():
             self.assertTrue(event.is_valid)
+            self.assertEqual(event.site, self.site)
         self.assertEqual(EventResult.objects.count(), 6)
         param = Parameter.objects.find('temperature')
         er = EventResult.objects.get(
@@ -256,6 +257,7 @@ class SwapTestCase(APITestCase):
         # 3. Import complete -verify data exists in database
         for event in Event.objects.all():
             self.assertTrue(event.is_valid)
+            self.assertEqual(event.site, self.site)
         self.assertEqual(EventResult.objects.count(), 6)
         param = Parameter.objects.find('temperature')
         er = EventResult.objects.get(
@@ -304,7 +306,7 @@ class SwapTestCase(APITestCase):
             for record in run.record_set.all()
         ]
         self.assertEqual(records, [
-            "'Site 1 on 2014-01-05 according to testuser' at row 1",
-            "'Site 1 on 2014-01-06 according to testuser' at row 2",
-            "'Site 1 on 2014-01-07 according to testuser' at row 3",
+            "'Site #1 on 2014-01-05 according to testuser' at row 1",
+            "'Site #1 on 2014-01-06 according to testuser' at row 2",
+            "'Site #1 on 2014-01-07 according to testuser' at row 3",
         ])

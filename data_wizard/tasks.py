@@ -9,7 +9,7 @@ import datetime
 from .signals import import_complete, new_metadata
 import json
 
-from wq.db.rest.models import get_ct, get_object_id
+from wq.db.rest.models import get_ct
 
 import vera.models  # noqa
 
@@ -194,9 +194,7 @@ def load_columns(run):
             info['field_name'] = rng.identifier.field
             info['model'] = ident.content_type.model
         elif ident.type == 'instance':
-            info['%s_id' % ident.content_type.model] = get_object_id(
-                ident.content_object
-            )
+            info['%s_id' % ident.content_type.model] = ident.object_id
         else:
             info['value'] = ident.name
 
@@ -310,9 +308,10 @@ def update_columns(run, user, post):
                 continue
 
             if vid == 'new':
+                # FIXME: This assumes class is a wq.db IdentifiedModel
                 obj = cls.objects.find(col['value'])
             else:
-                obj = cls.objects.get_by_identifier(vid)
+                obj = cls.objects.get(pk=vid)
 
             ident.content_type = get_ct(cls)
             ident.object_id = obj.pk
@@ -454,7 +453,7 @@ def load_row_identifiers(run):
                     ident.content_type.model_class(), meta
                 )
                 info['choices'] = [{
-                    'id': get_object_id(choice),
+                    'id': choice.pk,
                     'label': str(choice),
                 } for choice in choices]
                 info['choices'].insert(0, {
@@ -487,6 +486,7 @@ def update_row_identifiers(run, user, post):
             continue
         if ident_id == 'new':
             # Create new object (with primary identifier)
+            # FIXME: This assumes class is a wq.db IdentifiedModel
             obj = cls.objects.find(ident.name)
             meta = json.loads(ident.meta) if ident.meta else {}
 
@@ -497,7 +497,7 @@ def update_row_identifiers(run, user, post):
                 obj.save()
         else:
             # Add new identifier to existing object for future reference
-            obj = cls.objects.get_by_identifier(ident_id)
+            obj = cls.objects.get(pk=ident_id)
 
         ident.object_id = obj.pk
         ident.save()
@@ -581,7 +581,7 @@ def do_import(run, user):
 
         # Create report, capturing any errors
         try:
-            report = create_report(row, run_globals, matched)
+            report = create_report(run, row, run_globals, matched)
         except Exception as e:
             # Note exception in database
             report = None
@@ -619,7 +619,7 @@ def do_import(run, user):
     return status
 
 
-def create_report(row, instance_globals, matched):
+def create_report(run, row, instance_globals, matched):
     """
     Create actual report instance from parsed values.
     """
@@ -638,14 +638,25 @@ def create_report(row, instance_globals, matched):
     # Parse metadata & "horizontal" table parameter values
     for col in matched:
         if 'colnum' in col:
-            save_value(col, row[col['colnum']], record)
+            val = row[col['colnum']]
+            if col['type'] == 'meta' and col['field_name'] == 'id':
+                rng = run.range_set.filter(
+                    type='data',
+                    start_col=col['colnum'],
+                    end_col=col['colnum'],
+                    identifier__name__iexact=val,
+                ).first()
+                # FIXME: This assumes class is a wq.db IdentifiedModel
+                val = rng.identifier.content_object.slug
+            save_value(col, val, record)
 
     # Handle "vertical" table values (parsed as metadata by save_value())
     if 'result_meta' in record and 'parameter_meta' in record:
         # FIXME: handle other parameter & result metadata
         parameter_id = record['parameter_meta']['id']
         result_value = record['result_meta']['value']
-        record['param_vals'][parameter_id] = result_value
+        param = Parameter.objects.get(pk=parameter_id)
+        record['param_vals'][param.slug] = result_value
 
     if 'site_meta' in record:
         # FIXME: Handle other site metadata
@@ -694,7 +705,8 @@ def save_parameter_value(col, val, obj):
     if parameter_id in vals:
         val = "%s %s" % (vals[parameter_id], val)
 
-    vals[parameter_id] = val
+    param = Parameter.objects.get(pk=parameter_id)
+    vals[param.slug] = val
 
 
 def save_metadata_value(col, val, obj):

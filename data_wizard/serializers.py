@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 
 class CurrentUserDefault(serializers.CurrentUserDefault):
     def __call__(self):
-        user = super().__call__()
+        user = super(CurrentUserDefault, self).__call__()
         return user.pk
 
 
