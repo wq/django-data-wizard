@@ -9,6 +9,7 @@ import datetime
 from .signals import import_complete, new_metadata
 import json
 
+from django.contrib.contenttypes.models import ContentType
 from wq.db.rest.models import get_ct
 
 import vera.models  # noqa
@@ -20,13 +21,6 @@ ReportStatus = swapper.load_model('vera', 'ReportStatus')
 Parameter = swapper.load_model('vera', 'Parameter')
 Result = swapper.load_model('vera', 'Result')
 
-META_CLASSES = {
-    'site': Site,
-    'event': Event,
-    'report': Report,
-    'parameter': Parameter,
-    'result': Result,
-}
 
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
@@ -48,6 +42,14 @@ PRIORITY = {
     'unresolved': 3,
     'unknown': 4,
 }
+
+
+def ctid(ct):
+    return '%s.%s' % (ct.app_label, ct.model)
+
+
+def metaname(cls):
+    return ctid(get_ct(cls)) + '_meta'
 
 
 @task
@@ -108,11 +110,11 @@ def get_choices(run):
         rows = cls.objects.all()
         ct = get_ct(cls)
         result = [{
-            'id': '%s/new' % ct.urlbase,
+            'id': '%s/new' % ctid(ct),
             'label': "New %s" % name,
         }]
         result += [{
-            'id': '%s/%s' % (ct.urlbase, row.slug),
+            'id': '%s/%s' % (ctid(ct), row.pk),
             'label': str(row),
         } for row in rows]
         return {
@@ -123,7 +125,7 @@ def get_choices(run):
     meta_choices = set()
     for m in Identifier.objects.filter(resolved=True, field__isnull=False):
         assert(m.type == 'meta')
-        mid = '%s.%s' % (m.content_type.model, m.field)
+        mid = '%s:%s' % (ctid(m.content_type), m.field)
         mlabel = ('%s %s' % (m.content_type.name, m.field)).title()
         meta_choices.add((mid, mlabel))
     meta_choices = sorted(meta_choices, key=lambda d: d[1])
@@ -168,13 +170,17 @@ def get_columns(run):
 def get_meta_columns(run):
     matched = get_columns(run)
     cols = OrderedDict()
+    has_id = {}
     for col in matched:
         if 'colnum' not in col or col['type'] != 'meta':
             continue
-        if col['model'] in ('event', 'report', 'result'):
-            continue
         cols.setdefault(col['model'], [])
         cols[col['model']].append(col)
+        if col['field_name'] == 'id':
+            has_id[col['model']] = True
+    for model in list(cols.keys()):
+        if model not in has_id:
+            cols.pop(model)
     return cols
 
 
@@ -192,7 +198,7 @@ def load_columns(run):
 
         if ident.type == 'meta':
             info['field_name'] = rng.identifier.field
-            info['model'] = ident.content_type.model
+            info['model'] = ctid(ident.content_type)
         elif ident.type == 'instance':
             info['%s_id' % ident.content_type.model] = ident.object_id
         else:
@@ -301,26 +307,30 @@ def update_columns(run, user, post):
         assert(ident.field is None)
 
         if '/' in val:
-            vtype, vid = val.split('/')
-            if vtype == 'parameters':
-                cls = Parameter
-            else:
-                continue
+            ctype, val = val.split('/')
+            match = 'object_id'
+        elif ':' in val:
+            ctype, val = val.split(':')
+            match = 'field'
+        else:
+            continue
 
-            if vid == 'new':
+        app_label, model = ctype.split('.')
+        ident.content_type = ContentType.objects.get(
+            app_label=app_label,
+            model=model,
+        )
+
+        if match == 'object_id':
+            cls = ident.content_type.model_class()
+            if val == 'new':
                 # FIXME: This assumes class is a wq.db IdentifiedModel
                 obj = cls.objects.find(col['value'])
             else:
-                obj = cls.objects.get(pk=vid)
-
-            ident.content_type = get_ct(cls)
+                obj = cls.objects.get(pk=val)
             ident.object_id = obj.pk
-        elif '.' in val:
-            parts = val.split('.')
-            cname = parts[0]
-            field = '.'.join(parts[1:])
-            ident.content_type = get_ct(META_CLASSES[cname])
-            ident.field = field
+        else:
+            ident.field = val
 
         ident.save()
 
@@ -376,8 +386,12 @@ def parse_row_identifiers(run):
     assert(end_row > -1)
 
     for mtype in ids:
-        cls = META_CLASSES[mtype]
-        ct = get_ct(cls)
+        app_label, model = mtype.split('.')
+        ct = ContentType.objects.get(
+            app_label=app_label,
+            model=model,
+        )
+        cls = ct.model_class()
         for key, count in ids[mtype].items():
             meta = OrderedDict(key)
             ident = Identifier.objects.filter(
@@ -533,12 +547,12 @@ def do_import(run, user):
         user = None
     run_globals = {
         # Metadata fields
-        'event_meta': {},
-        'report_meta': {
+        metaname(Event): {},
+        metaname(Report): {
             'user': user,
             'status_id': DEFAULT_STATUS,
         },
-        # result_meta, parameter_meta, and site_meta are defined on a
+        # *.result_meta, *.parameter_meta, and *.site_meta are defined on a
         # case-by-case basis; see create_record() below
 
         # Result values indexed by parameter (for "horizontal" tables)
@@ -550,7 +564,7 @@ def do_import(run, user):
         info = Event._meta.get_field_by_name(field_name)
         field = info[0]
         if field.null:
-            run_globals['event_meta'][field_name] = None
+            run_globals[metaname(Event)][field_name] = None
 
     # Set any global defaults defined within data themselves (usually as extra
     # cells above the headers in a spreadsheet)
@@ -651,20 +665,20 @@ def create_report(run, row, instance_globals, matched):
             save_value(col, val, record)
 
     # Handle "vertical" table values (parsed as metadata by save_value())
-    if 'result_meta' in record and 'parameter_meta' in record:
+    if metaname(Result) in record and metaname(Parameter) in record:
         # FIXME: handle other parameter & result metadata
         parameter_id = record['parameter_meta']['id']
         result_value = record['result_meta']['value']
         param = Parameter.objects.get(pk=parameter_id)
         record['param_vals'][param.slug] = result_value
 
-    if 'site_meta' in record:
+    if metaname(Site) in record:
         # FIXME: Handle other site metadata
-        site_id = record['site_meta']['id']
-        record['event_meta']['site'] = site_id
+        site_id = record[metaname(Site)]['id']
+        record[metaname(Event)]['site'] = site_id
 
     # Ensure complete Event natural key (http://wq.io/docs/erav#natural-key)
-    missing = set(EVENT_KEY) - set(record['event_meta'].keys())
+    missing = set(EVENT_KEY) - set(record[metaname(Event)].keys())
     if missing:
         raise Exception(
             'Incomplete Record - missing %s' % ", ".join(missing)
@@ -672,9 +686,9 @@ def create_report(run, row, instance_globals, matched):
 
     # Create report instance
     report = Report.objects.create_report(
-        EventKey(**record['event_meta']),
+        EventKey(**record[metaname(Event)]),
         record['param_vals'],
-        **record['report_meta']
+        **record[metaname(Report)]
     )
     return report
 
@@ -721,7 +735,10 @@ def save_metadata_value(col, val, obj):
 
     # Assign metadata property based on meta_field (MetaColumn.name).
     meta_key = '%s_meta' % col['model']
-    meta_cls = META_CLASSES[col['model']]
+    app_label, model = col['model'].split('.')
+    meta_cls = ContentType.objects.get(
+        app_label=app_label, model=model
+    ).model_class()
     meta_field = col['field_name']
 
     # Event and report metadata are defined whether this is a "horizontal" or

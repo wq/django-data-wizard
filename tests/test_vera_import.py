@@ -102,10 +102,10 @@ class SwapTestCase(APITestCase):
             # "Choose" options from dropdown menu choices
             self.assertIn(col['name'], ("notes", "site id"))
             if col['name'] == "notes":
-                col_id = "parameters/new"
+                col_id = "vera.parameter/new"
                 type_name = "Parameter"
             elif col['name'] == "site id":
-                col_id = "site.id"
+                col_id = "swap_app.site:id"
                 type_name = "Metadata"
 
             found = False
