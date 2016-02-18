@@ -188,7 +188,7 @@ def load_columns(run):
     table = run.load_io()
     cols = list(table.field_map.keys())
     matched = []
-    for rng in run.range_set.all():
+    for rng in run.range_set.exclude(type='data'):
         ident = rng.identifier
         info = {
             'match': str(ident),
@@ -355,8 +355,10 @@ def parse_row_identifiers(run):
     run.add_event('parse_row_identifiers')
     coltypes = get_meta_columns(run)
     ids = {}
+    ranges = {}
     for mtype in coltypes:
         ids[mtype] = Counter()
+        ranges[mtype] = {}
 
     start_col = 1e10
     start_row = 1e10
@@ -369,21 +371,30 @@ def parse_row_identifiers(run):
             meta = OrderedDict()
             for col in cols:
                 meta[col['field_name']] = row[col['colnum']]
+
             assert('id' in meta)
             key = tuple(meta.items())
-            counter[key] += 1
 
-            start_col = min(col['colnum'], start_col)
-            end_col = max(col['colnum'], end_col)
+            ranges[mtype].setdefault(key, (1e10, 1e10, -1, -1))
+            start_row, start_col, end_row, end_col = ranges[mtype][key]
+            for col in cols:
+                meta[col['field_name']] = row[col['colnum']]
+                start_col = min(col['colnum'], start_col)
+                end_col = max(col['colnum'], end_col)
+
             rownum = i
             if table.tabular:
                 rownum += table.start_row
             start_row = min(start_row, rownum)
             end_row = max(end_row, rownum)
-    assert(start_col < 1e10)
-    assert(start_row < 1e10)
-    assert(end_col > -1)
-    assert(end_row > -1)
+
+            assert(start_col < 1e10)
+            assert(start_row < 1e10)
+            assert(end_col > -1)
+            assert(end_row > -1)
+
+            counter[key] += 1
+            ranges[mtype][key] = start_row, start_col, end_row, end_col
 
     for mtype in ids:
         app_label, model = mtype.split('.')
@@ -419,6 +430,7 @@ def parse_row_identifiers(run):
                     meta=other_meta,
                 )
 
+            start_row, start_col, end_row, end_col = ranges[mtype][key]
             run.range_set.create(
                 type='data',
                 identifier=ident,
@@ -442,7 +454,7 @@ def load_row_identifiers(run):
     idgroups = []
     for mtype in ids:
         idinfo = {
-            'type_id': mtype.model,
+            'type_id': ctid(mtype),
             'type_label': mtype.name.title(),
             'ids': []
         }
@@ -622,7 +634,7 @@ def do_import(run, user):
         'skipped': skipped
     }
     run.add_event('import_complete')
-    run.record_count = rows
+    run.record_count = run.record_set.filter(success=True).count()
     run.save()
     import_complete.send(sender=import_data, run=run, status=status)
 
@@ -656,12 +668,13 @@ def create_report(run, row, instance_globals, matched):
             if col['type'] == 'meta' and col['field_name'] == 'id':
                 rng = run.range_set.filter(
                     type='data',
-                    start_col=col['colnum'],
-                    end_col=col['colnum'],
+                    start_col__lte=col['colnum'],
+                    end_col__gte=col['colnum'],
                     identifier__name__iexact=val,
                 ).first()
                 # FIXME: This assumes class is a wq.db IdentifiedModel
-                val = rng.identifier.content_object.slug
+                if rng is not None:
+                    val = rng.identifier.content_object.slug
             save_value(col, val, record)
 
     # Handle "vertical" table values (parsed as metadata by save_value())
@@ -763,9 +776,12 @@ def save_metadata_value(col, val, obj):
     if col['model'] == 'result':
         meta_datatype = None
     else:
-        meta_datatype = meta_cls._meta.get_field_by_name(
-            meta_field,
-        )[0].get_internal_type()
+        try:
+            meta_datatype = meta_cls._meta.get_field_by_name(
+                meta_field,
+            )[0].get_internal_type()
+        except:
+            meta_datatype = None
 
     # Automatically parse date values as such
     if (meta_datatype in DATE_FIELDS and isinstance(val, string_types) and
