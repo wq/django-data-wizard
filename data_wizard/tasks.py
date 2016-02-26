@@ -373,6 +373,7 @@ def parse_row_identifiers(run):
                 meta[col['field_name']] = row[col['colnum']]
 
             assert('id' in meta)
+            meta['id'] = str(meta['id'])
             key = tuple(meta.items())
 
             ranges[mtype].setdefault(key, (1e10, 1e10, -1, -1))
@@ -670,7 +671,7 @@ def create_report(run, row, instance_globals, matched):
                     type='data',
                     start_col__lte=col['colnum'],
                     end_col__gte=col['colnum'],
-                    identifier__name__iexact=val,
+                    identifier__name__iexact=str(val),
                 ).first()
                 # FIXME: This assumes class is a wq.db IdentifiedModel
                 if rng is not None:
