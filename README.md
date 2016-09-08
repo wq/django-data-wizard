@@ -28,9 +28,9 @@ Django Data Wizard is an extension to [wq.db], the database component of the [wq
 
 # Examples
 
-[![Climata Viewer](https://wq.io/media/screenshots/climata-02.png)](https://wq.io/projects/climata)
+[![Climata Viewer](https://wq.io/media/700/screenshots/climata-02.png)](https://wq.io/projects/climata)
 
-[![river.watch](https://wq.io/media/screenshots/riverwatch-overview.png)](https://wq.io/projects/river-watch)
+[![river.watch](https://wq.io/media/700/screenshots/riverwatch-overview.png)](https://wq.io/projects/river-watch)
 
 [ERAV]: https://wq.io/docs/erav
 [vera]: https://wq.io/vera
