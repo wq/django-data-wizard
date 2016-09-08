@@ -3,24 +3,27 @@ sudo: false
 python:
  - "2.7"
  - "3.4"
+ - "3.5"
 env:
   global:
-   - DRF="djangorestframework==3.3.2"
-   - WQDB="git+https://github.com/wq/wq.db.git"
-   - WQIO="wq.io==0.8.0"
-   - VERA="git+https://github.com/wq/vera.git"
+   - DRF="djangorestframework==3.4.6"
+   - CELERY="celery==4.0.0rc3"
+   - KOMBU="kombu==4.0.0rc3"
+   - WQDB="wq.db==1.0.0b2"
+   - WQIO="wq.io==1.0.0b1"
+   - VERA="vera==1.0.0b1"
   matrix:
-   - DJANGO="django==1.8.8"
-   - DJANGO="django==1.8.8" LINT=1
+   - DJANGO="django==1.8.14"
+   - DJANGO="django==1.9.9"
+   - DJANGO="django==1.10.1"
+   - DJANGO="django==1.10.1" LINT=1
 before_script:
  - createdb -Upostgres data_wizard_test
  - psql -Upostgres data_wizard_test -c "CREATE EXTENSION postgis;"
 install:
- - pip install $DJANGO
- - pip install $DRF
- - pip install $WQDB
- - pip install $WQIO
- - pip install $VERA
+ - pip install $DJANGO $DRF
+ - pip install $CELERY $KOMBU
+ - pip install $WQDB $WQIO $VERA
  - pip install flake8
 script:
  - ./runtests.sh

@@ -1,4 +1,15 @@
-from .settings import *  # noqa
+from .settings import ( # noqa
+    SECRET_KEY,
+    MIDDLEWARE_CLASSES,
+    INSTALLED_APPS,
+    DATABASES,
+    ROOT_URLCONF,
+    MEDIA_ROOT,
+    WQ_DEFAULT_REPORT_STATUS,
+    CELERY_RESULT_BACKEND,
+    BROKER_URL,
+    CELERY_TASK_SERIALIZER,
+)
 
 SWAP = True
 

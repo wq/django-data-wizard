@@ -404,6 +404,7 @@ def parse_row_identifiers(run):
             model=model,
         )
         cls = ct.model_class()
+        assert cls, "%s.%s not found!" % (ct.app_label, ct.model)
         for key, count in ids[mtype].items():
             meta = OrderedDict(key)
             ident = Identifier.objects.filter(
@@ -574,8 +575,7 @@ def do_import(run, user):
 
     # Set default to None for any event key fields that are not required
     for field_name in EVENT_KEY:
-        info = Event._meta.get_field_by_name(field_name)
-        field = info[0]
+        field = Event._meta.get_field(field_name)
         if field.null:
             run_globals[metaname(Event)][field_name] = None
 
@@ -778,9 +778,9 @@ def save_metadata_value(col, val, obj):
         meta_datatype = None
     else:
         try:
-            meta_datatype = meta_cls._meta.get_field_by_name(
+            meta_datatype = meta_cls._meta.get_field(
                 meta_field,
-            )[0].get_internal_type()
+            ).get_internal_type()
         except:
             meta_datatype = None
 

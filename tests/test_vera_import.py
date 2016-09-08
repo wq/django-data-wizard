@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 from rest_framework import status
 import os
 from time import sleep
@@ -20,11 +20,25 @@ Report = swapper.load_model("vera", "Report")
 EventResult = swapper.load_model("vera", "EventResult")
 
 
-class SwapTestCase(APITestCase):
-    def setUp(self):
-        if not settings.SWAP:
-            return
+class SwapTestCase(APITransactionTestCase):
+    available_apps = (
+        'django.contrib.contenttypes',
+        'django.contrib.auth',
+        'wq.db.patterns.identify',
+        'data_wizard',
+        'vera',
+        'tests.swap_app',
+        'tests.file_app',
+    )
 
+    def _fixture_teardown(self):
+        # _fixture_teardown truncates related tables including contenttypes
+        # (even though that table is populated before the test runs)
+        content_types = list(ContentType.objects.all())
+        super(SwapTestCase, self)._fixture_teardown()
+        ContentType.objects.bulk_create(content_types)
+
+    def setUp(self):
         self.site = Site.objects.find("Site #1")
         self.user = User.objects.create(username='testuser', is_superuser=True)
         self.client.force_authenticate(user=self.user)
