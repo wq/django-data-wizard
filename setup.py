@@ -30,7 +30,7 @@ def parse_markdown_readme():
 
 setup(
     name='data-wizard',
-    version='1.0.0-dev',
+    version='1.0.0b1',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
     url='https://wq.io/django-data-wizard',
@@ -42,14 +42,15 @@ setup(
         'data_wizard.migrations',
     ],
     install_requires=[
-        'wq.db',
+        'wq.db>=1.0.0b1',
+        'vera>=1.0.0b1',
         'wq.io',
         'celery',
         'redis',
         'python-dateutil'
     ],
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
@@ -58,14 +59,17 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Framework :: Django',
+        'Framework :: Django :: 1.8',
+        'Framework :: Django :: 1.9',
+        'Framework :: Django :: 1.10',
         'Topic :: Scientific/Engineering :: GIS',
         'Topic :: Database :: Database Engines/Servers',
     ],
     test_suite='tests',
     tests_require=[
         'psycopg2',
-        'vera',
         'Pillow',
     ],
 )
