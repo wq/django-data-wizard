@@ -9,4 +9,5 @@ from .celery import app as celery_app  # noqa
 
 setup_test_environment()
 django.setup()
+call_command('makemigrations', interactive=False)
 call_command('migrate', interactive=False)
