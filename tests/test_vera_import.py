@@ -10,24 +10,18 @@ from django.contrib.auth.models import User
 from vera.models import ReportStatus, Parameter
 from data_wizard.models import Identifier, Run
 
-import unittest
-
-from django.conf import settings
-import swapper
-Site = swapper.load_model("vera", "Site")
-Event = swapper.load_model("vera", "Event")
-Report = swapper.load_model("vera", "Report")
-EventResult = swapper.load_model("vera", "EventResult")
+from vera.models import Site, Event, EventResult
 
 
-class SwapTestCase(APITransactionTestCase):
+class ImportTestCase(APITransactionTestCase):
     available_apps = (
         'django.contrib.contenttypes',
         'django.contrib.auth',
         'wq.db.patterns.identify',
         'data_wizard',
-        'vera',
-        'tests.swap_app',
+        'vera.params',
+        'vera.series',
+        'vera.results',
         'tests.file_app',
     )
 
@@ -35,7 +29,7 @@ class SwapTestCase(APITransactionTestCase):
         # _fixture_teardown truncates related tables including contenttypes
         # (even though that table is populated before the test runs)
         content_types = list(ContentType.objects.all())
-        super(SwapTestCase, self)._fixture_teardown()
+        super(ImportTestCase, self)._fixture_teardown()
         ContentType.objects.bulk_create(content_types)
 
     def setUp(self):
@@ -68,7 +62,6 @@ class SwapTestCase(APITransactionTestCase):
             field='id',
         )
 
-    @unittest.skipUnless(settings.SWAP, "requires swapped models")
     def test_manual(self):
         """
         Test the full data_wizard import process, from initial upload thru data
@@ -116,10 +109,10 @@ class SwapTestCase(APITransactionTestCase):
             # "Choose" options from dropdown menu choices
             self.assertIn(col['name'], ("notes", "site id"))
             if col['name'] == "notes":
-                col_id = "vera.parameter/new"
+                col_id = "params.parameter/new"
                 type_name = "Parameter"
             elif col['name'] == "site id":
-                col_id = "swap_app.site:id"
+                col_id = "params.site:id"
                 type_name = "Metadata"
 
             found = False
@@ -208,7 +201,6 @@ class SwapTestCase(APITransactionTestCase):
         ])
         self.check_data(run)
 
-    @unittest.skipUnless(settings.SWAP, "requires swapped models")
     def test_auto(self):
         """
         Test the full data_wizard import process, from initial upload thru data
@@ -320,7 +312,7 @@ class SwapTestCase(APITransactionTestCase):
             for record in run.record_set.all()
         ]
         self.assertEqual(records, [
-            "'Site #1 on 2014-01-05 according to testuser' at row 1",
-            "'Site #1 on 2014-01-06 according to testuser' at row 2",
-            "'Site #1 on 2014-01-07 according to testuser' at row 3",
+            "'Report for site-1 on 2014-01-05' at row 1",
+            "'Report for site-1 on 2014-01-06' at row 2",
+            "'Report for site-1 on 2014-01-07' at row 3",
         ])

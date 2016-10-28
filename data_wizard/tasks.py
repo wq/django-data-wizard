@@ -1,7 +1,6 @@
 from celery import task, current_task
 from xlrd import colname
 from collections import namedtuple, Counter, OrderedDict
-import swapper
 from .models import Identifier
 from django.conf import settings
 from django.utils.six import string_types
@@ -12,14 +11,13 @@ import json
 from django.contrib.contenttypes.models import ContentType
 from wq.db.rest.models import get_ct
 
-import vera.models  # noqa
-
-Site = swapper.load_model('vera', 'Site')
-Event = swapper.load_model('vera', 'Event')
-Report = swapper.load_model('vera', 'Report')
-ReportStatus = swapper.load_model('vera', 'ReportStatus')
-Parameter = swapper.load_model('vera', 'Parameter')
-Result = swapper.load_model('vera', 'Result')
+from vera.models import (
+    Site,
+    Event,
+    Report,
+    Parameter,
+    Result,
+)
 
 
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]

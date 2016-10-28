@@ -42,8 +42,8 @@ setup(
         'data_wizard.migrations',
     ],
     install_requires=[
-        'wq.db>=1.0.0b1',
-        'vera>=1.0.0b1',
+        'wq.db',
+        'vera',
         'wq.io',
         'celery',
         'redis',

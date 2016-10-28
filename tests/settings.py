@@ -10,7 +10,9 @@ INSTALLED_APPS = (
     'wq.db.rest',
     'wq.db.rest.auth',
     'wq.db.patterns.identify',
-    'vera',
+    'vera.params',
+    'vera.series',
+    'vera.results',
     'data_wizard',
     'tests.file_app'
 )
