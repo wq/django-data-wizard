@@ -11,6 +11,6 @@ rest.router.register_model(
     url='datawizard',
     modes=[],
     server_modes=[
-        'detail', 'start', 'ids', 'data', 'auto'
+        'detail', 'start', 'ids', 'data', 'auto', 'records',
     ],
 )
