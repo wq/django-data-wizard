@@ -121,11 +121,24 @@ def get_choices(run):
         }
 
     meta_choices = set()
+
+    def add_meta_choice(ct, field):
+        mid = '%s:%s' % (ctid(ct), field)
+        mlabel = ('%s %s' % (ct.model, field)).title()
+        meta_choices.add((mid, mlabel))
+
+    for field in Site._meta.fields:
+        if field.name not in ('slug', 'name'):
+            add_meta_choice(get_ct(Site), field.name)
+
+    for field in Event._meta.fields:
+        if field.name not in ('id', 'site'):
+            add_meta_choice(get_ct(Event), field.name)
+
     for m in Identifier.objects.filter(resolved=True, field__isnull=False):
         assert(m.type == 'meta')
-        mid = '%s:%s' % (ctid(m.content_type), m.field)
-        mlabel = ('%s %s' % (m.content_type.name, m.field)).title()
-        meta_choices.add((mid, mlabel))
+        add_meta_choice(m.content_type, m.field)
+
     meta_choices = sorted(meta_choices, key=lambda d: d[1])
     choices = [
         {
@@ -133,7 +146,7 @@ def get_choices(run):
             'choices': [{
                 'id': key,
                 'label': label
-            } for key, label in meta_choices],
+            } for key, label in sorted(meta_choices)],
         },
         make_list(Parameter, "Parameter")
     ]
@@ -599,7 +612,7 @@ def do_import(run, user):
         current_task.update_state(state='PROGRESS', meta={
             'message': "Importing Data...",
             'stage': 'data',
-            'current': i + 1,
+            'current': i,
             'total': rows,
             'skipped': skipped
         })

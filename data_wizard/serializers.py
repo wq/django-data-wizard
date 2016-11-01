@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from wq.db.rest.serializers import ModelSerializer, LabelRelatedField
-from django.contrib.contenttypes.models import ContentType
+from wq.db.rest.models import ContentType, get_object_id
 
 
 class CurrentUserDefault(serializers.CurrentUserDefault):
@@ -43,3 +43,22 @@ class RunSerializer(ModelSerializer):
 
     class Meta:
         exclude = ['content_type']
+
+
+class RecordSerializer(serializers.Serializer):
+    row = serializers.SerializerMethodField()
+    success = serializers.ReadOnlyField()
+    fail_reason = serializers.ReadOnlyField()
+    object_label = serializers.ReadOnlyField(source='content_object.__str__')
+    object_url = serializers.SerializerMethodField()
+
+    def get_row(self, instance):
+        return instance.row + 1
+
+    def get_object_url(self, instance):
+        if not instance.content_type_id:
+            return None
+        ct = ContentType.objects.get(pk=instance.content_type_id)
+        if not ct.urlbase:
+            return None
+        return "%s/%s" % (ct.urlbase, get_object_id(instance))

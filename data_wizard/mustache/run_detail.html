@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{label}}</title>
+    {{>head}}
+  </head>
+  <body>
+    <div data-role="page">
+      <div data-role="header">
+        {{>home}}
+        <h1>{{label}}</h1>
+      </div>
+      <div role="main" class="ui-content">
+        <h1>{{label}}</h1>
+        <form action="{{svc}}/datawizard/{{id}}/auto" method="post"
+              data-ajax="true" data-wq-json="false">
+          {{>csrf}}
+          <button type="submit">
+            Start Import
+          </button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

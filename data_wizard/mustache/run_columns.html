@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{label}}</title>
+    {{>head}}
+  </head>
+  <body>
+    <div data-role="page" data-url="{{svc}}/datawizard/{{id}}/columns">
+      <div data-role="header">
+        {{>home}}
+        <h1>{{label}}</h1>
+      </div>
+      <div role="main" class="ui-content">
+        <h1>{{label}}</h1>
+        {{#result}}
+        {{#unknown_count}}
+        <h3>Unknown Columns</h3>
+        <p>
+          This file contains {{unknown_count}} column(s) that are not yet
+          recognized by this database.
+        </p>
+	<form action="{{svc}}/datawizard/{{id}}/updatecolumns" method="post"
+	      data-ajax="true" data-wq-json="false">
+	{{>csrf}}
+        {{/unknown_count}}
+        <table class="table-stripe ui-table">
+          <thead>
+            <th>Column</th>
+            <th colspan="2">Mapping</th>
+          </thead>
+          <tbody>
+            {{#columns}}
+            <tr>
+              <th>{{column}}</th>
+              {{#unknown}}
+              <td>{{name}}</td>
+              <td>
+                <select name="rel_{{rel_id}}">
+                  <option value="">Select...</option>
+                  {{#types}}
+                  <optgroup label="{{name}}">
+                    {{#choices}}
+                    <option value="{{id}}">{{label}}</option>
+                    {{/choices}}
+                  </optgroup>
+                  {{/types}}
+                </select>
+              </td>
+              {{/unknown}}
+              {{^unknown}}
+              <td colspan=2>{{match}}</td>
+              {{/unknown}}
+            </tr>
+            {{/columns}}
+          </tbody>
+        </table>
+        {{#unknown_count}}
+	<button type="submit">
+	  Save Selections
+	</button>
+	</form>
+	{{/unknown_count}}
+        {{^unknown_count}}
+        <form action="{{svc}}/datawizard/{{id}}/auto" method="post"
+              data-ajax="true" data-wq-json="false">
+          {{>csrf}}
+          <button type="submit">
+            Continue
+          </button>
+        </form>
+        {{/unknown_count}}
+	{{/result}}
+      </div>
+    </div>
+  </body>
+</html>

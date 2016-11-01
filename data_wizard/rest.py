@@ -9,4 +9,8 @@ rest.router.register_model(
     serializer=RunSerializer,
     viewset=RunViewSet,
     url='datawizard',
+    modes=[],
+    server_modes=[
+        'detail', 'start', 'ids', 'data', 'auto'
+    ],
 )

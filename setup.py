@@ -41,6 +41,11 @@ setup(
         'data_wizard',
         'data_wizard.migrations',
     ],
+    package_data={
+        'data_wizard': [
+            'mustache/*.*',
+        ]
+    },
     install_requires=[
         'wq.db',
         'vera',
