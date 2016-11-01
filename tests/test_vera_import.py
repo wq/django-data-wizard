@@ -87,7 +87,7 @@ class ImportTestCase(APITransactionTestCase):
             return '/datawizard/%s/%s.json' % (run.pk, action)
 
         # 2. Start import process
-        response = self.client.get(url('start'))
+        response = self.client.get(url('columns'))
         self.assertIn('result', response.data)
         self.assertIn('columns', response.data['result'])
         self.assertEqual(len(response.data['result']['columns']), 4)
@@ -127,7 +127,7 @@ class ImportTestCase(APITransactionTestCase):
             post["rel_%s" % col['rel_id']] = col_id
 
         # 4. Post selected options, verify that all columns are now known
-        response = self.client.post(url('columns'), post)
+        response = self.client.post(url('updatecolumns'), post)
         unknown = response.data['result']['unknown_count']
         self.assertFalse(unknown, "%s unknown columns remain" % unknown)
 
