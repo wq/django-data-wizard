@@ -47,8 +47,8 @@ setup(
         ]
     },
     install_requires=[
-        'wq.db',
-        'vera',
+        'wq.db>=1.0.0b3',
+        'vera>=1.0.0b2',
         'wq.io',
         'celery',
         'redis',
