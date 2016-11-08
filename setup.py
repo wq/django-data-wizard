@@ -30,7 +30,7 @@ def parse_markdown_readme():
 
 setup(
     name='data-wizard',
-    version='1.0.0-dev',
+    version='1.0.0b2',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
     url='https://wq.io/django-data-wizard',
