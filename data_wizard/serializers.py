@@ -61,4 +61,4 @@ class RecordSerializer(serializers.Serializer):
         ct = ContentType.objects.get(pk=instance.content_type_id)
         if not ct.urlbase:
             return None
-        return "%s/%s" % (ct.urlbase, get_object_id(instance))
+        return "%s/%s" % (ct.urlbase, get_object_id(instance.content_object))

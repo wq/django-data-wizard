@@ -31,7 +31,6 @@ MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "media")
 WQ_DEFAULT_REPORT_STATUS = 100
 
 CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost/0'
-CELERY_TASK_SERIALIZER = 'pickle'
 
 SWAP = False
 

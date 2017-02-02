@@ -4,15 +4,7 @@ from wq.db.rest.views import ModelViewSet
 from data_wizard import tasks
 from wq.io.exceptions import IoException
 from celery.result import AsyncResult
-from django.contrib.auth import get_user_model
 from .serializers import RecordSerializer
-
-
-def get_user(request):
-    # Avoid celery repr error by removing lazy wrapper
-    return get_user_model().objects.get(
-        pk=request.user.pk
-    )
 
 
 class RunViewSet(ModelViewSet):
@@ -45,9 +37,9 @@ class RunViewSet(ModelViewSet):
         response = self.retrieve(self.request, **self.kwargs)
 
         run = self.get_object()
-        user = get_user(self.request)
+        user = self.request.user
 
-        task = getattr(tasks, name).delay(run, user)
+        task = getattr(tasks, name).delay(run.pk, user.pk)
         if async:
             response.data['task_id'] = task.task_id
         else:
@@ -67,7 +59,7 @@ class RunViewSet(ModelViewSet):
         response = self.run_task('read_columns')
         self.action = 'columns'
         result = tasks.update_columns.delay(
-            self.get_object(), get_user(request), request.POST
+            self.get_object().pk, request.user.pk, post=request.POST
         )
         response.data['result'] = result.get()
         return response
@@ -81,7 +73,7 @@ class RunViewSet(ModelViewSet):
         response = self.run_task('read_row_identifiers')
         self.action = 'ids'
         result = tasks.update_row_identifiers.delay(
-            self.get_object(), get_user(request), request.POST
+            self.get_object().pk, request.user.pk, post=request.POST
         )
         response.data['result'] = result.get()
         return response

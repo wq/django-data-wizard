@@ -1,14 +1,16 @@
 from celery import task, current_task
 from xlrd import colname
 from collections import namedtuple, Counter, OrderedDict
-from .models import Identifier
+from .models import Run, Identifier
 from django.conf import settings
 from django.utils.six import string_types
 import datetime
 from .signals import import_complete, new_metadata
 import json
+from functools import wraps
 
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import get_user_model
 from wq.db.rest.models import get_ct
 
 from vera.models import (
@@ -19,6 +21,8 @@ from vera.models import (
     Result,
 )
 
+
+User = get_user_model()
 
 EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
 EventKey = namedtuple('EventKey', EVENT_KEY)
@@ -50,7 +54,19 @@ def metaname(cls):
     return ctid(get_ct(cls)) + '_meta'
 
 
+def lookuprun(fn):
+    @wraps(fn)
+    def wrapped(run, user=None, **kwargs):
+        if not isinstance(run, Run):
+            run = Run.objects.get(pk=run)
+        if user and not isinstance(user, User):
+            user = User.objects.get(pk=user)
+        return fn(run, user, **kwargs)
+    return wrapped
+
+
 @task
+@lookuprun
 def auto_import(run, user):
     """
     Walk through all the steps necessary to interpret and import data from an
@@ -154,6 +170,7 @@ def get_choices(run):
 
 
 @task
+@lookuprun
 def read_columns(run, user=None):
     matched = get_columns(run)
     unknown_count = 0
@@ -302,7 +319,8 @@ def parse_column(run, name, **kwargs):
 
 
 @task
-def update_columns(run, user, post):
+@lookuprun
+def update_columns(run, user, post={}):
     run.add_event('update_columns')
     matched = get_columns(run)
     for col in matched:
@@ -355,6 +373,7 @@ def update_columns(run, user, post):
 
 
 @task
+@lookuprun
 def read_row_identifiers(run, user=None):
     if run.range_set.filter(type='data').exists():
         return load_row_identifiers(run)
@@ -511,7 +530,8 @@ def load_row_identifiers(run):
 
 
 @task
-def update_row_identifiers(run, user, post):
+@lookuprun
+def update_row_identifiers(run, user, post={}):
     run.add_event('update_row_identifiers')
     unknown = run.range_set.filter(
         type='data',
@@ -552,6 +572,7 @@ def update_row_identifiers(run, user, post):
 
 
 @task
+@lookuprun
 def import_data(run, user):
     """
     Import all parseable data from the dataset instance's IO class.
