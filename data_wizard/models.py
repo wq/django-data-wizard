@@ -160,6 +160,9 @@ class Range(models.Model):
             head=header
         )
 
+    class Meta:
+        ordering = ('run_id', '-type', 'start_row', 'start_col', 'pk')
+
 
 class Record(models.Model):
     run = models.ForeignKey(Run)
@@ -184,3 +187,6 @@ class Record(models.Model):
                 row=self.row,
                 fail_reason=self.fail_reason,
             )
+
+    class Meta:
+        ordering = ('run_id', 'row')

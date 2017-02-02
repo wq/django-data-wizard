@@ -151,6 +151,20 @@ def get_choices(run):
         if field.name not in ('id', 'site'):
             add_meta_choice(get_ct(Event), field.name)
 
+    for field in Report._meta.fields:
+        if field.name not in ('id', 'event', 'entered', 'status', 'user'):
+            add_meta_choice(get_ct(Report), field.name)
+
+    for field in Result._meta.fields:
+        if field.name not in ('id', 'value_text', 'value_numeric', 'empty',
+                              'report', 'type'):
+            add_meta_choice(get_ct(Result), field.name)
+    add_meta_choice(get_ct(Result), 'value')
+
+    for field in Parameter._meta.fields:
+        if field.name not in ('slug', 'name'):
+            add_meta_choice(get_ct(Parameter), field.name)
+
     for m in Identifier.objects.filter(resolved=True, field__isnull=False):
         assert(m.type == 'meta')
         add_meta_choice(m.content_type, m.field)
@@ -713,10 +727,9 @@ def create_report(run, row, instance_globals, matched):
     # Handle "vertical" table values (parsed as metadata by save_value())
     if metaname(Result) in record and metaname(Parameter) in record:
         # FIXME: handle other parameter & result metadata
-        parameter_id = record['parameter_meta']['id']
-        result_value = record['result_meta']['value']
-        param = Parameter.objects.get(pk=parameter_id)
-        record['param_vals'][param.slug] = result_value
+        parameter_id = record[metaname(Parameter)]['id']
+        result_value = record[metaname(Result)]['value']
+        record['param_vals'][parameter_id] = result_value
 
     if metaname(Site) in record:
         # FIXME: Handle other site metadata

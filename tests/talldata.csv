@@ -1,0 +1,7 @@
+date,site id,parameter,value
+2014-01-05,Site 1,temperature,3
+2014-01-05,Site 1,notes,Test Note 1
+2014-01-06,Site 1,temperature,2
+2014-01-06,Site 1,notes,Test Note 2
+2014-01-07,Site 1,temperature,1
+2014-01-07,Site 1,notes,Test Note 3

@@ -153,23 +153,11 @@ class ImportTestCase(APITransactionTestCase):
         self.assertFalse(response.data['result']['unknown_count'])
 
         # 7. Start data import process, wait for completion
-        response = self.client.post(url('data'))
-        self.assertIn("task_id", response.data)
-        task = response.data['task_id']
-        done = False
-        print()
-        while not done:
-            sleep(1)
-            response = self.client.get(url('status'), {'task': task})
-            res = response.data
-            if res.get('status', None) in ("PENDING", "PROGRESS"):
-                print(res)
-                continue
-            for key in ('status', 'total', 'current', 'skipped'):
-                self.assertIn(key, res)
-            if res['status'] == "SUCCESS" or res['total'] == res['current']:
-                done = True
-                self.assertFalse(res['skipped'])
+        res = self.wait(url('data'), url('status'))
+        for key in ('status', 'total', 'current', 'skipped'):
+            self.assertIn(key, res)
+        self.assertEqual(res['status'], 'SUCCESS')
+        self.assertFalse(res['skipped'])
 
         # 8. Import complete -verify data exists in database
         for event in Event.objects.all():
@@ -241,24 +229,11 @@ class ImportTestCase(APITransactionTestCase):
             return '/datawizard/%s/%s.json' % (run.pk, action)
 
         # 2. Trigger auto-import
-        response = self.client.post(url('auto'))
-        self.assertIn("task_id", response.data)
-        task = response.data['task_id']
-
-        print()
-        done = False
-        while not done:
-            sleep(1)
-            response = self.client.get(url('status'), {'task': task})
-            res = response.data
-            if res.get('status', None) in ("PENDING", "PROGRESS"):
-                print(res)
-                continue
-            for key in ('status', 'total', 'current', 'skipped'):
-                self.assertIn(key, res)
-            if res['status'] == "SUCCESS" or res['total'] == res['current']:
-                done = True
-                self.assertFalse(res['skipped'])
+        res = self.wait(url('auto'), url('status'))
+        for key in ('status', 'total', 'current', 'skipped'):
+            self.assertIn(key, res)
+        self.assertEqual(res['status'], "SUCCESS")
+        self.assertFalse(res['skipped'])
 
         # 3. Import complete -verify data exists in database
         for event in Event.objects.all():
@@ -315,4 +290,197 @@ class ImportTestCase(APITransactionTestCase):
             "'Report for site-1 on 2014-01-05' at row 1",
             "'Report for site-1 on 2014-01-06' at row 2",
             "'Report for site-1 on 2014-01-07' at row 3",
+        ])
+
+    def wait(self, url, status_url):
+        print()
+        response = self.client.post(url)
+        self.assertIn("task_id", response.data)
+        status_params = {'task': response.data['task_id']}
+        done = False
+        while not done:
+            sleep(1)
+            response = self.client.get(status_url, status_params)
+            res = response.data
+            if res.get('status', None) in ("PENDING", "PROGRESS"):
+                print(res)
+            else:
+                done = True
+        return res
+
+    def test_tall(self):
+        """
+        Test with a tall spreadsheet (one parameter per row)
+        """
+
+        # 1. Upload file
+        filename = os.path.join(os.path.dirname(__file__), 'talldata.csv')
+        with open(filename, 'rb') as f:
+            response = self.client.post('/files.json', {'file': f})
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            fileid = response.data['id']
+
+        response = self.client.post('/datawizard.json', {
+            'content_type_id': 'file_app.file',
+            'object_id': fileid,
+        })
+        self.assertEqual(
+            response.status_code, status.HTTP_201_CREATED, response.data
+        )
+        run = Run.objects.get(pk=response.data['id'])
+
+        def url(action):
+            return '/datawizard/%s/%s.json' % (run.pk, action)
+
+        # 2. Trigger auto-import
+        res = self.wait(url('auto'), url('status'))
+        self.assertEqual(res['status'], "SUCCESS")
+        self.assertEqual(res.get('message'), "Input Needed")
+        self.assertEqual(
+            res.get('location'), url("columns").replace('.json', '')
+        )
+
+        # 3. Inspect unmatched columns, noting that
+        #    - "site id" is an alias for site.id
+        #    - "parameter" is an alias for parameter.id
+        #    - "value" is an alias for result.value
+        response = self.client.get(url('columns'))
+        post = {}
+        for col in response.data['result']['columns']:
+            if not col.get('unknown', False):
+                continue
+            self.assertIn('types', col)
+            meta_choices = None
+            for tc in col['types']:
+                if tc['name'] == "Metadata":
+                    meta_choices = tc['choices']
+            self.assertTrue(meta_choices, "could not find meta choices")
+
+            # "Choose" options from dropdown menu choices
+            if col['name'] == "site id":
+                col_id = "params.site:id"
+            elif col['name'] == "parameter":
+                col_id = "params.parameter:id"
+            elif col['name'] == "value":
+                col_id = "results.result:value"
+
+            found = False
+            for choice in meta_choices:
+                if choice['id'] == col_id:
+                    found = True
+
+            self.assertTrue(
+                found,
+                col_id + " not found in choices: %s" % meta_choices
+            )
+            post["rel_%s" % col['rel_id']] = col_id
+
+        # 4. Post selected options, verify that all columns are now known
+        response = self.client.post(url('updatecolumns'), post)
+        unknown = response.data['result']['unknown_count']
+        self.assertFalse(unknown, "%s unknown columns remain" % unknown)
+
+        # 5. Trigger auto-import again
+        res = self.wait(url('auto'), url('status'))
+        self.assertEqual(res['status'], "SUCCESS")
+        self.assertEqual(res.get('message'), "Input Needed")
+        self.assertEqual(
+            res.get('location'), url("ids").replace('.json', '')
+        )
+
+        # 6. Check site and parameter identifiers
+        response = self.client.get(url('ids'))
+        res = response.data['result']
+        self.assertEqual(res['unknown_count'], 2)
+        type_ids = {
+            t['type_id']: t['ids'] for t in res['types']
+        }
+        self.assertIn('params.site', type_ids)
+        self.assertIn('params.parameter', type_ids)
+
+        post = {}
+        for idinfo in type_ids['params.site']:
+            if idinfo['value'] == "Site 1":
+                for choice in idinfo['choices']:
+                    if choice['label'] == 'Site #1':
+                        post['ident_%s_id' % idinfo['ident_id']] = choice['id']
+
+        for idinfo in type_ids['params.parameter']:
+            if idinfo['value'] == 'notes':
+                post['ident_%s_id' % idinfo['ident_id']] = 'new'
+
+        # 7. Post selected options, verify that all identifiers are now known
+        response = self.client.post(url('updateids'), post)
+        self.assertFalse(response.data['result']['unknown_count'])
+
+        # 8. Trigger auto import again
+        res = self.wait(url('auto'), url('status'))
+        for key in ('status', 'total', 'current', 'skipped'):
+            self.assertIn(key, res)
+        self.assertEqual(res['status'], 'SUCCESS')
+        self.assertFalse(res['skipped'])
+
+        # 9. Import complete -verify data exists in database
+        for event in Event.objects.all():
+            self.assertTrue(event.is_valid)
+            self.assertEqual(event.site, self.site)
+        self.assertEqual(EventResult.objects.count(), 6)
+        param = Parameter.objects.find('temperature')
+        er = EventResult.objects.get(
+            result_type=param, event_date='2014-01-07'
+        )
+        self.assertEqual(er.result_value_numeric, 1.0)
+
+        param = Parameter.objects.find('notes')
+        er = EventResult.objects.get(
+            result_type=param, event_date='2014-01-06'
+        )
+        self.assertEqual(er.result_value_text, "Test Note 2")
+
+        # 10. Check logs
+        steps = [log.event for log in run.log.all()]
+        self.assertEqual(steps, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'update_columns',
+            'auto_import',
+            'parse_row_identifiers',
+            'update_row_identifiers',
+            'auto_import',
+            'do_import',
+            'import_complete',
+        ])
+
+        run = Run.objects.get(pk=run.pk)
+        self.assertEqual(run.record_count, 6)
+        self.assertEqual(run.loader, 'data_wizard.loaders.FileLoader')
+
+        ranges = [
+            str(rng).replace("Run for File object contains ", "")
+            for rng in run.range_set.all()
+        ]
+        self.assertEqual(ranges, [
+            "Data Column 'Date -> Meta: event.date' at Rows 1-6, Column 0",
+            "Data Column 'site id -> Meta: site.id' at Rows 1-6, Column 1",
+            "Data Column 'parameter -> Meta: parameter.id'"
+            " at Rows 1-6, Column 2",
+            "Data Column 'value -> Meta: result.value' at Rows 1-6, Column 3",
+            "Cell value 'Site 1 -> site: Site #1' at Rows 1-6, Column 1",
+            "Cell value 'Temperature -> parameter: Temperature (C)'"
+            " at Rows 1-5, Column 2",
+            "Cell value 'notes -> parameter: notes' at Rows 2-6, Column 2",
+        ])
+
+        records = [
+            str(record).replace("Run for File object imported ", "")
+            for record in run.record_set.all()
+        ]
+        self.assertEqual(records, [
+            "'Report for site-1 on 2014-01-05' at row 1",
+            "'Report for site-1 on 2014-01-05' at row 2",
+            "'Report for site-1 on 2014-01-06' at row 3",
+            "'Report for site-1 on 2014-01-06' at row 4",
+            "'Report for site-1 on 2014-01-07' at row 5",
+            "'Report for site-1 on 2014-01-07' at row 6",
         ])
