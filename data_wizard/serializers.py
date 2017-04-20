@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from wq.db.rest.serializers import ModelSerializer, LabelRelatedField
+from wq.db.rest.serializers import ModelSerializer
 from wq.db.rest.models import ContentType, get_object_id
 
 
@@ -37,7 +37,7 @@ class ContentTypeIdField(serializers.RelatedField):
 class RunSerializer(ModelSerializer):
     user_id = serializers.HiddenField(default=CurrentUserDefault())
     content_type_id = ContentTypeIdField(queryset=ContentType.objects.all())
-    object_label = LabelRelatedField(
+    object_label = serializers.StringRelatedField(
         source='content_object', read_only=True
     )
 
