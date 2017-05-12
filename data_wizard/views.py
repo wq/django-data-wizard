@@ -2,7 +2,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
 from data_wizard import tasks
-from data_wizard import registry
 from wq.io.exceptions import IoException
 from celery.result import AsyncResult
 from .serializers import RunSerializer, RecordSerializer

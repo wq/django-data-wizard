@@ -18,11 +18,11 @@ class ImportTestCase(BaseImportTestCase):
         # Start data import process, wait for completion
         self.start_import(run, [{
             'row': 5,
-            'reason': "{'color': ['\"orange\" is not a valid choice.']}"
+            'reason': '{"color": ["\\"orange\\" is not a valid choice."]}'
         }, {
             'row': 6,
-            'reason': "{'date': ['Date has wrong format."
-                      " Use one of these formats instead: YYYY[-MM[-DD]].']}"
+            'reason': '{"date": ["Date has wrong format.'
+                      ' Use one of these formats instead: YYYY[-MM[-DD]]."]}'
         }])
 
         # Verify results
@@ -76,8 +76,8 @@ class ImportTestCase(BaseImportTestCase):
             "imported '2017-06-02: green (Test Note 2)' at row 2",
             "imported '2017-06-03: blue (Test Note 3)' at row 3",
             "failed at row 4:"
-            " {'color': ['\"orange\" is not a valid choice.']}",
+            ' {"color": ["\\"orange\\" is not a valid choice."]}',
             "failed at row 5:"
-            " {'date': ['Date has wrong format."
-            " Use one of these formats instead: YYYY[-MM[-DD]].']}"
+            ' {"date": ["Date has wrong format.'
+            ' Use one of these formats instead: YYYY[-MM[-DD]]."]}'
         ])

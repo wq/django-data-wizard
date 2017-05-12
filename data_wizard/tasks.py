@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.serializers import RelatedField
 from natural_keys import NaturalKeySerializer
 from html_json_forms import parse_json_form
+import json
 
 User = get_user_model()
 
@@ -623,7 +624,7 @@ def do_import(run, user):
         obj, error = import_row(run, row, run_globals, matched)
         if error:
             success = False
-            fail_reason = repr(error)
+            fail_reason = error
             skipped.append({'row': rownum(i) + 1, 'reason': fail_reason})
         else:
             success = True
@@ -693,10 +694,10 @@ def import_row(run, row, instance_globals, matched):
             error = None
         except Exception as e:
             obj = None
-            error = e
+            error = repr(e)
     else:
         obj = None
-        error = serializer.errors
+        error = json.dumps(serializer.errors)
 
     # Handle "vertical" table values (parsed as metadata by save_value())
     # if metaname(Result) in record and metaname(Parameter) in record:
