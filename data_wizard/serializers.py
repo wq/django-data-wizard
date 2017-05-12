@@ -1,12 +1,7 @@
 from rest_framework import serializers
-from wq.db.rest.serializers import ModelSerializer
-from wq.db.rest.models import ContentType, get_object_id
-
-
-class CurrentUserDefault(serializers.CurrentUserDefault):
-    def __call__(self):
-        user = super(CurrentUserDefault, self).__call__()
-        return user.pk
+from django.contrib.contenttypes.models import ContentType
+from .models import Run, Record
+from data_wizard import registry
 
 
 # c.f SlugRelatedField
@@ -34,18 +29,26 @@ class ContentTypeIdField(serializers.RelatedField):
         return '%s.%s' % (ct.app_label, ct.model)
 
 
-class RunSerializer(ModelSerializer):
-    user_id = serializers.HiddenField(default=CurrentUserDefault())
+class RunSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     content_type_id = ContentTypeIdField(queryset=ContentType.objects.all())
     object_label = serializers.StringRelatedField(
         source='content_object', read_only=True
     )
 
+    def get_fields(self):
+        fields = super(RunSerializer, self).get_fields()
+        fields['serializer'] = serializers.ChoiceField(
+            choices=registry.get_choices(),
+        )
+        return fields
+
     class Meta:
+        model = Run
         exclude = ['content_type']
 
 
-class RecordSerializer(serializers.Serializer):
+class RecordSerializer(serializers.ModelSerializer):
     row = serializers.SerializerMethodField()
     success = serializers.ReadOnlyField()
     fail_reason = serializers.ReadOnlyField()
@@ -56,9 +59,20 @@ class RecordSerializer(serializers.Serializer):
         return instance.row + 1
 
     def get_object_url(self, instance):
+        router = self.context.get('router', None)
+        if not router:
+            # Not using wq.db
+            return
+
+        return
+        # FIXME:
         if not instance.content_type_id:
             return None
         ct = ContentType.objects.get(pk=instance.content_type_id)
         if not ct.urlbase:
             return None
-        return "%s/%s" % (ct.urlbase, get_object_id(instance.content_object))
+        # return "%s/%s" % (ct.urlbase, get_object_id(instance.content_object))
+
+    class Meta:
+        model = Record
+        fields = "__all__"

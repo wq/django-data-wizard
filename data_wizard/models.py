@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
 from rest_framework.settings import import_from_string
+from data_wizard import registry
 
 
 LOADER_PATH = getattr(
@@ -16,6 +17,7 @@ class Run(models.Model):
     template = models.ForeignKey('self', null=True, blank=True)
     record_count = models.IntegerField(null=True, blank=True)
     loader = models.CharField(max_length=255, default=LOADER_PATH)
+    serializer = models.CharField(max_length=255, null=True, blank=True)
 
     content_type = models.ForeignKey(ContentType, null=True, blank=True)
     object_id = models.PositiveIntegerField(null=True, blank=True)
@@ -34,9 +36,11 @@ class Run(models.Model):
         loader = Loader(self)
         return loader.load_io()
 
-    def get_id_choices(self, model, meta):
-        loader = Loader(self)
-        return loader.get_id_choices(model, meta)
+    def get_serializer(self):
+        if self.serializer:
+            return registry.get_serializer(self.serializer)
+        else:
+            raise Exception("No serializer specified!")
 
     def already_parsed(self):
         return self.range_set.count()
@@ -60,48 +64,32 @@ class RunLog(models.Model):
 
 
 class Identifier(models.Model):
+    serializer = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
-    content_type = models.ForeignKey(
-        ContentType, null=True, blank=True, related_name='+',
-    )
-
     field = models.CharField(max_length=255, null=True, blank=True)
-
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey()
-
+    value = models.CharField(max_length=255, null=True, blank=True)
     resolved = models.BooleanField(default=False)
-    meta = models.TextField(null=True, blank=True)
 
     def __str__(self):
         if self.type == 'instance':
-            return "%s -> %s: %s" % (
-                self.name, self.content_type, self.content_object
-            )
+            return "%s -> %s (%s)" % (self.name, self.value, self.field)
         elif self.type == 'meta':
-            return "%s -> Meta: %s.%s" % (
-                self.name, self.content_type.model, self.field
-            )
+            return "%s -> %s" % (self.name, self.field)
         else:
             return "%s: %s" % (self.type.title(), self.name)
 
     @property
     def type(self):
         if self.resolved:
-            if self.object_id:
+            if self.value is not None:
                 return 'instance'
             elif self.field:
                 return 'meta'
         else:
-            if self.content_type:
+            if self.field:
                 return 'unresolved'
             else:
                 return 'unknown'
-
-    def save(self, *args, **kwargs):
-        if self.object_id or self.field:
-            self.resolved = True
-        super(Identifier, self).save(*args, **kwargs)
 
 
 class Range(models.Model):

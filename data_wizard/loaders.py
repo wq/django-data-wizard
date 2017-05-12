@@ -5,9 +5,6 @@ class BaseLoader(object):
     def load_io(self):
         raise NotImplementedError()
 
-    def get_id_choices(self, model, meta):
-        return model.objects.all()
-
 
 class FileLoader(BaseLoader):
     file_attr = 'file'
@@ -19,10 +16,8 @@ class FileLoader(BaseLoader):
 
     def load_io(self):
         from wq.io import load_file
-        from django.conf import settings
-        filename = "%s/%s" % (settings.MEDIA_ROOT, self.file.name)
         options = self.load_file_options(self.run)
-        return load_file(filename, options=options)
+        return load_file(self.file.path, options=options)
 
     def load_file_options(self, run):
         headers = run.range_set.filter(type__in='head')

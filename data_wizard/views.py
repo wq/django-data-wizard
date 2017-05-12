@@ -1,13 +1,18 @@
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
-from wq.db.rest.views import ModelViewSet
+from rest_framework.viewsets import ModelViewSet
 from data_wizard import tasks
+from data_wizard import registry
 from wq.io.exceptions import IoException
 from celery.result import AsyncResult
-from .serializers import RecordSerializer
+from .serializers import RunSerializer, RecordSerializer
+from .models import Run
 
 
 class RunViewSet(ModelViewSet):
+    serializer_class = RunSerializer
+    queryset = Run.objects.all()
+
     @detail_route()
     def status(self, request, *args, **kwargs):
         taskid = request.GET.get('task', None)

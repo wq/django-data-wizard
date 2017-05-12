@@ -7,14 +7,10 @@ MIDDLEWARE_CLASSES = tuple()
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.auth',
-    'wq.db.rest',
-    'wq.db.rest.auth',
-    'wq.db.patterns.identify',
-    'vera.params',
-    'vera.series',
-    'vera.results',
     'data_wizard',
-    'tests.file_app'
+    'tests.file_app',
+    'tests.data_app',
+    'tests.naturalkey_app',
 )
 
 DATABASES = {
@@ -26,12 +22,6 @@ DATABASES = {
 }
 
 ROOT_URLCONF = "tests.urls"
-MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "media")
-
-WQ_DEFAULT_REPORT_STATUS = 100
+MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')
 
 CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost/0'
-
-SWAP = False
-
-from wq.db.default_settings import *  # noqa

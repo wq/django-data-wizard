@@ -47,9 +47,9 @@ setup(
         ]
     },
     install_requires=[
-        'wq.db>=1.0.0b3',
-        'vera>=1.0.0b2',
         'wq.io',
+        'natural-keys',
+        'html-json-forms',
         'celery',
         'redis',
         'python-dateutil'
@@ -75,6 +75,5 @@ setup(
     test_suite='tests',
     tests_require=[
         'psycopg2',
-        'Pillow',
     ],
 )

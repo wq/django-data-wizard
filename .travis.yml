@@ -9,9 +9,7 @@ env:
    - DRF="djangorestframework==3.5.3"
    - CELERY="celery==4.0.0rc3"
    - KOMBU="kombu==4.0.0rc3"
-   - WQDB="wq.db==1.0.0b3"
    - WQIO="wq.io==1.0.0b1"
-   - VERA="vera==1.0.0b2"
   matrix:
    - DJANGO="django==1.8.16"
    - DJANGO="django==1.9.11"
@@ -23,8 +21,8 @@ before_script:
 install:
  - pip install $DJANGO $DRF
  - pip install $CELERY $KOMBU
- - pip install $WQDB $WQIO $VERA
- - pip install psycopg2 Pillow
+ - pip install $WQIO
+ - pip install psycopg2
  - pip install flake8
  - pip install .
 script:

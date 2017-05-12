@@ -1,42 +1,19 @@
 from celery import task, current_task
 from xlrd import colname
-from collections import namedtuple, Counter, OrderedDict
+from collections import Counter, OrderedDict
 from .models import Run, Identifier
-from django.conf import settings
-from django.utils.six import string_types
-import datetime
 from .signals import import_complete, new_metadata
-import json
 from functools import wraps
 
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
-from wq.db.rest.models import get_ct
 
-from vera.models import (
-    Site,
-    Event,
-    Report,
-    Parameter,
-    Result,
-)
-
+from rest_framework.serializers import RelatedField
+from natural_keys import NaturalKeySerializer
+from html_json_forms import parse_json_form
 
 User = get_user_model()
 
-EVENT_KEY = [val for val, cls in Event.get_natural_key_info()]
-EventKey = namedtuple('EventKey', EVENT_KEY)
-
-
-DATE_FIELDS = {
-    'DateTimeField': datetime.datetime,
-    'DateField': datetime.date,
-}
-
-if hasattr(settings, 'WQ_DEFAULT_REPORT_STATUS'):
-    DEFAULT_STATUS = settings.WQ_DEFAULT_REPORT_STATUS
-else:
-    DEFAULT_STATUS = None
 
 PRIORITY = {
     'instance': 1,
@@ -46,12 +23,24 @@ PRIORITY = {
 }
 
 
+def get_ct(model):
+    return ContentType.objects.get_for_model(model)
+
+
 def ctid(ct):
     return '%s.%s' % (ct.app_label, ct.model)
 
 
 def metaname(cls):
     return ctid(get_ct(cls)) + '_meta'
+
+
+def get_id(obj, field):
+    if isinstance(field, NaturalKeySerializer):
+        data = list(type(field)(obj).data.values())
+        return data[0]
+    else:
+        return field.to_representation(obj)
 
 
 def lookuprun(fn):
@@ -136,51 +125,79 @@ def get_choices(run):
             'choices': result
         }
 
-    meta_choices = set()
+    Serializer = run.get_serializer()
+    field_choices = set()
 
-    def add_meta_choice(ct, field):
-        mid = '%s:%s' % (ctid(ct), field)
-        mlabel = ('%s %s' % (ct.model, field)).title()
-        meta_choices.add((mid, mlabel))
+    def load_fields(serializer, label_prefix="", name_prefix=""):
+        fields = serializer.get_fields().items()
+        if len(fields) == 1 and isinstance(serializer, NaturalKeySerializer):
+            is_natkey_lookup = True
+        else:
+            is_natkey_lookup = False
+        for name, field in fields:
+            if name_prefix:
+                qualname = name_prefix + ('[%s]' % name)
+            else:
+                qualname = name
 
-    for field in Site._meta.fields:
-        if field.name not in ('slug', 'name'):
-            add_meta_choice(get_ct(Site), field.name)
+            label = (field.label or name).title()
+            if label_prefix:
+                quallabel = label_prefix + " " + label
+            else:
+                quallabel = label
 
-    for field in Event._meta.fields:
-        if field.name not in ('id', 'site'):
-            add_meta_choice(get_ct(Event), field.name)
+            if isinstance(field, NaturalKeySerializer):
+                load_fields(
+                    field, label_prefix=quallabel, name_prefix=qualname
+                )
+            else:
+                if is_natkey_lookup:
+                    is_lookup = True
+                    lookup_field = serializer
+                else:
+                    is_lookup = isinstance(field, RelatedField)
+                    lookup_field = field
+                field_choices.add(
+                    (qualname, quallabel, is_lookup, lookup_field)
+                )
 
-    for field in Report._meta.fields:
-        if field.name not in ('id', 'event', 'entered', 'status', 'user'):
-            add_meta_choice(get_ct(Report), field.name)
+    load_fields(Serializer())
 
-    for field in Result._meta.fields:
-        if field.name not in ('id', 'value_text', 'value_numeric', 'empty',
-                              'report', 'type'):
-            add_meta_choice(get_ct(Result), field.name)
-    add_meta_choice(get_ct(Result), 'value')
+    field_choices = sorted(field_choices, key=lambda d: d[1])
+    group_name = Serializer.Meta.model._meta.verbose_name.title()
 
-    for field in Parameter._meta.fields:
-        if field.name not in ('slug', 'name'):
-            add_meta_choice(get_ct(Parameter), field.name)
+    choices = [{
+        'id': name,
+        'label': label,
+        'is_lookup': is_lookup,
+        'group': group_name,
+        'field': field,
+    } for name, label, is_lookup, field, in field_choices]
 
-    for m in Identifier.objects.filter(resolved=True, field__isnull=False):
-        assert(m.type == 'meta')
-        add_meta_choice(m.content_type, m.field)
-
-    meta_choices = sorted(meta_choices, key=lambda d: d[1])
-    choices = [
-        {
-            'name': 'Metadata',
-            'choices': [{
-                'id': key,
-                'label': label
-            } for key, label in sorted(meta_choices)],
-        },
-        make_list(Parameter, "Parameter")
-    ]
+#   make_list(Parameter, "Parameter")
     return choices
+
+
+def get_choice_groups(run):
+    choices = get_choices(run)
+    groups = OrderedDict()
+
+    for choice in choices:
+
+        groups.setdefault(choice['group'], [])
+        groups[choice['group']].append({
+            'id': choice['id'],
+            'label': choice['label'],
+        })
+
+    return [{
+        'name': group,
+        'choices': group_choices
+    } for group, group_choices in groups.items()]
+
+
+def get_choice_ids(run):
+    return [choice['id'] for choice in get_choices(run)]
 
 
 @task
@@ -193,7 +210,8 @@ def read_columns(run, user=None):
             unknown_count += 1
             # Add some useful context items for client
             info['unknown'] = True
-            info['types'] = get_choices(run)
+            info['types'] = get_choice_groups(run)
+        assert(info['type'] != 'unresolved')
 
     return {
         'columns': matched,
@@ -209,20 +227,29 @@ def get_columns(run):
         return parse_columns(run)
 
 
-def get_meta_columns(run):
-    matched = get_columns(run)
-    cols = OrderedDict()
-    has_id = {}
-    for col in matched:
+def get_lookup_columns(run):
+    cols = []
+    choices = {
+        choice['id']: choice
+        for choice in get_choices(run)
+        if choice['is_lookup']
+    }
+    for col in get_columns(run):
         if 'colnum' not in col or col['type'] != 'meta':
             continue
-        cols.setdefault(col['model'], [])
-        cols[col['model']].append(col)
-        if col['field_name'] == 'id':
-            has_id[col['model']] = True
-    for model in list(cols.keys()):
-        if model not in has_id:
-            cols.pop(model)
+        if col['field_name'] not in choices:
+            continue
+        col = col.copy()
+        info = choices[col['field_name']]
+        if isinstance(info['field'], NaturalKeySerializer):
+            # FIXME: how to override this?
+            queryset = info['field'].Meta.model.objects.all()
+        else:
+            queryset = info['field'].get_queryset()
+
+        col['serializer_field'] = info['field']
+        col['queryset'] = queryset
+        cols.append(col)
     return cols
 
 
@@ -240,7 +267,6 @@ def load_columns(run):
 
         if ident.type == 'meta':
             info['field_name'] = rng.identifier.field
-            info['model'] = ctid(ident.content_type)
         elif ident.type == 'instance':
             info['%s_id' % ident.content_type.model] = ident.object_id
         else:
@@ -256,7 +282,7 @@ def load_columns(run):
             info['name'] = get_range_value(
                 table, rng, rng.header_col, rng.start_col - 1
             )
-            info['value'] = get_range_value(
+            info['meta_value'] = get_range_value(
                 table, rng, rng.start_col, rng.end_col
             )
         matched.append(info)
@@ -317,14 +343,26 @@ def parse_columns(run):
 
 
 def parse_column(run, name, **kwargs):
-    matches = list(Identifier.objects.filter(name__iexact=name))
+    matches = list(Identifier.objects.filter(
+        serializer=run.serializer,
+        name__iexact=name,
+    ))
     if len(matches) > 0:
         matches.sort(
             key=lambda ident: PRIORITY.get(ident.type, 0)
         )
         ident = matches[0]
     else:
-        ident = Identifier.objects.create(name=name)
+        if name in get_choice_ids(run):
+            field = name
+        else:
+            field = None
+        ident = Identifier.objects.create(
+            serializer=run.serializer,
+            name=name,
+            field=field,
+            resolved=(field is not None),
+        )
 
     run.range_set.create(
         identifier=ident,
@@ -345,36 +383,19 @@ def update_columns(run, user, post={}):
             continue
 
         ident = run.range_set.get(pk=col['rel_id']).identifier
-        assert(ident.content_type_id is None)
-        assert(ident.object_id is None)
         assert(ident.field is None)
 
-        if '/' in val:
-            ctype, val = val.split('/')
-            match = 'object_id'
-        elif ':' in val:
-            ctype, val = val.split(':')
-            match = 'field'
+        if '=' in val:
+            # FIXME: handle tall format
+            field, object_id = val.split('=')
         else:
+            field = val
+
+        if val not in get_choice_ids(run):
             continue
 
-        app_label, model = ctype.split('.')
-        ident.content_type = ContentType.objects.get(
-            app_label=app_label,
-            model=model,
-        )
-
-        if match == 'object_id':
-            cls = ident.content_type.model_class()
-            if val == 'new':
-                # FIXME: This assumes class is a wq.db IdentifiedModel
-                obj = cls.objects.find(col['value'])
-            else:
-                obj = cls.objects.get(pk=val)
-            ident.object_id = obj.pk
-        else:
-            ident.field = val
-
+        ident.field = field
+        ident.resolved = True
         ident.save()
 
         new_metadata.send(
@@ -397,35 +418,22 @@ def read_row_identifiers(run, user=None):
 
 def parse_row_identifiers(run):
     run.add_event('parse_row_identifiers')
-    coltypes = get_meta_columns(run)
-    ids = {}
-    ranges = {}
-    for mtype in coltypes:
-        ids[mtype] = Counter()
-        ranges[mtype] = {}
 
-    start_col = 1e10
-    start_row = 1e10
-    end_col = -1
-    end_row = -1
+    lookup_cols = get_lookup_columns(run)
+    for col in lookup_cols:
+        col['ids'] = Counter()
+        col['ranges'] = {}
+
     table = run.load_io()
     for i, row in enumerate(table):
-        for mtype, cols in coltypes.items():
-            counter = ids[mtype]
-            meta = OrderedDict()
-            for col in cols:
-                meta[col['field_name']] = row[col['colnum']]
+        for col in lookup_cols:
+            name = row[col['colnum']]
+            col['ids'][name] += 1
+            col['ranges'].setdefault(
+                name, (1e10, col['colnum'], -1, col['colnum'])
+            )
 
-            assert('id' in meta)
-            meta['id'] = str(meta['id'])
-            key = tuple(meta.items())
-
-            ranges[mtype].setdefault(key, (1e10, 1e10, -1, -1))
-            start_row, start_col, end_row, end_col = ranges[mtype][key]
-            for col in cols:
-                meta[col['field_name']] = row[col['colnum']]
-                start_col = min(col['colnum'], start_col)
-                end_col = max(col['colnum'], end_col)
+            start_row, start_col, end_row, end_col = col['ranges'][name]
 
             rownum = i
             if table.tabular:
@@ -438,45 +446,24 @@ def parse_row_identifiers(run):
             assert(end_col > -1)
             assert(end_row > -1)
 
-            counter[key] += 1
-            ranges[mtype][key] = start_row, start_col, end_row, end_col
+            col['ranges'][name] = start_row, start_col, end_row, end_col
 
-    for mtype in ids:
-        app_label, model = mtype.split('.')
-        ct = ContentType.objects.get(
-            app_label=app_label,
-            model=model,
-        )
-        cls = ct.model_class()
-        assert cls, "%s.%s not found!" % (ct.app_label, ct.model)
-        for key, count in ids[mtype].items():
-            meta = OrderedDict(key)
+    for col in lookup_cols:
+        for name, count in col['ids'].items():
             ident = Identifier.objects.filter(
-                name__iexact=meta['id'],
-                content_type=ct
+                serializer=run.serializer,
+                field=col['field_name'],
+                name__iexact=name,
             ).first()
-            if ident:
-                # FIXME: assert that meta matches any ident.meta?
-                pass
-            else:
-                try:
-                    obj = cls.objects.get_by_natural_key(meta['id'])
-                except cls.DoesNotExist:
-                    obj = None
-                    other_meta = meta.copy()
-                    other_meta.pop('id')
-                    other_meta = json.dumps(other_meta)
-                else:
-                    # FIXME: assert that meta matches fields on obj?
-                    other_meta = None
+
+            if not ident:
                 ident = Identifier.objects.create(
-                    name=meta['id'],
-                    content_type=ct,
-                    object_id=obj.pk if obj else None,
-                    meta=other_meta,
+                    serializer=run.serializer,
+                    field=col['field_name'],
+                    name=name,
                 )
 
-            start_row, start_col, end_row, end_col = ranges[mtype][key]
+            start_row, start_col, end_row, end_col = col['ranges'][name]
             run.range_set.create(
                 type='data',
                 identifier=ident,
@@ -486,52 +473,58 @@ def parse_row_identifiers(run):
                 end_row=end_row,
                 count=count,
             )
+
     return load_row_identifiers(run)
 
 
 def load_row_identifiers(run):
     ids = {}
+    lookup_cols = get_lookup_columns(run)
     for rng in run.range_set.filter(type='data'):
         ident = rng.identifier
-        ids.setdefault(ident.content_type, {})
-        ids[ident.content_type][ident] = rng.count
+        info = None
+        for col in lookup_cols:
+            if col['field_name'] == ident.field:
+                info = col
+        if not info:
+            continue
+        model = info['queryset'].model
+        ids.setdefault(model, {})
+        ids[model][ident] = rng.count, info
 
     unknown_ids = 0
     idgroups = []
-    for mtype in ids:
+    for model in ids:
+        mtype = get_ct(model)
         idinfo = {
             'type_id': ctid(mtype),
             'type_label': mtype.name.title(),
             'ids': []
         }
-        for ident, count in ids[mtype].items():
-            meta = json.loads(ident.meta) if ident.meta else {}
+        for ident, (count, col) in ids[model].items():
             info = {
                 'value': ident.name,
                 'count': count,
-                'meta': [{
-                    'name': k,
-                    'value': v
-                } for k, v in meta.items()]
             }
-            if ident.object_id is not None:
-                info['match'] = str(ident.content_object)
+            if ident.resolved:
+                info['match'] = ident.value or ident.name
             else:
                 assert(ident.type == 'unresolved')
                 unknown_ids += 1
+                field = col['serializer_field']
+
                 info['ident_id'] = ident.pk
                 info['unknown'] = True
-                choices = run.get_id_choices(
-                    ident.content_type.model_class(), meta
-                )
                 info['choices'] = [{
-                    'id': choice.pk,
+                    'id': get_id(choice, field),
                     'label': str(choice),
-                } for choice in choices]
-                info['choices'].insert(0, {
-                    'id': 'new',
-                    'label': "New %s" % idinfo['type_label'],
-                })
+                } for choice in col['queryset']]
+
+                if isinstance(field, NaturalKeySerializer):
+                    info['choices'].insert(0, {
+                        'id': 'new',
+                        'label': "New %s" % idinfo['type_label'],
+                    })
 
             idinfo['ids'].append(info)
         idinfo['ids'].sort(key=lambda info: info['value'])
@@ -553,32 +546,21 @@ def update_row_identifiers(run, user, post={}):
     )
     for rng in unknown:
         ident = rng.identifier
-        cls = ident.content_type.model_class()
         ident_id = post.get('ident_%s_id' % ident.pk, None)
         if not ident_id:
             continue
+
         if ident_id == 'new':
-            # Create new object (with primary identifier)
-            # FIXME: This assumes class is a wq.db IdentifiedModel
-            obj = cls.objects.find(ident.name)
-            meta = json.loads(ident.meta) if ident.meta else {}
-
-            if meta:
-                # Set additional metadata fields on new object
-                for col, val in meta.items():
-                    setattr(obj, col, val)
-                obj.save()
+            ident.value = ident.name
         else:
-            # Add new identifier to existing object for future reference
-            obj = cls.objects.get(pk=ident_id)
+            ident.value = ident_id
 
-        ident.object_id = obj.pk
+        ident.resolved = True
         ident.save()
 
         new_metadata.send(
             sender=update_row_identifiers,
             run=run,
-            object=obj,
             identifier=ident,
         )
 
@@ -605,31 +587,16 @@ def do_import(run, user):
     # Set global defaults for metadata values
     if not user.is_authenticated():
         user = None
+
     run_globals = {
         # Metadata fields
-        metaname(Event): {},
-        metaname(Report): {
-            'user': user,
-            'status_id': DEFAULT_STATUS,
-        },
-        # *.result_meta, *.parameter_meta, and *.site_meta are defined on a
-        # case-by-case basis; see create_record() below
-
-        # Result values indexed by parameter (for "horizontal" tables)
-        'param_vals': {}
     }
-
-    # Set default to None for any event key fields that are not required
-    for field_name in EVENT_KEY:
-        field = Event._meta.get_field(field_name)
-        if field.null:
-            run_globals[metaname(Event)][field_name] = None
 
     # Set any global defaults defined within data themselves (usually as extra
     # cells above the headers in a spreadsheet)
     for col in matched:
-        if 'value' in col:
-            save_value(col, col['value'], run_globals)
+        if 'meta_value' in col:
+            save_value(col, col['meta_value'], run_globals)
 
     # Loop through table rows and add each record
     rows = len(table)
@@ -653,13 +620,10 @@ def do_import(run, user):
         })
 
         # Create report, capturing any errors
-        try:
-            report = create_report(run, row, run_globals, matched)
-        except Exception as e:
-            # Note exception in database
-            report = None
+        obj, error = import_row(run, row, run_globals, matched)
+        if error:
             success = False
-            fail_reason = repr(e)
+            fail_reason = repr(error)
             skipped.append({'row': rownum(i) + 1, 'reason': fail_reason})
         else:
             success = True
@@ -669,7 +633,7 @@ def do_import(run, user):
         # skipped record), including specific cell range.
         run.record_set.create(
             row=rownum(i),
-            content_object=report,
+            content_object=obj,
             success=success,
             fail_reason=fail_reason
         )
@@ -692,7 +656,7 @@ def do_import(run, user):
     return status
 
 
-def create_report(run, row, instance_globals, matched):
+def import_row(run, row, instance_globals, matched):
     """
     Create actual report instance from parsed values.
     """
@@ -712,44 +676,36 @@ def create_report(run, row, instance_globals, matched):
     for col in matched:
         if 'colnum' in col:
             val = row[col['colnum']]
-            if col['type'] == 'meta' and col['field_name'] == 'id':
-                rng = run.range_set.filter(
-                    type='data',
-                    start_col__lte=col['colnum'],
-                    end_col__gte=col['colnum'],
-                    identifier__name__iexact=str(val),
+            if col['type'] == 'meta':
+                ident = Identifier.objects.filter(
+                    serializer=run.serializer,
+                    name__iexact=str(val)
                 ).first()
-                # FIXME: This assumes class is a wq.db IdentifiedModel
-                if rng is not None:
-                    val = rng.identifier.content_object.slug
+                if ident and ident.value:
+                    val = ident.value
             save_value(col, val, record)
 
+    Serializer = run.get_serializer()
+    serializer = Serializer(data=parse_json_form(record))
+    if serializer.is_valid():
+        try:
+            obj = serializer.save()
+            error = None
+        except Exception as e:
+            obj = None
+            error = e
+    else:
+        obj = None
+        error = serializer.errors
+
     # Handle "vertical" table values (parsed as metadata by save_value())
-    if metaname(Result) in record and metaname(Parameter) in record:
+    # if metaname(Result) in record and metaname(Parameter) in record:
         # FIXME: handle other parameter & result metadata
-        parameter_id = record[metaname(Parameter)]['id']
-        result_value = record[metaname(Result)]['value']
-        record['param_vals'][parameter_id] = result_value
+#    parameter_id = record[metaname(Parameter)]['id']
+#        result_value = record[metaname(Result)]['value']
+#        record['param_vals'][parameter_id] = result_value
 
-    if metaname(Site) in record:
-        # FIXME: Handle other site metadata
-        site_id = record[metaname(Site)]['id']
-        record[metaname(Event)]['site'] = site_id
-
-    # Ensure complete Event natural key (http://wq.io/docs/erav#natural-key)
-    missing = set(EVENT_KEY) - set(record[metaname(Event)].keys())
-    if missing:
-        raise Exception(
-            'Incomplete Record - missing %s' % ", ".join(missing)
-        )
-
-    # Create report instance
-    report = Report.objects.create_report(
-        EventKey(**record[metaname(Event)]),
-        record['param_vals'],
-        **record[metaname(Report)]
-    )
-    return report
+    return obj, error
 
 
 def save_value(col, val, obj):
@@ -760,7 +716,7 @@ def save_value(col, val, obj):
     if col['type'] == "instance":
         # Parameter value in a "horizontal" table
         save_parameter_value(col, val, obj)
-    elif col['type'] != "unknown":
+    elif col['type'] == "meta":
         # Metadata value in either a "horizontal" or "vertical" table
         save_metadata_value(col, val, obj)
 
@@ -778,8 +734,8 @@ def save_parameter_value(col, val, obj):
     if parameter_id in vals:
         val = "%s %s" % (vals[parameter_id], val)
 
-    param = Parameter.objects.get(pk=parameter_id)
-    vals[param.slug] = val
+    # param = Parameter.objects.get(pk=parameter_id)
+    # vals[param.slug] = val
 
 
 def save_metadata_value(col, val, obj):
@@ -788,114 +744,5 @@ def save_metadata_value(col, val, obj):
     for the related object with the cell value from this row.
     """
 
-    # Skip empty values
-    if val is None or val == '' or not col['model']:
-        return
-
-    # Assign metadata property based on meta_field (MetaColumn.name).
-    meta_key = '%s_meta' % col['model']
-    app_label, model = col['model'].split('.')
-    meta_cls = ContentType.objects.get(
-        app_label=app_label, model=model
-    ).model_class()
     meta_field = col['field_name']
-
-    # Event and report metadata are defined whether this is a "horizontal" or
-    # "vertical" table.  On the other hand, parameter/result meta are unique to
-    # "vertical" tables and are thus not included by default.  In either case,
-    # site metadata is also not expected.
-    if meta_key not in obj:
-        # This is one of parameter, result, or site meta.
-        obj[meta_key] = {}
-
-    # A meta_field value of '[field].[part]' indicates a value is split across
-    # multiple columns.  For example, a spreadsheet could contain two columns
-    # (date and time) that would be merged into a single "observed" field on a
-    # custom Event class.  There would then be two MetaColumns values, with
-    # names of "observed.date" and "observed.time" respectively.
-    if '.' in meta_field:
-        meta_field, part = meta_field.split('.')
-    else:
-        part = None
-
-    # Determine Django field type (for metadata models only)
-    if col['model'] == 'result':
-        meta_datatype = None
-    else:
-        try:
-            meta_datatype = meta_cls._meta.get_field(
-                meta_field,
-            ).get_internal_type()
-        except:
-            meta_datatype = None
-
-    # Automatically parse date values as such
-    if (meta_datatype in DATE_FIELDS and isinstance(val, string_types) and
-            part != 'time'):
-        from dateutil.parser import parse
-        val = parse(val)
-        if meta_datatype == 'DateField':
-            val = val.date()
-
-    # If field is already set by an earlier column, this value might be the
-    # second half of a date/time pair.
-    if obj[meta_key].get(meta_field, None) is not None:
-        if not part:
-            raise Exception(
-                'Multiple columns found for %s' % meta_field
-            )
-        if part not in ('date', 'time'):
-            raise Exception(
-                'Unexpected multi-column field name: %s.%s!' % (
-                    meta_field, part
-                )
-            )
-        other_val = obj[meta_key][meta_field]
-        val = process_date_part(val, other_val, part)
-
-    # Save value to parsed record
-    obj[meta_key][meta_field] = val
-
-
-def process_date_part(new_val, old_val, part):
-    """
-    Combine separate date & time columns into a single value.
-    """
-
-    if part == 'date':
-        date, time = new_val, old_val
-    else:
-        date, time = old_val, new_val
-
-    # Date should already be a valid date (see parse in save_metadata_value)
-    if not isinstance(date, datetime.date):
-        raise Exception("Expected date but got %s!" % date)
-
-    # Try some extra hacks to convert time values
-    if not isinstance(time, datetime.time):
-        if (isinstance(time, float) and
-                time >= 100 and time <= 2400):
-            # "Numeric" time (hour * 100 + minutes)
-            time = str(time)
-        elif isinstance(time, string_types) and ":" in time:
-            # Take out semicolon for isdigit() code below
-            time = time.replace(":", "")
-
-        # FIXME: what about seconds?
-        if time.isdigit() and len(time) in (3, 4):
-            if len(time) == 3:
-                # 300 -> time(3, 0)
-                time = datetime.time(
-                    int(time[0]),
-                    int(time[1:])
-                )
-            else:
-                # 1200 -> time(12, 0)
-                time = datetime.time(
-                    int(time[0:2]),
-                    int(time[2:])
-                )
-        else:
-            # Meh, it was worth a shot
-            raise Exception("Expected time but got %s!" % time)
-    return datetime.datetime.combine(date, time)
+    obj[meta_field] = val
