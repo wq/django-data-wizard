@@ -1,7 +1,7 @@
 from .base import BaseImportTestCase
 
 
-class ImportTestCase(BaseImportTestCase):
+class SimpleTestCase(BaseImportTestCase):
     serializer_name = 'tests.data_app.wizard.SimpleSerializer'
 
     def test_manual(self):

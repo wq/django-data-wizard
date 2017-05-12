@@ -2,7 +2,7 @@ from .base import BaseImportTestCase
 from tests.naturalkey_app.models import Place, Event
 
 
-class ImportTestCase(BaseImportTestCase):
+class NaturalKeyTestCase(BaseImportTestCase):
     serializer_name = 'tests.naturalkey_app.wizard.NoteSerializer'
 
     def test_manual(self):
