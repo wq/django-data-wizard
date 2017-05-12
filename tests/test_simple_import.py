@@ -81,3 +81,4 @@ class SimpleTestCase(BaseImportTestCase):
             ' {"date": ["Date has wrong format.'
             ' Use one of these formats instead: YYYY[-MM[-DD]]."]}'
         ])
+        self.assert_urls(run, 'simplemodels/%s')

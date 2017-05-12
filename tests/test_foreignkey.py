@@ -25,6 +25,7 @@ class BaseFKTestCase(BaseImportTestCase):
             "imported 'Type #2 (Test Note 3)' at row 3",
             expect_last_record
         ])
+        self.assert_urls(run, 'fkmodels/%s')
 
 
 class ForeignKeyTestCase(BaseFKTestCase):

@@ -10,6 +10,7 @@ from .models import Run
 
 class RunViewSet(ModelViewSet):
     serializer_class = RunSerializer
+    record_serializer_class = RecordSerializer
     queryset = Run.objects.all()
 
     @detail_route()
@@ -93,7 +94,7 @@ class RunViewSet(ModelViewSet):
     @detail_route()
     def records(self, request, *args, **kwargs):
         response = self.retrieve(self.request, **kwargs)
-        response.data['records'] = RecordSerializer(
+        response.data['records'] = self.record_serializer_class(
             self.get_object().record_set.all(),
             many=True
         ).data

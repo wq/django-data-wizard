@@ -35,18 +35,18 @@ class BaseImportTestCase(APITransactionTestCase):
         self.user = User.objects.create(username='testuser', is_superuser=True)
         self.client.force_authenticate(user=self.user)
 
+    def mkurl(self, run, action):
+        if settings.WITH_WQDB:
+            template = "/datawizard/%s/%s.json"
+        else:
+            template = "/datawizard/%s/%s/?format=json"
+        return template % (run.pk, action)
+
     def get_url(self, run, action, params={}):
-        params['format'] = 'json'
-        return self.client.get(
-            '/datawizard/%s/%s/' % (run.pk, action),
-            params
-        )
+        return self.client.get(self.mkurl(run, action), params)
 
     def post_url(self, run, action, post):
-        return self.client.post(
-            '/datawizard/%s/%s/?format=json' % (run.pk, action),
-            post
-        )
+        return self.client.post(self.mkurl(run, action), post)
 
     def wait(self, run, action):
         print()
@@ -78,11 +78,16 @@ class BaseImportTestCase(APITransactionTestCase):
 
     def upload_file(self, filename):
         """
-        1. "Upload" spreadsheet file
+        1. Upload spreadsheet file
         """
         filename = os.path.join(settings.MEDIA_ROOT, filename)
         with open(filename) as f:
-            fileobj = FileModel.objects.create(file=File(f))
+            if settings.WITH_WQDB:
+                response = self.client.post('/files.json', {'file': f})
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                fileobj = FileModel.objects.get(pk=response.data['id'])
+            else:
+                fileobj = FileModel.objects.create(file=File(f))
 
         response = self.client.post('/datawizard/?format=json', {
             'content_type_id': 'file_app.file',
@@ -246,3 +251,14 @@ class BaseImportTestCase(APITransactionTestCase):
         """
         steps = [log.event for log in run.log.all()]
         self.assertEqual(expect_log, steps)
+
+    def assert_urls(self, run, urltemplate):
+        if not settings.WITH_WQDB:
+            return
+        records = self.get_url(run, 'records').data['records']
+        for row, record in zip(records, run.record_set.all()):
+            if record.success:
+                self.assertEqual(
+                    urltemplate % record.object_id,
+                    row.get('object_url'),
+                )

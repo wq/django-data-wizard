@@ -141,3 +141,4 @@ class NaturalKeyTestCase(BaseImportTestCase):
             "imported '%s on 2017-06-01: Test Note 3' at row 3" % chi.name,
             "imported '%s on 2017-06-02: Test Note 4' at row 4" % chi.name,
         ])
+        self.assert_urls(run, 'notes/%s')
