@@ -90,9 +90,9 @@ class EAVTestCase(BaseImportTestCase):
 
         values = [str(value) for value in Value.objects.order_by('pk')]
         self.assertEqual(values, [
-            'Temperature for Minneapolis: 20.8 °C',
+            'Temperature for Minneapolis: 20.8 C',
             'Notes for Minneapolis: Test Note 1',
-            'Temperature for Chicago: 70.2 °F',
+            'Temperature for Chicago: 70.2 F',
             'Notes for Chicago: Test Note 2',
         ])
         self.assert_urls(run, 'entities/%s')
