@@ -22,6 +22,7 @@ class BaseImportTestCase(APITransactionTestCase):
         'tests.file_app',
         'tests.data_app',
         'tests.naturalkey_app',
+        'tests.eav_app',
     )
 
     def _fixture_teardown(self):
@@ -64,7 +65,7 @@ class BaseImportTestCase(APITransactionTestCase):
                 done = True
         return res
 
-    def create_identifier(self, name, field, value=None):
+    def create_identifier(self, name, field, value=None, attr_id=None):
         """
         0. Preregister any necessary identifiers
         """
@@ -73,6 +74,7 @@ class BaseImportTestCase(APITransactionTestCase):
             name=name,
             field=field,
             value=value,
+            attr_id=attr_id,
             resolved=True,
         )
 

@@ -21,6 +21,7 @@ INSTALLED_APPS = (
     'tests.file_app',
     'tests.data_app',
     'tests.naturalkey_app',
+    'tests.eav_app',
 )
 
 

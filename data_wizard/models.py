@@ -68,20 +68,25 @@ class Identifier(models.Model):
     name = models.CharField(max_length=255)
     field = models.CharField(max_length=255, null=True, blank=True)
     value = models.CharField(max_length=255, null=True, blank=True)
+    attr_id = models.PositiveIntegerField(null=True, blank=True)
     resolved = models.BooleanField(default=False)
 
     def __str__(self):
-        if self.type == 'instance':
-            return "%s -> %s (%s)" % (self.name, self.value, self.field)
-        elif self.type == 'meta':
+        if self.type == 'meta':
             return "%s -> %s" % (self.name, self.field)
+        elif self.type == 'attribute':
+            return "%s -> %s (attr=%s)" % (self.name, self.field, self.attr_id)
+        elif self.type == 'instance':
+            return "%s -> %s (%s)" % (self.name, self.value, self.field)
         else:
             return "%s: %s" % (self.type.title(), self.name)
 
     @property
     def type(self):
         if self.resolved:
-            if self.value is not None:
+            if self.attr_id is not None:
+                return 'attribute'
+            elif self.value is not None:
                 return 'instance'
             elif self.field:
                 return 'meta'

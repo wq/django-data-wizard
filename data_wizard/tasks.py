@@ -8,7 +8,7 @@ from functools import wraps
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 
-from rest_framework.serializers import RelatedField
+from rest_framework import serializers
 from natural_keys import NaturalKeySerializer
 from html_json_forms import parse_json_form
 import json
@@ -18,9 +18,10 @@ User = get_user_model()
 
 PRIORITY = {
     'instance': 1,
-    'meta': 2,
-    'unresolved': 3,
-    'unknown': 4,
+    'attribute': 2,
+    'meta': 3,
+    'unresolved': 4,
+    'unknown': 5,
 }
 
 
@@ -109,27 +110,32 @@ def auto_import(run, user):
     return do_import(run, user)
 
 
+def get_attribute_field(field):
+    for cname, cfield in field.child.get_fields().items():
+        if isinstance(cfield, serializers.RelatedField):
+            return cname, cfield
+
+
 def get_choices(run):
-    def make_list(cls, name):
-        rows = cls.objects.all()
-        ct = get_ct(cls)
-        result = [{
-            'id': '%s/new' % ctid(ct),
-            'label': "New %s" % name,
-        }]
+    def make_list(choices):
+        result = []
+        # FIXME:
+        # result = [{
+        #     'id': '%s/new' % ctid(ct),
+        #     'label': "New %s" % name,
+        # }]
         result += [{
-            'id': '%s/%s' % (ctid(ct), row.pk),
+            'id': row.pk,
             'label': str(row),
-        } for row in rows]
-        return {
-            'name': name,
-            'choices': result
-        }
+        } for row in choices]
+        return result
 
     Serializer = run.get_serializer()
     field_choices = set()
 
-    def load_fields(serializer, label_prefix="", name_prefix=""):
+    def load_fields(serializer, group_name,
+                    label_prefix="", name_prefix="",
+                    attribute_name=None, attribute_choices=None):
         fields = serializer.get_fields().items()
         if len(fields) == 1 and isinstance(serializer, NaturalKeySerializer):
             is_natkey_lookup = True
@@ -149,23 +155,52 @@ def get_choices(run):
 
             if isinstance(field, NaturalKeySerializer):
                 load_fields(
-                    field, label_prefix=quallabel, name_prefix=qualname
+                    field, group_name,
+                    label_prefix=quallabel, name_prefix=qualname
                 )
+            elif isinstance(field, serializers.ListSerializer):
+                attr_name, attr_field = get_attribute_field(field)
+
+                if not attr_field:
+                    raise Exception("No attribute field found!")
+
+                choices = make_list(attr_field.get_queryset())
+                load_fields(
+                    field.child,
+                    group_name=quallabel,
+                    label_prefix="",
+                    name_prefix=qualname + '[]',
+                    attribute_name=attr_name,
+                    attribute_choices=choices,
+                )
+            elif attribute_choices:
+                if isinstance(field, serializers.RelatedField):
+                    continue
+                for choice in attribute_choices:
+                    field_choices.add((
+                        group_name,
+                        '%s;%s=%s' % (qualname, attribute_name, choice['id']),
+                        '%s for %s' % (
+                            label, choice['label']
+                        ),
+                        False,
+                        field,
+                    ))
             else:
                 if is_natkey_lookup:
                     is_lookup = True
                     lookup_field = serializer
                 else:
-                    is_lookup = isinstance(field, RelatedField)
+                    is_lookup = isinstance(field, serializers.RelatedField)
                     lookup_field = field
                 field_choices.add(
-                    (qualname, quallabel, is_lookup, lookup_field)
+                    (group_name, qualname, quallabel, is_lookup, lookup_field)
                 )
 
-    load_fields(Serializer())
+    group_name = Serializer.Meta.model._meta.verbose_name.title()
+    load_fields(Serializer(), group_name)
 
     field_choices = sorted(field_choices, key=lambda d: d[1])
-    group_name = Serializer.Meta.model._meta.verbose_name.title()
 
     choices = [{
         'id': name,
@@ -173,7 +208,7 @@ def get_choices(run):
         'is_lookup': is_lookup,
         'group': group_name,
         'field': field,
-    } for name, label, is_lookup, field, in field_choices]
+    } for group_name, name, label, is_lookup, field in field_choices]
 
 #   make_list(Parameter, "Parameter")
     return choices
@@ -268,8 +303,9 @@ def load_columns(run):
 
         if ident.type == 'meta':
             info['field_name'] = rng.identifier.field
-        elif ident.type == 'instance':
-            info['%s_id' % ident.content_type.model] = ident.object_id
+        elif ident.type == 'attribute':
+            info['field_name'] = rng.identifier.field
+            info['attr_id'] = rng.identifier.attr_id
         else:
             info['value'] = ident.name
 
@@ -386,16 +422,18 @@ def update_columns(run, user, post={}):
         ident = run.range_set.get(pk=col['rel_id']).identifier
         assert(ident.field is None)
 
-        if '=' in val:
-            # FIXME: handle tall format
-            field, object_id = val.split('=')
-        else:
-            field = val
-
         if val not in get_choice_ids(run):
             continue
 
+        if ';' in val:
+            field, attr_info = val.split(';')
+            attr_name, attr_id = attr_info.split('=')
+        else:
+            field = val
+            attr_id = None
+
         ident.field = field
+        ident.attr_id = attr_id
         ident.resolved = True
         ident.save()
 
@@ -598,6 +636,15 @@ def do_import(run, user):
     for col in matched:
         if 'meta_value' in col:
             save_value(col, col['meta_value'], run_globals)
+        elif 'attr_id' in col:
+            Serializer = run.get_serializer()
+            basename = col['field_name'].split('[')[0]
+            field = Serializer().get_fields().get(basename)
+            if field:
+                attr_name, attr_field = get_attribute_field(field)
+                run_globals['_attr_field'] = '%s[][%s]' % (
+                    basename, attr_name
+                )
 
     # Loop through table rows and add each record
     rows = len(table)
@@ -664,16 +711,10 @@ def import_row(run, row, instance_globals, matched):
 
     # Copy global values to record hash
     record = {
-        key: instance_globals[key].copy()
+        key: instance_globals[key]
         for key in instance_globals
     }
 
-    # In some spreadsheets (i.e. "horizontal" tables), multiple columns
-    # indicate parameter names and each row only contains result values.  In
-    # others (i.e. "vertical" tables), each row lists both the parameter name
-    # and the value.  See http://wq.io/docs/dbio#horizontal-vs-vertical
-
-    # Parse metadata & "horizontal" table parameter values
     for col in matched:
         if 'colnum' in col:
             val = row[col['colnum']]
@@ -685,6 +726,8 @@ def import_row(run, row, instance_globals, matched):
                 if ident and ident.value:
                     val = ident.value
             save_value(col, val, record)
+
+    record.pop('_attr_index', None)
 
     Serializer = run.get_serializer()
     serializer = Serializer(data=parse_json_form(record))
@@ -699,13 +742,6 @@ def import_row(run, row, instance_globals, matched):
         obj = None
         error = json.dumps(serializer.errors)
 
-    # Handle "vertical" table values (parsed as metadata by save_value())
-    # if metaname(Result) in record and metaname(Parameter) in record:
-        # FIXME: handle other parameter & result metadata
-#    parameter_id = record[metaname(Parameter)]['id']
-#        result_value = record[metaname(Result)]['value']
-#        record['param_vals'][parameter_id] = result_value
-
     return obj, error
 
 
@@ -713,30 +749,42 @@ def save_value(col, val, obj):
     """
     For each cell in each row, use parsed col(umn) information to determine how
     to apply the cell val(ue) to the obj(ect hash).
+
     """
-    if col['type'] == "instance":
-        # Parameter value in a "horizontal" table
-        save_parameter_value(col, val, obj)
+    # In some spreadsheets (i.e. "horizontal" tables), multiple columns
+    # indicate attribute names and each row contains result values.  In others
+    # (i.e. "vertical" tables), each row lists both the attribute name and the
+    # value.
+
+    if col['type'] == "attribute":
+        # Attribute value in a "horizontal" table
+        save_attribute_value(col, val, obj)
     elif col['type'] == "meta":
         # Metadata value in either a "horizontal" or "vertical" table
         save_metadata_value(col, val, obj)
 
 
-def save_parameter_value(col, val, obj):
+def save_attribute_value(col, val, obj):
     """
-    This column was identified as a parameter; update param_vals with the
-    cell value from this row.
+    This column was identified as an EAV attribute; update nested array with
+    the cell value from this row.
     """
-    parameter_id = col['parameter_id']
-    vals = obj['param_vals']
+    if '_attr_field' not in obj:
+        raise Exception("Unexpected EAV value!")
+    if '_attr_index' not in obj:
+        obj['_attr_index'] = {
+            col['attr_id']: 0
+        }
+    else:
+        obj['_attr_index'].setdefault(
+            col['attr_id'], max(obj['_attr_index'].values()) or 0 + 1
+        )
 
-    # Hack: if there are two (or more) columns pointing to the same
-    # parameter, join both values together with a space.
-    if parameter_id in vals:
-        val = "%s %s" % (vals[parameter_id], val)
-
-    # param = Parameter.objects.get(pk=parameter_id)
-    # vals[param.slug] = val
+    index = obj['_attr_index'][col['attr_id']]
+    value_field = col['field_name'].replace('[]', '[%s]' % index)
+    attr_field = obj['_attr_field'].replace('[]', '[%s]' % index)
+    obj[value_field] = val
+    obj[attr_field] = col['attr_id']
 
 
 def save_metadata_value(col, val, obj):
