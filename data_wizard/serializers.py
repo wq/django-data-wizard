@@ -35,13 +35,18 @@ class RunSerializer(serializers.ModelSerializer):
     object_label = serializers.StringRelatedField(
         source='content_object', read_only=True
     )
+    serializer_label = serializers.SerializerMethodField()
 
     def get_fields(self):
         fields = super(RunSerializer, self).get_fields()
         fields['serializer'] = serializers.ChoiceField(
             choices=registry.get_choices(),
+            required=False,
         )
         return fields
+
+    def get_serializer_label(self, instance):
+        return registry.get_serializer_name(instance.serializer)
 
     class Meta:
         model = Run

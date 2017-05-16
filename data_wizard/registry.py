@@ -45,9 +45,11 @@ class Registry(object):
             })
         return serializers
 
+    def get_serializer_name(self, name):
+        return self._serializer_names.get(name, name)
+
     def get_serializer(self, name):
-        if name in self._serializer_names:
-            name = self._serializer_names[name]
+        name = self.get_serializer_name(name)
         if name not in self._registry:
             raise ImproperlyConfigured(
                 "%s is not a registered serializer!" % name

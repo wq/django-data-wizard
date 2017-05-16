@@ -45,6 +45,58 @@ class SimpleTestCase(BaseImportTestCase):
             'parse_columns',
         ])
 
+    def test_auto_no_serializer(self):
+        # Should abort since no serializer is set
+        run = self.upload_file('simplemodel.csv', skip_serializer=True)
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+        ])
+
+    def test_auto_continue(self):
+        # Should abort due to missing serializer
+        run = self.upload_file('simplemodel.csv', skip_serializer=True)
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+        ])
+
+        # Set serializer and try again, should abort due to unknown column
+        self.set_serializer(run)
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'update_serializer',
+            'auto_import',
+            'parse_columns',
+        ])
+
+        # Set column and try again, should work now
+        self.update_columns(run, {
+            'Simple Model': {
+                'field notes': 'notes'
+            }
+        })
+        self.auto_import(run, expect_input_required=False)
+
+        # Verify results
+        self.check_data(run)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'update_serializer',
+            'auto_import',
+            'parse_columns',
+            'update_columns',
+            'auto_import',
+            'parse_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])
+
     def test_auto_preset(self):
         # Initialize identifier before auto import
         self.create_identifier('field notes', 'notes')

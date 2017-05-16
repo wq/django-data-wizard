@@ -65,6 +65,14 @@ def auto_import(run, user):
     any additional input is needed from the user.
     """
     run.add_event('auto_import')
+    if not run.serializer:
+        result = {
+            'action': 'serializers',
+            'message': 'Input Needed'
+        }
+        current_task.update_state(state='SUCCESS', meta=result)
+        return result
+
     # Preload IO to catch any load errors early
     status = {
         'message': "Loading Data...",

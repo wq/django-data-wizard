@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
 from data_wizard import tasks
+from data_wizard import registry
 from wq.io.exceptions import IoException
 from celery.result import AsyncResult
 from .serializers import RunSerializer, RecordSerializer
@@ -54,6 +55,25 @@ class RunViewSet(ModelViewSet):
                 response.data['error'] = str(e)
 
         return response
+
+    @detail_route()
+    def serializers(self, request, *args, **kwargs):
+        response = self.retrieve(request, **self.kwargs)
+        response.data['serializer_choices'] = [{
+            'name': s['class_name'],
+            'label': s['name'],
+        } for s in registry.get_serializers()]
+        return response
+
+    @detail_route(methods=['post'])
+    def updateserializer(self, request, *args, **kwargs):
+        run = self.get_object()
+        name = request.POST.get('serializer', None)
+        if name and registry.get_serializer(name):
+            run.serializer = name
+            run.save()
+            run.add_event('update_serializer')
+        return self.retrieve(request)
 
     @detail_route()
     def columns(self, request, *args, **kwargs):

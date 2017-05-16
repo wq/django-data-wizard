@@ -78,7 +78,7 @@ class BaseImportTestCase(APITransactionTestCase):
             resolved=True,
         )
 
-    def upload_file(self, filename):
+    def upload_file(self, filename, skip_serializer=False):
         """
         1. Upload spreadsheet file
         """
@@ -91,16 +91,34 @@ class BaseImportTestCase(APITransactionTestCase):
             else:
                 fileobj = FileModel.objects.create(file=File(f))
 
-        response = self.client.post('/datawizard/?format=json', {
+        post = {
             'content_type_id': 'file_app.file',
             'object_id': fileobj.pk,
-            'serializer': self.serializer_name,
-        })
+        }
+        if not skip_serializer:
+            post['serializer'] = self.serializer_name
+
+        response = self.client.post('/datawizard/?format=json', post)
         self.assertEqual(
             response.status_code, status.HTTP_201_CREATED, response.data
         )
         run = Run.objects.get(pk=response.data['id'])
         return run
+
+    def set_serializer(self, run):
+        """
+        1b. Set serializer class
+        """
+        response = self.get_url(run, 'serializers')
+        found = False
+        for choice in response.data.get('serializer_choices'):
+            if choice['name'] == self.serializer_name:
+                found = True
+        self.assertTrue(found)
+        response = self.post_url(run, 'updateserializer', {
+            'serializer': self.serializer_name,
+        })
+        self.assertEqual(response.data.get('serializer'), self.serializer_name)
 
     def check_columns(self, run, expect_columns, expect_unknown):
         """
