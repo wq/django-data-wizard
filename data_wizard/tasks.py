@@ -1,6 +1,6 @@
 from celery import task, current_task
 from xlrd import colname
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 from .models import Run, Identifier
 from .signals import import_complete, new_metadata
 from functools import wraps
@@ -475,58 +475,66 @@ def parse_row_identifiers(run):
     run.add_event('parse_row_identifiers')
 
     lookup_cols = get_lookup_columns(run)
+    lookup_fields = OrderedDict()
     for col in lookup_cols:
-        col['ids'] = Counter()
-        col['ranges'] = {}
+        field_name = col['field_name']
+        lookup_fields.setdefault(field_name, {
+            'cols': [],
+            'ids': OrderedDict(),
+            'start_col': 1e10,
+            'end_col': -1,
+        })
+        info = lookup_fields[field_name]
+        info['cols'].append(col)
+        info['start_col'] = min(info['start_col'], col['colnum'])
+        info['end_col'] = max(info['end_col'], col['colnum'])
+        assert(info['start_col'] < 1e10)
+        assert(info['end_col'] > -1)
 
     table = run.load_io()
     for i, row in enumerate(table):
-        for col in lookup_cols:
-            name = row[col['colnum']]
-            col['ids'][name] += 1
-            col['ranges'].setdefault(
-                name, (1e10, col['colnum'], -1, col['colnum'])
-            )
-
-            start_row, start_col, end_row, end_col = col['ranges'][name]
-
+        for field_name, info in lookup_fields.items():
+            names = [row[col['colnum']] for col in info['cols']]
+            name = " ".join(names)
+            info['ids'].setdefault(name, {
+                'count': 0,
+                'start_row': 1e10,
+                'end_row': -1,
+            })
+            idinfo = info['ids'][name]
+            idinfo['count'] += 1
             rownum = i
             if table.tabular:
                 rownum += table.start_row
-            start_row = min(start_row, rownum)
-            end_row = max(end_row, rownum)
+            idinfo['start_row'] = min(idinfo['start_row'], rownum)
+            idinfo['end_row'] = max(idinfo['end_row'], rownum)
 
-            assert(start_col < 1e10)
-            assert(start_row < 1e10)
-            assert(end_col > -1)
-            assert(end_row > -1)
+            assert(idinfo['start_row'] < 1e10)
+            assert(idinfo['end_row'] > -1)
 
-            col['ranges'][name] = start_row, start_col, end_row, end_col
-
-    for col in lookup_cols:
-        for name, count in col['ids'].items():
+    for field_name, info in lookup_fields.items():
+        for name, idinfo in info['ids'].items():
             ident = Identifier.objects.filter(
                 serializer=run.serializer,
-                field=col['field_name'],
+                field=field_name,
                 name__iexact=name,
             ).first()
 
             if not ident:
                 ident = Identifier.objects.create(
                     serializer=run.serializer,
-                    field=col['field_name'],
+                    field=field_name,
                     name=name,
                 )
 
-            start_row, start_col, end_row, end_col = col['ranges'][name]
             run.range_set.create(
                 type='data',
                 identifier=ident,
-                start_col=start_col,
-                end_col=end_col,
-                start_row=start_row,
-                end_row=end_row,
-                count=count,
+                start_col=info['start_col'],
+                end_col=info['end_col'],
+                start_row=idinfo['start_row'],
+                end_row=idinfo['end_row'],
+                count=idinfo['count'],
             )
 
     return load_row_identifiers(run)
@@ -734,14 +742,19 @@ def import_row(run, row, instance_globals, matched):
     for col in matched:
         if 'colnum' in col:
             val = row[col['colnum']]
-            if col['type'] == 'meta':
-                ident = Identifier.objects.filter(
-                    serializer=run.serializer,
-                    name__iexact=str(val)
-                ).first()
-                if ident and ident.value:
-                    val = ident.value
             save_value(col, val, record)
+
+    seen = set()
+    for col in matched:
+        field_name = col['field_name']
+        if col['type'] == 'meta' and field_name not in seen:
+            seen.add(field_name)
+            ident = Identifier.objects.filter(
+                serializer=run.serializer,
+                name__iexact=str(record[field_name]),
+            ).first()
+            if ident and ident.value:
+                record[field_name] = ident.value
 
     record.pop('_attr_index', None)
     record.pop('_attr_field', None)
@@ -777,7 +790,7 @@ def save_value(col, val, obj):
         save_attribute_value(col, val, obj)
     elif col['type'] == "meta":
         # Metadata value in either a "horizontal" or "vertical" table
-        save_metadata_value(col, val, obj)
+        set_value(obj, col['field_name'], val)
 
 
 def save_attribute_value(col, val, obj):
@@ -799,15 +812,11 @@ def save_attribute_value(col, val, obj):
     index = obj['_attr_index'][col['attr_id']]
     value_field = col['field_name'].replace('[]', '[%s]' % index)
     attr_field = obj['_attr_field'].replace('[]', '[%s]' % index)
-    obj[value_field] = val
+    set_value(obj, value_field, val)
     obj[attr_field] = col['attr_id']
 
 
-def save_metadata_value(col, val, obj):
-    """
-    This column was identified as a metadata field; update the metadata
-    for the related object with the cell value from this row.
-    """
-
-    meta_field = col['field_name']
-    obj[meta_field] = val
+def set_value(obj, field_name, val):
+    if field_name in obj:
+        val = "%s %s" % (obj[field_name], val)
+    obj[field_name] = val

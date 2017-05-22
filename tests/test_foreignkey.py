@@ -157,3 +157,155 @@ class SlugTestCase(BaseFKTestCase):
             'do_import',
             'import_complete',
         ])
+
+
+class SplitTestCase(BaseFKTestCase):
+    serializer_name = 'tests.data_app.wizard.SlugSerializer'
+
+    def test_manual(self):
+        run = self.upload_file('fksplit.csv')
+        row4_error = ('{"type": ["Object with name=Type #2 - Alternate Name'
+                      ' does not exist."]}')
+
+        # 4 columns, all unmatched
+        self.check_columns(run, 4, 4)
+        self.update_columns(run, {
+            'Fk Model': {
+                'type group': 'type',
+                'type num': 'type',
+                'notes 1': 'notes',
+                'notes 2': 'notes',
+            }
+        })
+
+        # Start data import process, wait for completion
+        self.start_import(run, [{
+            'row': 5,
+            'reason': row4_error,
+        }])
+
+        # Verify results
+        self.check_data(
+            run, expect_last_record="failed at row 4: %s" % row4_error
+        )
+        self.assert_log(run, [
+            'created',
+            'parse_columns',
+            'update_columns',
+            'do_import',
+            'import_complete',
+        ])
+
+    def test_auto(self):
+        # Should abort due to unknown columns
+        run = self.upload_file('fksplit.csv')
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+        ])
+
+        # Update columns and try again
+        self.update_columns(run, {
+            'Fk Model': {
+                'type group': 'type',
+                'type num': 'type',
+                'notes 1': 'notes',
+                'notes 2': 'notes',
+            }
+        })
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'update_columns',
+            'auto_import',
+            'parse_row_identifiers',
+        ])
+
+        # Update identifiers and try again
+        self.update_row_identifiers(run, {
+            'data_app.type': {
+                'Type #1': 'Type #1',
+                'Type #2': 'Type #2',
+                'Type #2 - Alternate Name': 'Type #2',
+            }
+        })
+        self.auto_import(run, expect_input_required=False)
+        self.check_data(
+            run,
+            expect_last_record="imported 'Type #2 (Test Note 4)' at row 4",
+            extra_ranges=[
+                "Cell value 'Type #1 -> Type #1 (type)'"
+                " at Rows 1-2, Column 0-1",
+                "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0-1",
+                "Cell value 'Type #2 - Alternate Name -> Type #2 (type)'"
+                " at Row 4, Column 0-1",
+            ]
+        )
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'update_columns',
+            'auto_import',
+            'parse_row_identifiers',
+            'update_row_identifiers',
+            'auto_import',
+            'do_import',
+            'import_complete',
+        ])
+
+    def test_auto_preset(self):
+        self.create_identifier('type group', 'type')
+        self.create_identifier('type num', 'type')
+        self.create_identifier('notes 1', 'notes')
+        self.create_identifier('notes 2', 'notes')
+        self.create_identifier('Type #1', 'type', 'Type #1')
+        self.create_identifier('Type #2', 'type', 'Type #2')
+        self.create_identifier('Type #2 - Alternate Name', 'type', 'Type #2')
+
+        # Should succeed due to premapped type ids
+        run = self.upload_file('fksplit.csv')
+        self.auto_import(run, expect_input_required=False)
+        self.check_data(
+            run,
+            expect_last_record="imported 'Type #2 (Test Note 4)' at row 4",
+            extra_ranges=[
+                "Cell value 'Type #1 -> Type #1 (type)'"
+                " at Rows 1-2, Column 0-1",
+                "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0-1",
+                "Cell value 'Type #2 - Alternate Name -> Type #2 (type)'"
+                " at Row 4, Column 0-1",
+            ]
+        )
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'parse_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])
+
+    def check_data(self, run, expect_last_record=None, extra_ranges=[]):
+        if 'imported' in expect_last_record:
+            total = 4
+        else:
+            total = 3
+        self.assert_status(run, total)
+        self.assert_ranges(run, [
+            "Data Column 'type group -> type' at Rows 1-4, Column 0",
+            "Data Column 'type num -> type' at Rows 1-4, Column 1",
+            "Data Column 'notes 1 -> notes' at Rows 1-4, Column 2",
+            "Data Column 'notes 2 -> notes' at Rows 1-4, Column 3",
+        ] + extra_ranges)
+        self.assert_records(run, [
+            "imported 'Type #1 (Test Note 1)' at row 1",
+            "imported 'Type #1 (Test Note 2)' at row 2",
+            "imported 'Type #2 (Test Note 3)' at row 3",
+            expect_last_record,
+        ])
+        self.assert_urls(run, 'fkmodels/%s')
