@@ -68,6 +68,7 @@ class RunViewSet(ModelViewSet):
     @detail_route(methods=['post'])
     def updateserializer(self, request, *args, **kwargs):
         run = self.get_object()
+        self.action = 'serializers'
         name = request.POST.get('serializer', None)
         if name and registry.get_serializer(name):
             run.serializer = name

@@ -5,14 +5,13 @@
     {{>head}}
   </head>
   <body>
-    <div data-role="page" data-url="{{svc}}/datawizard/{{id}}/serializer">
+    <div data-role="page" data-url="{{svc}}/datawizard/{{id}}/serializers">
       <div data-role="header">
         {{>home}}
         <h1>{{label}}</h1>
       </div>
       <div role="main" class="ui-content">
         <h1>{{label}}</h1>
-        {{#result}}
         <h3>Data Format</h3>
         {{#serializer}}
         <p>
@@ -26,7 +25,7 @@
         <ul data-role="listview" data-inset="true">
           <li class="ui-field-contain">
             <fieldset data-role="controlgroup">
-              <legend>Select Format</li>
+              <legend>Select Format</legend>
               {{#serializer_choices}}
               <label for="serializer-{{name}}">{{label}}</label>
               <input type="radio" name="serializer" id="serializer-{{name}}"
@@ -49,7 +48,6 @@
           </button>
         </form>
         {{/serializer}}
-	{{/result}}
       </div>
     </div>
   </body>

@@ -45,6 +45,12 @@ def get_id(obj, field):
         return field.to_representation(obj)
 
 
+def update_state(state, meta):
+    if not current_task:
+        return
+    current_task.update_state(state=state, meta=meta)
+
+
 def lookuprun(fn):
     @wraps(fn)
     def wrapped(run, user=None, **kwargs):
@@ -70,7 +76,7 @@ def auto_import(run, user):
             'action': 'serializers',
             'message': 'Input Needed'
         }
-        current_task.update_state(state='SUCCESS', meta=result)
+        update_state(state='SUCCESS', meta=result)
         return result
 
     # Preload IO to catch any load errors early
@@ -80,7 +86,7 @@ def auto_import(run, user):
         'current': 1,
         'total': 4,
     }
-    current_task.update_state(state='PROGRESS', meta=status)
+    update_state(state='PROGRESS', meta=status)
     run.load_io()
 
     # Parse columns
@@ -88,12 +94,12 @@ def auto_import(run, user):
         message="Parsing Columns...",
         current=2,
     )
-    current_task.update_state(state='PROGRESS', meta=status)
+    update_state(state='PROGRESS', meta=status)
     result = read_columns(run, user)
     if result['unknown_count']:
         result['action'] = "columns"
         result['message'] = "Input Needed"
-        current_task.update_state(state='SUCCESS', meta=result)
+        update_state(state='SUCCESS', meta=result)
         return result
 
     # Parse row identifiers
@@ -101,12 +107,12 @@ def auto_import(run, user):
         message="Parsing Identifiers...",
         current=3,
     )
-    current_task.update_state(state='PROGRESS', meta=status)
+    update_state(state='PROGRESS', meta=status)
     result = read_row_identifiers(run, user)
     if result['unknown_count']:
         result['action'] = "ids"
         result['message'] = "Input Needed"
-        current_task.update_state(state='SUCCESS', meta=result)
+        update_state(state='SUCCESS', meta=result)
         return result
 
     status.update(
@@ -205,8 +211,10 @@ def get_choices(run):
                     (group_name, qualname, quallabel, is_lookup, lookup_field)
                 )
 
-    group_name = Serializer.Meta.model._meta.verbose_name.title()
-    load_fields(Serializer(), group_name)
+    load_fields(
+        Serializer(),
+        Serializer.Meta.model._meta.verbose_name.title(),
+    )
 
     field_choices = sorted(field_choices, key=lambda d: d[1])
 
@@ -667,7 +675,7 @@ def do_import(run, user):
 
     for i, row in enumerate(table):
         # Update state (for status() on view)
-        current_task.update_state(state='PROGRESS', meta={
+        update_state(state='PROGRESS', meta={
             'message': "Importing Data...",
             'stage': 'data',
             'current': i,
@@ -706,7 +714,7 @@ def do_import(run, user):
     import_complete.send(sender=import_data, run=run, status=status)
 
     # FIXME: Shouldn't this happen automatically?
-    current_task.update_state(state='SUCCESS', meta=status)
+    update_state(state='SUCCESS', meta=status)
 
     # Return status (thereby updating task state for status() on view)
     return status
@@ -736,20 +744,20 @@ def import_row(run, row, instance_globals, matched):
             save_value(col, val, record)
 
     record.pop('_attr_index', None)
+    record.pop('_attr_field', None)
 
     Serializer = run.get_serializer()
-    serializer = Serializer(data=parse_json_form(record))
-    if serializer.is_valid():
-        try:
+    try:
+        serializer = Serializer(data=parse_json_form(record))
+        if serializer.is_valid():
             obj = serializer.save()
             error = None
-        except Exception as e:
+        else:
             obj = None
-            error = repr(e)
-    else:
+            error = json.dumps(serializer.errors)
+    except Exception as e:
         obj = None
-        error = json.dumps(serializer.errors)
-
+        error = repr(e)
     return obj, error
 
 
