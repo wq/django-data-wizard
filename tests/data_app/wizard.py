@@ -26,6 +26,28 @@ class SlugSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class NestedFKSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FKModel
+        fields = ['notes']
+
+
+class NestedSerializer(serializers.ModelSerializer):
+    fkmodel = NestedFKSerializer()
+
+    def create(self, validated_data):
+        fkdata = validated_data.pop('fkmodel')
+        instance = super(NestedSerializer, self).create(validated_data)
+        fkdata['type'] = instance
+        NestedFKSerializer().create(fkdata)
+        return instance
+
+    class Meta:
+        model = Type
+        fields = "__all__"
+
+
 registry.register('Simple Model', SimpleSerializer)
 registry.register('FK Model', FKSerializer)
 registry.register('FK Model By Name', SlugSerializer)
+registry.register('New Type + FK Model', NestedSerializer)

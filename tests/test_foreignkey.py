@@ -1,5 +1,5 @@
 from .base import BaseImportTestCase
-from .data_app.models import Type
+from .data_app.models import Type, FKModel
 
 
 class BaseFKTestCase(BaseImportTestCase):
@@ -309,3 +309,28 @@ class SplitTestCase(BaseFKTestCase):
             expect_last_record,
         ])
         self.assert_urls(run, 'fkmodels/%s')
+
+
+class NestedTestCase(BaseImportTestCase):
+    serializer_name = 'tests.data_app.wizard.NestedSerializer'
+
+    def test_nested(self):
+        run = self.upload_file('nested.csv')
+
+        # Inspect unmatched columns and select choices
+        self.check_columns(run, 2, 1)
+        self.update_columns(run, {
+            'Fkmodel': {
+                'initial note': 'fkmodel[notes]'
+            }
+        })
+
+        # Start data import process, wait for completion
+        self.assertEqual(FKModel.objects.count(), 0)
+        self.start_import(run, [])
+        self.assert_status(run, 2)
+        self.assert_records(run, [
+            "imported 'Type #1' at row 1",
+            "imported 'Type #2' at row 2",
+        ])
+        self.assertEqual(FKModel.objects.count(), 2)

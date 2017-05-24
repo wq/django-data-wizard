@@ -200,6 +200,13 @@ def get_choices(run):
                         False,
                         field,
                     ))
+            elif isinstance(field, serializers.ModelSerializer):
+                load_fields(
+                    field,
+                    group_name=quallabel,
+                    label_prefix="",
+                    name_prefix=qualname,
+                )
             else:
                 if is_natkey_lookup:
                     is_lookup = True
