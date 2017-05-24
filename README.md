@@ -2,6 +2,8 @@
 
 By default, Django Data Wizard supports any format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.
 
+The Data Wizard supports straightforward one-to-one mappings from spreadsheet columns to database fields, as well as more complex scenarios like [natural keys] and [Entity-Attribute-Value] (or "wide") table mappings.  It was originally developed for use with the [ERAV data model][ERAV] provided by [vera].
+
 [![Latest PyPI Release](https://img.shields.io/pypi/v/data-wizard.svg)](https://pypi.python.org/pypi/data-wizard)
 [![Release Notes](https://img.shields.io/github/release/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/releases)
 [![License](https://img.shields.io/pypi/l/data-wizard.svg)](https://wq.io/license)
@@ -104,7 +106,9 @@ urlpatterns = [
 
 The API is accessible as JSON and as HTML - though the HTML interface is (currently) only accessible when using the Mustache template engine (i.e. with wq.db).
 
-### POST /datawizard/
+### New Run
+
+#### `POST /datawizard/`
 
 Create a new instance of the wizard (i.e. a `Run`).  The returned run `id` should be used in all subsequent calls to the API.  Each `Run` is tied to the model containing the actual data via a [generic foreign key].
 
@@ -130,13 +134,17 @@ If you are using wq.db, you could allow the user to initiate an import run by ad
 </form>
 ```
 
-### POST /datawizard/[id]/auto
+### auto
+#### `POST /datawizard/[id]/auto`
 
-Attempt to automatically run the entire data wizard process from beginning to end.  If any input is needed, the import will halt and redirect to the necessary screen.  This is an asynchronous method, and returns a `task_id` to be used with the status API.
+The `auto` task attempts to run the entire data wizard process from beginning to end.  If any input is needed, the import will halt and redirect to the necessary screen.  If no input is needed, the `auto` task is equivalent to starting the `data` task directly.  This is an asynchronous method, and returns a `task_id` to be used with the status API.
 
-### GET /datawizard/[id]/status.json?task=[task]
+The default [run_detail.html] template provides an example form to initiate the `auto` task.
 
-The status API is used to check the status of an asynchronous task (one of `auto` or `data`).  The API is designed to be used in conjunction with the [wq/progress.js] plugin for [wq.app], which can be used as a reference for custom implementations.  Unlike the other methods, this API should always be called as JSON (either as `status.json` or `status?format=json`).  An object of the following format will be returned:
+### status
+#### `GET /datawizard/[id]/status.json?task=[task]`
+
+The `status` API is used to check the status of an asynchronous task (one of `auto` or `data`).  The API is designed to be used in conjunction with the [wq/progress.js] plugin for [wq.app], which can be used as a reference for custom implementations.  Unlike the other methods, this API should always be called as JSON (either as `status.json` or `status?format=json`).  An object of the following format will be returned:
 
 ```js
 {
@@ -150,33 +158,83 @@ The status API is used to check the status of an asynchronous task (one of `auto
     "error": "Error Message",
 
     // Task complete ("SUCCESS")
-    "skipped": [...],     // information about rows that were skipped
-
-    // Task complete ("SUCCESS"), but no data was imported
-    "message": "Input Needed",
-    "action": "columns",  // or "serializers", "ids"
-    "location": "/datawizard/[id]/columns"
+    "action": "records",        // or "serializers", "columns" "ids"
+    "message": "Input Needed",  // if action is not "records"
+    "skipped": [...],           // rows that could not be imported
+    "location": "/datawizard/[id]/records",
 }
 ```
 
-Note that the `status` field is directly derived from the underlying [Celery task state].
+Note that the `status` field is directly derived from the underlying [Celery task state].  When running an `auto` task, the result is `SUCCESS` whenever the task ends without errors, even if there is additional input needed to fully complete the run.
 
-### GET /datawizard/[id]/serializers
+The default [run_auto.html] and [run_data.html] templates include a `<progress>` element for use with [wq/progress.js] and the status task.
 
-### POST /datawizard/[id]/updateserializer
+### serializers
+#### `GET /datawizard/[id]/serializers`
 
-### GET /datawizard/[id]/columns
+The `serializers` task provides a list of all registered serializers.  This screen is shown by the `auto` task if a serializer was not specified when the `Run` was created.  The default [run_serializers.html] template includes an interface for selecting a registered serializer.  If a serializer is already selected, the template will display the label and a button to (re)start the `auto` task.
 
-### POST /datawizard/[id]/updatecolumns
+### updateserializer
+#### `POST /datawizard/[id]/updateserializer`
 
-### GET /datawizard/[id]/ids
+The `updateserializer` task updates the specified `Run` with the selected serializer class name.  This is typically called from [the form][run_serializers.html] generated by the `serializers` task, and will redirect to that task when complete.
 
-### POST /datawizard/[id]/updateids
+parameter | description
+----------|--------------
+`serializer` | The class name (or label) of the serializer to use for this run.
 
-### POST /datawizard/[id]/data
+### columns
+#### `GET /datawizard/[id]/columns`
 
-### GET /datawizard/[id]/records
+The `columns` task lists all of the columns found in the dataset (i.e. spreadsheet) and their mappings to serializer fields.  This screen is shown by the `auto` task if there are any column names that could not be automatically mapped.  The potential mappings are one of:
+  * simple serializer field names (e.g. `field`)
+  * nested field names (for [natural keys], e.g. `nested[record][field]`)
+  * [EAV][Entity-Attribute-Value] attribute-value mappings (e.g. `values[][value];attribute_id=1`).
 
+To enable a natural key mapping, the registered serializer should be an instance of `NaturalKeyModelSerializer`, as in [this example][naturalkey_wizard].  To enable an EAV mapping, the registered serializer should include a nested serializer with `many=True` and at least one foreign key to the attribute table, as in [this example][eav_wizard].
+
+The default [run_columns.html] template includes an interface for mapping data columns to serializer fields.  If all columns are already mapped, the template will display the mappings and a button to (re)start the `auto` task.
+
+### updatecolumns
+#### `POST /datawizard/[id]/updatecolumns`
+
+The `updatecolumns` task saves the specified mappings from data columns to serializer fields.  This is typically called from [the form][run_columns.html] generated by the `columns` task, and will redirect to that task when complete.
+
+parameter | description
+----------|--------------
+`rel_[relid]` | The column to map to the specified serializer field.  The `relid` and the complete list of possible mappings will be provided by the `columns` task.
+
+### ids
+#### `GET /datawizard/[id]/ids`
+
+The `ids` task lists all of the identifiers found in the dataset (i.e. spreadsheet) that are in a column known to correspond to a foreign key.  This screen is shown by the `auto` task if there are any identifiers that could not be automatically mapped to foreign key values.  The potential mappings depend on the serializer field used to represent the foreign key.
+
+ * Existing record ID or slug (for [PrimaryKeyRelatedField], [SlugRelatedField], and [NaturalKeySerializer][natural keys])
+ * `"new"` (`NaturalKeySerializer` only)
+
+The primary difference is that `NaturalKeySerializer` allows for the possibility of creating new records in the foreign table on the fly, while the regular related fields do not.
+
+The default [run_ids.html] template includes an interface for mapping row identifiers to foreign key values.   If all ids are already mapped (or indicated to be new natural keys), the template will display the mappings and a button to (re)start the `auto` task.
+
+### updateids
+#### `POST /datawizard/[id]/updateids`
+
+The `updateids` task saves the specified mappings from row identifiers to foreign key values.  This is typically called from [the form][run_ids.html] generated by the `ids` task, and will redirect to that task when complete.
+
+parameter | description
+----------|--------------
+`ident_[identid]_id` | The identifier to map to the specified foreign key value.  The `identid` and the complete list of possible mappings will be provided by the `ids` task.
+
+### data
+#### `POST /datawizard/[id]/data`
+The `data` task starts the actual import process (and is called by `auto` behind the scenes).  Unlike `auto`, calling `data` directly will not cause a redirect to one of the other tasks if any meta input is needed.  Instead, `data` will attempt to import each record as-is, and report any errors that occured due to e.g. missing fields or unmapped foreign keys.
+
+This is an asynchronous method, and returns a `task_id` to be used with the `status` API.  The default [run_data.html] template includes a `<progress>` element for use with [wq/progress.js] and the status task.
+
+### records
+#### `GET /datawizard/[id]/records`
+
+The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When used with wq.db, the `records` task includes links to the detail page for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
 
 # Examples
 
@@ -186,6 +244,11 @@ Note that the `status` field is directly derived from the underlying [Celery tas
 
 [wq.io]: https://wq.io/wq.io
 [Django REST Framework]: http://www.django-rest-framework.org/
+[natural keys]: https://github.com/wq/django-natural-keys
+[Entity-Attribute-Value]: https://wq.io/docs/eav-vs-relational
+[ERAV]: https://wq.io/docs/erav
+[vera]: https://wq.io/vera
+
 [wq.db]: https://wq.io/wq.db
 [custom wq.io class]: https://wq.io/docs/custom-io
 [Climata Viewer]: https://github.com/heigeo/climata-viewer
@@ -200,3 +263,17 @@ Note that the `status` field is directly derived from the underlying [Celery tas
 [daemonization]: http://docs.celeryproject.org/en/latest/userguide/daemonizing.html
 [wq.app]: https://wq.io/wq.app
 [Celery task state]: http://docs.celeryproject.org/en/latest/userguide/tasks.html#task-states
+
+[PrimaryKeyRelatedField]: http://www.django-rest-framework.org/api-guide/relations/#primarykeyrelatedfield
+[SlugRelatedField]: http://www.django-rest-framework.org/api-guide/relations/#slugrelatedfield
+
+[run_detail.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_detail.html
+[run_auto.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_auto.html
+[run_serializers.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_serializers.html
+[run_columns.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_columns.html
+[run_ids.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_ids.html
+[run_data.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_data.html
+[run_records.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_records.html
+
+[naturalkey_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/naturalkey_app/wizard.py
+[eav_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/eav_app/wizard.py
