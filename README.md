@@ -236,12 +236,6 @@ This is an asynchronous method, and returns a `task_id` to be used with the `sta
 
 The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When used with wq.db, the `records` task includes links to the detail page for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
 
-# Examples
-
-[![Climata Viewer](https://wq.io/media/700/screenshots/climata-02.png)](https://wq.io/projects/climata)
-
-[![river.watch](https://wq.io/media/700/screenshots/riverwatch-overview.png)](https://wq.io/projects/river-watch)
-
 [wq.io]: https://wq.io/wq.io
 [Django REST Framework]: http://www.django-rest-framework.org/
 [natural keys]: https://github.com/wq/django-natural-keys
