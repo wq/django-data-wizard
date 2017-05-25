@@ -71,7 +71,7 @@ Finally, make sure that celery is running in the background.  You can test with 
 
 ```bash
 # celery.sh
-export DJANGO_SETTINGS_MODULE=apiary.settings
+export DJANGO_SETTINGS_MODULE=myproject.settings
 celery -A myproject worker -l info
 ```
 
