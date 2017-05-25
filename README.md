@@ -1,5 +1,15 @@
 **Django Data Wizard** is an interactive tool for mapping structured data (e.g. Excel, XML) into a normalized database structure via [wq.io] and the [Django REST Framework].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
 
+<img width="33%"
+     alt="Column Choices"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/02-columns.png">
+<img width="33%"
+     alt="Auto Import - Progress Bar"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/08-data75.png">
+<img width="33%"
+     alt="Imported Records"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/10-records.png">
+
 By default, Django Data Wizard supports any format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.
 
 The Data Wizard supports straightforward one-to-one mappings from spreadsheet columns to database fields, as well as more complex scenarios like [natural keys] and [Entity-Attribute-Value] (or "wide") table mappings.  It was originally developed for use with the [ERAV data model][ERAV] provided by [vera].
@@ -137,6 +147,10 @@ If you are using wq.db, you could allow the user to initiate an import run by ad
 ### auto
 #### `POST /datawizard/[id]/auto`
 
+<img align="right" width=320 height=240
+     alt="Auto Import - Progress Bar"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/06-data25.png">
+
 The `auto` task attempts to run the entire data wizard process from beginning to end.  If any input is needed, the import will halt and redirect to the necessary screen.  If no input is needed, the `auto` task is equivalent to starting the `data` task directly.  This is an asynchronous method, and returns a `task_id` to be used with the status API.
 
 The default [run_detail.html] template provides an example form to initiate the `auto` task.
@@ -172,6 +186,10 @@ The default [run_auto.html] and [run_data.html] templates include a `<progress>`
 ### serializers
 #### `GET /datawizard/[id]/serializers`
 
+<img align="right" width=320 height=240
+     alt="Serializer Choices"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/00-serializers.png">
+     
 The `serializers` task provides a list of all registered serializers.  This screen is shown by the `auto` task if a serializer was not specified when the `Run` was created.  The default [run_serializers.html] template includes an interface for selecting a registered serializer.  If a serializer is already selected, the template will display the label and a button to (re)start the `auto` task.
 
 ### updateserializer
@@ -185,6 +203,10 @@ parameter | description
 
 ### columns
 #### `GET /datawizard/[id]/columns`
+
+<img align="right" width=320 height=240
+     alt="Column Choices"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/02-columns.png">
 
 The `columns` task lists all of the columns found in the dataset (i.e. spreadsheet) and their mappings to serializer fields.  This screen is shown by the `auto` task if there are any column names that could not be automatically mapped.  The potential mappings are one of:
   * simple serializer field names (e.g. `field`)
@@ -207,6 +229,10 @@ parameter | description
 ### ids
 #### `GET /datawizard/[id]/ids`
 
+<img align="right" width=320 height=240
+     alt="Identifier Choices"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/04-ids.png">
+
 The `ids` task lists all of the identifiers found in the dataset (i.e. spreadsheet) that are in a column known to correspond to a foreign key.  This screen is shown by the `auto` task if there are any identifiers that could not be automatically mapped to foreign key values.  The potential mappings depend on the serializer field used to represent the foreign key.
 
  * Existing record ID or slug (for [PrimaryKeyRelatedField], [SlugRelatedField], and [NaturalKeySerializer][natural keys])
@@ -227,12 +253,21 @@ parameter | description
 
 ### data
 #### `POST /datawizard/[id]/data`
+
+<img align="right" width=320 height=240
+     alt="Auto Import - Progress Bar"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/08-data75.png">
+
 The `data` task starts the actual import process (and is called by `auto` behind the scenes).  Unlike `auto`, calling `data` directly will not cause a redirect to one of the other tasks if any meta input is needed.  Instead, `data` will attempt to import each record as-is, and report any errors that occured due to e.g. missing fields or unmapped foreign keys.
 
 This is an asynchronous method, and returns a `task_id` to be used with the `status` API.  The default [run_data.html] template includes a `<progress>` element for use with [wq/progress.js] and the status task.
 
 ### records
 #### `GET /datawizard/[id]/records`
+
+<img align="right" width=320 height=240
+     alt="Imported Records"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/10-records.png">
 
 The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When used with wq.db, the `records` task includes links to the detail page for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
 
