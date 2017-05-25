@@ -813,7 +813,7 @@ def save_attribute_value(col, val, obj):
         }
     else:
         obj['_attr_index'].setdefault(
-            col['attr_id'], max(obj['_attr_index'].values()) or 0 + 1
+            col['attr_id'], (max(obj['_attr_index'].values()) or 0) + 1
         )
 
     index = obj['_attr_index'][col['attr_id']]

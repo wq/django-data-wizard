@@ -1,3 +1,3 @@
-place,temperature,temperature units,notes
-Minneapolis,20.8,C,Test Note 1
-Chicago,70.2,F,Test Note 2
+place,temperature,temperature units,precipitation,precipitation units,notes
+Minneapolis,20.8,C,1,in,Test Note 1
+Chicago,70.2,F,2,in,Test Note 2

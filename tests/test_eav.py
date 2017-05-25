@@ -9,18 +9,21 @@ class EAVTestCase(BaseImportTestCase):
         super(EAVTestCase, self).setUp()
         Attribute.objects.create(pk=1, name="Temperature")
         Attribute.objects.create(pk=2, name="Notes")
+        Attribute.objects.create(pk=3, name="Precipitation")
 
     def test_manual(self):
         run = self.upload_file('eav.csv')
 
         # Inspect unmatched columns and select choices
-        self.check_columns(run, 4, 4)
+        self.check_columns(run, 6, 6)
         self.update_columns(run, {
             'Entity': {
                 'place': 'name',
             }, 'Values': {
                 'temperature': 'values[][value];attribute=1',
                 'temperature units': 'values[][units];attribute=1',
+                'precipitation': 'values[][value];attribute=3',
+                'precipitation units': 'values[][units];attribute=3',
                 'notes': 'values[][value];attribute=2',
             }
         })
@@ -55,6 +58,10 @@ class EAVTestCase(BaseImportTestCase):
         self.create_identifier(
             'temperature units', 'values[][units]', attr_id=1
         )
+        self.create_identifier('precipitation', 'values[][value]', attr_id=3)
+        self.create_identifier(
+            'precipitation units', 'values[][units]', attr_id=3
+        )
         self.create_identifier('notes', 'values[][value]', attr_id=2)
 
         # Should succeed since fields are already mapped
@@ -80,8 +87,12 @@ class EAVTestCase(BaseImportTestCase):
             " at Rows 1-2, Column 1",
             "Data Column 'temperature units -> values[][units] (attr=1)'"
             " at Rows 1-2, Column 2",
-            "Data Column 'notes -> values[][value] (attr=2)'"
+            "Data Column 'precipitation -> values[][value] (attr=3)'"
             " at Rows 1-2, Column 3",
+            "Data Column 'precipitation units -> values[][units] (attr=3)'"
+            " at Rows 1-2, Column 4",
+            "Data Column 'notes -> values[][value] (attr=2)'"
+            " at Rows 1-2, Column 5",
         ])
         self.assert_records(run, [
             "imported 'Minneapolis' at row 1",
@@ -91,8 +102,10 @@ class EAVTestCase(BaseImportTestCase):
         values = [str(value) for value in Value.objects.order_by('pk')]
         self.assertEqual(values, [
             'Temperature for Minneapolis: 20.8 C',
+            'Precipitation for Minneapolis: 1 in',
             'Notes for Minneapolis: Test Note 1',
             'Temperature for Chicago: 70.2 F',
+            'Precipitation for Chicago: 2 in',
             'Notes for Chicago: Test Note 2',
         ])
         self.assert_urls(run, 'entities/%s')
