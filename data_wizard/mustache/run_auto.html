@@ -13,9 +13,10 @@
       <div role="main" class="ui-content">
         <h1>{{label}}</h1>
         <progress data-wq-url="{{svc}}/datawizard/{{id}}/status.json?task={{task_id}}"
-           style="width:100%;">
+           data-wq-status="status" style="width:100%">
           Loading...
         </progress>
+        <p id="status"></p>
       </div>
     </div>
   </body>

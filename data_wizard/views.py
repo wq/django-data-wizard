@@ -108,8 +108,11 @@ class RunViewSet(ModelViewSet):
     def data(self, request, *args, **kwargs):
         return self.run_task('import_data', async=True)
 
-    @detail_route(methods=['post'])
+    @detail_route(methods=['post', 'get'])
     def auto(self, request, *args, **kwargs):
+        if request.method == 'GET':
+            self.action = 'retrieve'
+            return self.retrieve(request, **kwargs)
         return self.run_task('auto_import', async=True)
 
     @detail_route()
