@@ -13,6 +13,11 @@ from natural_keys import NaturalKeySerializer
 from html_json_forms import parse_json_form
 import json
 
+try:
+    import reversion
+except ImportError:
+    reversion = None
+
 User = get_user_model()
 
 
@@ -648,6 +653,17 @@ def import_data(run, user):
 
 
 def do_import(run, user):
+    if reversion:
+        with reversion.create_revision():
+            reversion.set_user(user)
+            reversion.set_comment('Imported via %s' % run)
+            result = _do_import(run, user)
+    else:
+        result = _do_import(run, user)
+    return result
+
+
+def _do_import(run, user):
     run.add_event('do_import')
 
     # (Re-)Load data and column information
