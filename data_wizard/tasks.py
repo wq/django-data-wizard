@@ -137,17 +137,10 @@ def get_attribute_field(field):
 
 def get_choices(run):
     def make_list(choices):
-        result = []
-        # FIXME:
-        # result = [{
-        #     'id': '%s/new' % ctid(ct),
-        #     'label': "New %s" % name,
-        # }]
-        result += [{
+        return [{
             'id': row.pk,
             'label': str(row),
         } for row in choices]
-        return result
 
     Serializer = run.get_serializer()
     field_choices = set()
@@ -240,7 +233,6 @@ def get_choices(run):
         'field': field,
     } for group_name, name, label, is_lookup, field in field_choices]
 
-#   make_list(Parameter, "Parameter")
     return choices
 
 
