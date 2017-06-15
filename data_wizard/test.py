@@ -245,7 +245,7 @@ class WizardTestCase(APITransactionTestCase):
         8. Verify column and identifier ranges
         """
         ranges = [
-            str(rng).replace("Run for File object contains ", "")
+            str(rng).replace("%s contains " % run, "")
             for rng in run.range_set.all()
         ]
         self.assertEqual(expect_ranges, ranges)
@@ -255,7 +255,7 @@ class WizardTestCase(APITransactionTestCase):
         9. Verify column and identifier ranges
         """
         records = [
-            str(record).replace("Run for File object ", "")
+            str(record).replace("%s " % run, "").replace('[u"', '["')
             for record in run.record_set.all()
         ]
         self.assertEqual(expect_records, records)
