@@ -5,6 +5,7 @@ from .models import Run, Identifier
 from .signals import import_complete, new_metadata
 from functools import wraps
 
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 
@@ -780,7 +781,8 @@ def import_row(run, row, instance_globals, matched):
     try:
         serializer = Serializer(data=parse_json_form(record))
         if serializer.is_valid():
-            obj = serializer.save()
+            with transaction.atomic():
+                obj = serializer.save()
             error = None
         else:
             obj = None

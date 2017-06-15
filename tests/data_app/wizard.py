@@ -9,6 +9,17 @@ class SimpleSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class IncompleteSerializer(serializers.ModelSerializer):
+    # Serializer will report is_valid(), but save will fail
+
+    date = serializers.CharField()  # Should be date field
+    color = serializers.CharField()   # Should limit length (and choices)
+
+    class Meta:
+        model = SimpleModel
+        fields = "__all__"
+
+
 class FKSerializer(serializers.ModelSerializer):
     class Meta:
         model = FKModel
@@ -48,6 +59,7 @@ class NestedSerializer(serializers.ModelSerializer):
 
 
 registry.register('Simple Model', SimpleSerializer)
+registry.register('Simple Model - Incomplete', IncompleteSerializer)
 registry.register('FK Model', FKSerializer)
 registry.register('FK Model By Name', SlugSerializer)
 registry.register('New Type + FK Model', NestedSerializer)
