@@ -161,6 +161,8 @@ def get_choices(run):
         else:
             is_natkey_lookup = False
         for name, field in fields:
+            if field.read_only:
+                continue
             if name_prefix:
                 qualname = name_prefix + ('[%s]' % name)
             else:
@@ -506,7 +508,7 @@ def parse_row_identifiers(run):
     table = run.load_io()
     for i, row in enumerate(table):
         for field_name, info in lookup_fields.items():
-            names = [row[col['colnum']] for col in info['cols']]
+            names = [str(row[col['colnum']]) for col in info['cols']]
             name = " ".join(names)
             info['ids'].setdefault(name, {
                 'count': 0,
