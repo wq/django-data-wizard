@@ -1,4 +1,5 @@
 README.rst
+README-tmp.md
 *.egg*
 __pycache__
 *.pyc

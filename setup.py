@@ -11,11 +11,13 @@ def parse_markdown_readme():
     Convert README.md to RST via pandoc, and load into memory
     (fallback to LONG_DESCRIPTION on failure)
     """
+    images = convert_images()
+
     # Attempt to run pandoc on markdown file
     import subprocess
     try:
         subprocess.call(
-            ['pandoc', '-t', 'rst', '-o', 'README.rst', 'README.md']
+            ['pandoc', '-t', 'rst', '-o', 'README.rst', 'README-tmp.md']
         )
     except OSError:
         return LONG_DESCRIPTION
@@ -25,8 +27,46 @@ def parse_markdown_readme():
         readme = open(join(dirname(__file__), 'README.rst'))
     except IOError:
         return LONG_DESCRIPTION
-    return readme.read()
+    rst = readme.read()
+    for i, imgrst in enumerate(images):
+        rst = rst.replace("IMG%s" % i, imgrst)
+    with open(join(dirname(__file__), 'README.rst'), 'w') as output:
+        output.write(rst)
+    return rst
 
+
+def convert_images():
+    """
+    Convert HTML images to RST so they survive pandoc conversion
+    """
+    images = []
+    with open('README-tmp.md', 'w') as output:
+        img = None
+        for row in open('README.md'):
+            if not row.startswith('<img') and img is None:
+                output.write(row)
+                continue
+            img = img or {}
+            if 'alt=' in row:
+                img['alt'] = row.replace('alt=', '').strip().strip('"')
+            else:
+                for part in row.replace('>', '').split(' '):
+                    if '=' in part:
+                        key, val = part.split('=')
+                        img[key] = val.strip().strip('"')
+            if '>' in row:
+                src = img.pop('src')
+                imgrst = "\n.. image:: %s\n" % src.replace('images/', 'images/320/')
+                imgrst += "   :target: %s\n" % src
+                for key, val in img.items():
+                    val = val.replace('%', ' %')
+                    if val.isdigit():
+                        val += ' px'
+                    imgrst += '   :%s: %s\n' % (key, val)
+                output.write("IMG%s\n" % len(images))
+                images.append(imgrst)
+                img = None
+    return images
 
 setup(
     name='data-wizard',
