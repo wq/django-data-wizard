@@ -43,7 +43,7 @@ def user_filter(qs, request):
     if request.user.is_authenticated():
         return qs.filter(user=request.user)
     else:
-        return qs.empty()
+        return qs.none()
 
 
 rest.router.register_model(
