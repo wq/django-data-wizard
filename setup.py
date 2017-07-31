@@ -75,7 +75,7 @@ setup(
     author_email='andrew@wq.io',
     url='https://wq.io/django-data-wizard',
     license='MIT',
-    description='Django Data Wizard',
+    description=LONG_DESCRIPTION,
     long_description=parse_markdown_readme(),
     packages=[
         'data_wizard',
@@ -95,7 +95,7 @@ setup(
         'python-dateutil'
     ],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
