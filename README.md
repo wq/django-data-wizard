@@ -43,11 +43,32 @@ See <https://github.com/wq/django-data-wizard> to report any issues.
 
 ## Initial Configuration
 
+Within a new or existing Django or wq project, configure the following:
+
+ 1. Celery / Redis
+ 2. A model for (up)loading source data
+ 3. One or more serializers for populating the destination models
+ 4. wq/progress.js plugin (if using wq)
+
 ### Celery
 
-Django Data Wizard requires [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.  These should be configured first or the REST API may not work.  Once Redis is installed, you should be able to add the following to your project settings:
+Django Data Wizard requires [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.  These should be configured first or the REST API may not work.  On Ubuntu, run the following command:
+
+```bash
+# Install redis on Ubuntu
+sudo apt-get install redis-server
+```
+
+Once Redis is installed, you should be able to add the following to your project settings:
 ```python
 # myproject/settings.py
+
+INSTALLED_APPS = (
+   # ...
+   'data_wizard',
+   'myapp',
+)
+
 CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost:6379/1'
 ```
 
@@ -171,6 +192,19 @@ registry.register("Time Series", TimeSeriesSerializer)
 ```
 
 At least one serializer should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
+
+### Progress Bar Support
+
+If you are using the built-in Data Wizard interface for wq, be sure to enable the [wq/progress.js] plugin.
+
+```javascript
+// myapp/main.js
+define(['wq/app', 'wq/progress', ...],
+function(app, progress, ...) {
+    app.use(progress);
+    app.init(config).then(...);
+});
+```
 
 ## Run-Time Usage (REST API)
 
