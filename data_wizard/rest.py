@@ -53,8 +53,10 @@ rest.router.register_model(
     url='datawizard',
     modes=[],
     server_modes=[
-        'detail', 'serializers', 'columns', 'ids', 'data', 'auto', 'records',
+        'list', 'detail',
+        'serializers', 'columns', 'ids', 'data', 'auto', 'records',
     ],
     fields="__all__",
-    cache_filter=user_filter
+    filter=user_filter,
+    cache='none',
 )
