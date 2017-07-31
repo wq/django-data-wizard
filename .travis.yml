@@ -8,14 +8,14 @@ python:
 env:
   global:
    - DRF="djangorestframework==3.6.3"
-   - WQIO="wq.io==1.0.0b1"
+   - WQIO="wq.io==1.0.0"
   matrix:
    - DJANGO="django==1.8.18"
-   - DJANGO="django==1.8.18" WITH_WQDB="pip install wq.db==1.0.0rc1"
-   - DJANGO="django==1.11.1"
-   - DJANGO="django==1.11.1" WITH_WQDB="pip install wq.db==1.0.0rc1"
-   - DJANGO="django==1.11.1" WITH_WQDB="pip install wq.db==1.0.0rc1" WITH_REVERSION="pip install django-reversion"
-   - DJANGO="django==1.11.1" LINT="pip install flake8"
+   - DJANGO="django==1.8.18" WITH_WQDB="pip install wq.db==1.0.0"
+   - DJANGO="django==1.11.3"
+   - DJANGO="django==1.11.3" WITH_WQDB="pip install wq.db==1.0.0"
+   - DJANGO="django==1.11.3" WITH_WQDB="pip install wq.db==1.0.0" WITH_REVERSION="pip install django-reversion"
+   - DJANGO="django==1.11.3" LINT="pip install flake8"
 before_script:
  - createdb -Upostgres data_wizard_test
  - psql -Upostgres data_wizard_test -c "CREATE EXTENSION postgis;"
