@@ -27,7 +27,7 @@ The Data Wizard supports straightforward one-to-one mappings from spreadsheet co
 
 # Usage
 
-Django Data Wizard provides a JSON (and HTML) API for specifying a data set to import, selecting a serializer, mapping the data columns and identifiers, and (asynchronously) importing the data into the database.
+Django Data Wizard provides a JSON (and HTML) API for specifying a data set to import (by referencing a previously-uploaded file), selecting a serializer, mapping the data columns and identifiers, and (asynchronously) importing the data into the database.
 
 ## Installation
 
@@ -41,7 +41,9 @@ pip install data-wizard
 
 See <https://github.com/wq/django-data-wizard> to report any issues.
 
-## Celery
+## Initial Configuration
+
+### Celery
 
 Django Data Wizard requires [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.  These should be configured first or the REST API may not work.  Once Redis is installed, you should be able to add the following to your project settings:
 ```python
@@ -77,9 +79,82 @@ celery -A myproject worker -l info
 
 Note that any time you change your serializer registration, you should reload celery in addition to restarting the Django WSGI  instance.
 
-## Serializer Registration
+### Data Loader
 
-As of version 1.0, Data Wizard relies on serializer classes as the primary means of detecting model fields.  These are subclasses of Django REST Framework's [ModelSerializer class].  You can register serializers by creating a `wizard.py` in your app directory (analagous to Django's `admin.py` and wq.db's `rest.py`).
+To use Data Wizard with the default configuration, your project should provide a Django model with a `FileField` named `file`.  You will want to provide your users with the ability to upload spreadsheets and other files to this model, for example by registering it with [wq.db].  The actual import process can then be triggered after the file is uploaded, for example by adding a form to the detail page ([see below](#new-run)).
+
+```python
+# myapp/models.py
+from django.db import models
+
+class FileModel(models.Model):
+    file = models.FileField(upload_to='spreadsheets')
+    # ...
+```
+
+```python
+# myapp/rest.py
+from wq.db import rest
+from .models import FileModel
+
+rest.router.register_model(
+    FileModel,
+    fields="__all__",
+)
+```
+
+#### Custom FileField Name
+You can use a model with a different `FileField` name by extending `data_wizard.loaders.FileLoader` and setting `DATA_WIZARD_LOADER`:
+
+```python
+# myapp/models.py
+from django.db import models
+
+class FileModel(models.Model):
+    spreadsheet = models.FileField(upload_to='spreadsheets')
+```
+
+```python
+# myapp/loaders.py
+from data_wizard import loaders
+class FileLoader(loaders.FileLoader):
+    file_attr = 'spreadsheet'
+```
+
+```python
+# myapp/settings.py
+DATA_WIZARD_LOADER = 'myapp.loaders.FileLoader'
+```
+
+#### Custom Data Source
+You can also customize the loader to load data from a [custom wq.io class].  For example, the [Climata Viewer] uses [climata] classes to load data directly from third-party webservices.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io:
+
+```python
+# myapp/models.py
+class WebSource(models.Model):
+    url = models.URLField()
+```
+
+```myapp/loaders.py
+from data_wizard import loaders
+
+class UrlLoader(loaders.BaseLoader):
+    def load_io(self):
+        source = self.run.content_object
+        from wq.io import load_url # or e.g. JsonNetIO
+        return load_url(source.url)
+```
+
+```python
+# myapp/settings.py
+DATA_WIZARD_LOADER = 'myapp.loaders.UrlLoader'
+```
+
+Note that there still should be a custom model to define the parameters for the IO class, even though there is no file being stored.
+
+### Serializer Registration
+
+Data Wizard uses wq.io classes (via the loader) to determine the *source columns* present on the spreadsheet or other data source.  It uses Django REST Framework's [ModelSerializer class] to determine the *destination fields* on the database model.  You can register serializers by creating a `wizard.py` in your app directory (analogous to Django's `admin.py` and wq.db's `rest.py`).  Multiple serializers can be registered with the wizard to support multiple import configurations and destination models.  
 
 ```python
 # myapp/wizard.py
@@ -97,7 +172,7 @@ registry.register("Time Series", TimeSeriesSerializer)
 
 At least one serializer should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
 
-## REST API
+## Run-Time Usage (REST API)
 
 The Data Wizard REST API provides the following capabilities.  If you are using wq.db, the wizard will automatically register itself with the router.  Otherwise, be sure to include `data_wizard.urls` in your URL configuration:
 
