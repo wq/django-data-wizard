@@ -138,6 +138,7 @@ class FileModel(models.Model):
 ```python
 # myapp/loaders.py
 from data_wizard import loaders
+
 class FileLoader(loaders.FileLoader):
     file_attr = 'spreadsheet'
 ```
@@ -152,11 +153,14 @@ You can also customize the loader to load data from a [custom wq.io class].  For
 
 ```python
 # myapp/models.py
+from django.db import models
+
 class WebSource(models.Model):
     url = models.URLField()
 ```
 
-```myapp/loaders.py
+```python
+# myapp/loaders.py
 from data_wizard import loaders
 
 class UrlLoader(loaders.BaseLoader):

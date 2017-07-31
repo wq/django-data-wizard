@@ -75,7 +75,7 @@ setup(
     author_email='andrew@wq.io',
     url='https://wq.io/django-data-wizard',
     license='MIT',
-    description=LONG_DESCRIPTION,
+    description=LONG_DESCRIPTION.strip(),
     long_description=parse_markdown_readme(),
     packages=[
         'data_wizard',
