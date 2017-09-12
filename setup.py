@@ -75,7 +75,7 @@ def convert_images():
 
 setup(
     name='data-wizard',
-    version='1.0.1',
+    version='1.0.2-dev',
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
     url='https://wq.io/django-data-wizard',
