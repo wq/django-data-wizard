@@ -40,9 +40,14 @@ def convert_images():
     Convert HTML images to RST so they survive pandoc conversion
     """
     images = []
+    try:
+        readme = open('README.md')
+    except IOError:
+        return images
+
     with open('README-tmp.md', 'w') as output:
         img = None
-        for row in open('README.md'):
+        for row in readme:
             if not row.startswith('<img') and img is None:
                 output.write(row)
                 continue
