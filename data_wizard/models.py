@@ -13,13 +13,19 @@ Loader = import_from_string(LOADER_PATH, 'DATA_WIZARD_LOADER')
 
 
 class Run(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    template = models.ForeignKey('self', null=True, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+    )
+    template = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.PROTECT
+    )
     record_count = models.IntegerField(null=True, blank=True)
     loader = models.CharField(max_length=255, default=LOADER_PATH)
     serializer = models.CharField(max_length=255, null=True, blank=True)
 
-    content_type = models.ForeignKey(ContentType, null=True, blank=True)
+    content_type = models.ForeignKey(
+        ContentType, null=True, blank=True, on_delete=models.PROTECT,
+    )
     object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey()
 
@@ -52,7 +58,7 @@ class Run(models.Model):
 
 
 class RunLog(models.Model):
-    run = models.ForeignKey(Run, related_name='log')
+    run = models.ForeignKey(Run, related_name='log', on_delete=models.CASCADE)
     event = models.CharField(max_length=100)
     date = models.DateTimeField(auto_now_add=True)
 
@@ -103,8 +109,8 @@ class Range(models.Model):
         ('value', 'Header metadata'),
         ('data', 'Cell value'),
     )
-    run = models.ForeignKey(Run)
-    identifier = models.ForeignKey(Identifier)
+    run = models.ForeignKey(Run, on_delete=models.CASCADE)
+    identifier = models.ForeignKey(Identifier, on_delete=models.PROTECT)
     type = models.CharField(max_length=10, choices=RANGE_TYPES)
 
     header_col = models.IntegerField()
@@ -158,8 +164,10 @@ class Range(models.Model):
 
 
 class Record(models.Model):
-    run = models.ForeignKey(Run)
-    content_type = models.ForeignKey(ContentType, null=True, blank=True)
+    run = models.ForeignKey(Run, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(
+        ContentType, null=True, blank=True, on_delete=models.PROTECT
+    )
     object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey()
 

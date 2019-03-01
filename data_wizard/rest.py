@@ -40,7 +40,7 @@ class RunViewSet(ModelViewSet, wizard.RunViewSet):
 
 # wq.db router registration
 def user_filter(qs, request):
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return qs.filter(user=request.user)
     else:
         return qs.none()

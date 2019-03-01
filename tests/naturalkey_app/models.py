@@ -13,7 +13,7 @@ class Place(NaturalKeyModel):
 
 
 class Event(NaturalKeyModel):
-    place = models.ForeignKey(Place)
+    place = models.ForeignKey(Place, on_delete=models.PROTECT)
     date = models.DateField()
 
     def __str__(self):
@@ -24,7 +24,7 @@ class Event(NaturalKeyModel):
 
 
 class Note(models.Model):
-    event = models.ForeignKey(Event)
+    event = models.ForeignKey(Event, on_delete=models.PROTECT)
     note = models.TextField()
 
     def __str__(self):

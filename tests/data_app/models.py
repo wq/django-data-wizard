@@ -30,7 +30,7 @@ class Type(models.Model):
 
 
 class FKModel(models.Model):
-    type = models.ForeignKey(Type)
+    type = models.ForeignKey(Type, on_delete=models.PROTECT)
     notes = models.TextField()
 
     def __str__(self):
