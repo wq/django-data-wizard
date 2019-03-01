@@ -39,14 +39,14 @@ class RunViewSet(ModelViewSet):
             response['error'] = str(result.result)
         return Response(response)
 
-    def run_task(self, name, async=False):
+    def run_task(self, name, use_async=False):
         response = self.retrieve(self.request, **self.kwargs)
 
         run = self.get_object()
         user = self.request.user
 
         task = getattr(tasks, name).delay(run.pk, user.pk)
-        if async:
+        if use_async:
             response.data['task_id'] = task.task_id
         else:
             try:
@@ -106,14 +106,14 @@ class RunViewSet(ModelViewSet):
 
     @detail_route(methods=['post'])
     def data(self, request, *args, **kwargs):
-        return self.run_task('import_data', async=True)
+        return self.run_task('import_data', use_async=True)
 
     @detail_route(methods=['post', 'get'])
     def auto(self, request, *args, **kwargs):
         if request.method == 'GET':
             self.action = 'retrieve'
             return self.retrieve(request, **kwargs)
-        return self.run_task('auto_import', async=True)
+        return self.run_task('auto_import', use_async=True)
 
     @detail_route()
     def records(self, request, *args, **kwargs):
