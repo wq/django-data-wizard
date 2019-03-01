@@ -1,38 +1,37 @@
 language: python
-sudo: false
+dist: xenial
 python:
  - "2.7"
  - "3.4"
  - "3.5"
  - "3.6"
+ - "3.7"
 env:
   global:
-   - DRF="djangorestframework==3.6.3"
-   - WQIO="wq.io==1.0.0"
+   - DRF="djangorestframework==3.9.1"
+   - WQIO="wq.io==1.1.0"
   matrix:
-   - DJANGO="django==1.8.18"
-   - DJANGO="django==1.8.18" WITH_WQDB="pip install wq.db==1.0.0"
-   - DJANGO="django==1.11.3"
-   - DJANGO="django==1.11.3" WITH_WQDB="pip install wq.db==1.0.0"
-   - DJANGO="django==1.11.3" WITH_WQDB="pip install wq.db==1.0.0" WITH_REVERSION="pip install django-reversion"
-   - DJANGO="django==1.11.3" LINT="pip install flake8"
+   - DJANGO="django==1.8.19"
+   - DJANGO="django==1.11.20"
+   - DJANGO="django==2.0.13"
+   - DJANGO="django==2.1.7"
+   - DJANGO="django==2.1.7" WQDB="wq.db==1.1.2"
+   - DJANGO="django==2.1.7" WQDB="wq.db==1.1.2" REVERSION="django-reversion"
+   - LINT="flake8"
 before_script:
  - createdb -Upostgres data_wizard_test
  - psql -Upostgres data_wizard_test -c "CREATE EXTENSION postgis;"
 install:
- - pip install $DJANGO $DRF
- - pip install $WQIO
+ - pip install $DJANGO $DRF $WQIO $WQDB $REVERSION $LINT
  - pip install psycopg2
  - pip install .
- - $WITH_WQDB
- - $WITH_REVERSION
  - $LINT
 script:
  - ./runtests.sh
 services:
  - redis-server
 addons:
-  postgresql: "9.6"
+  postgresql: "10"
   apt:
     packages:
-     - postgresql-9.6-postgis-2.3
+     - postgresql-10-postgis-2.4
