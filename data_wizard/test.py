@@ -213,6 +213,13 @@ class WizardTestCase(APITransactionTestCase):
         for key in ('status', 'total', 'current', 'skipped'):
             self.assertIn(key, res)
         self.assertEqual('SUCCESS', res['status'])
+
+        # Can remove this once we drop older DRF/Django/Python
+        for skipped in res['skipped']:
+            skipped['reason'] = skipped['reason'].replace(
+                'YYYY[-MM[-DD]]', 'YYYY-MM-DD'
+            )
+
         self.assertEqual(expect_skipped, res['skipped'])
 
     def auto_import(self, run, expect_input_required=False):
@@ -255,7 +262,10 @@ class WizardTestCase(APITransactionTestCase):
         9. Verify column and identifier ranges
         """
         records = [
-            str(record).replace("%s " % run, "").replace('[u"', '["')
+            str(record).replace("%s " % run, "")
+                       .replace('[u"', '["')
+                       .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")
+                       .replace(',)', ')')
             for record in run.record_set.all()
         ]
         self.assertEqual(expect_records, records)

@@ -22,7 +22,7 @@ class SimpleTestCase(BaseImportTestCase):
         }, {
             'row': 6,
             'reason': '{"date": ["Date has wrong format.'
-                      ' Use one of these formats instead: YYYY[-MM[-DD]]."]}'
+                      ' Use one of these formats instead: YYYY-MM-DD."]}'
         }])
 
         # Verify results
@@ -131,7 +131,7 @@ class SimpleTestCase(BaseImportTestCase):
             ' {"color": ["\\"orange\\" is not a valid choice."]}',
             "failed at row 5:"
             ' {"date": ["Date has wrong format.'
-            ' Use one of these formats instead: YYYY[-MM[-DD]]."]}'
+            ' Use one of these formats instead: YYYY-MM-DD."]}'
         ])
         self.assert_urls(run, 'simplemodels/%s')
 
@@ -170,7 +170,7 @@ class IncompleteTestCase(BaseImportTestCase):
             "imported '2017-06-02: green (Test Note 2)' at row 2",
             "imported '2017-06-03: blue (Test Note 3)' at row 3",
             "failed at row 4: DataError('value too long for type character"
-            " varying(5)\\n',)",
+            " varying(5)\\n')",
             "failed at row 5: ValidationError([\"'2017-06-50' value has the"
             " correct format (YYYY-MM-DD) but it is an invalid date.\"])"
         ])
