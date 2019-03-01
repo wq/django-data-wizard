@@ -263,9 +263,9 @@ class WizardTestCase(APITransactionTestCase):
         """
         records = [
             str(record).replace("%s " % run, "")
-                       .replace('[u"', '["')
-                       .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")
-                       .replace(',)', ')')
+                       .replace('[u"', '["')  # Python 2.7
+                       .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")  # DRF < 3.9
+                       .replace(',)', ')')  # Python < 3.7
             for record in run.record_set.all()
         ]
         self.assertEqual(expect_records, records)

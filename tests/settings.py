@@ -4,7 +4,7 @@ SECRET_KEY = '1234'
 
 MIDDLEWARE_CLASSES = tuple()
 
-WITH_WQDB = os.environ.get('WITH_WQDB', False)
+WITH_WQDB = os.environ.get('WQDB', False)
 if WITH_WQDB:
     WQ_APPS = (
         'wq.db.rest',
@@ -13,11 +13,21 @@ if WITH_WQDB:
 else:
     WQ_APPS = tuple()
 
+WITH_REVERSION = os.environ.get('REVERSION', False)
+if WITH_REVERSION:
+    REVERSION_APPS = (
+        'django.contrib.admin',
+        'reversion',
+    )
+else:
+    REVERSION_APPS = tuple()
+
+
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.auth',
     'data_wizard',
-) + WQ_APPS + (
+) + WQ_APPS + REVERSION_APPS + (
     'tests.file_app',
     'tests.data_app',
     'tests.naturalkey_app',
