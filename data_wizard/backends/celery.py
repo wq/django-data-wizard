@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from celery import task, current_task
 from celery.result import AsyncResult
 from .base import DataWizardBackend
