@@ -57,10 +57,13 @@ class RecordSerializer(serializers.ModelSerializer):
     row = serializers.SerializerMethodField()
     success = serializers.ReadOnlyField()
     fail_reason = serializers.ReadOnlyField()
-    object_label = serializers.ReadOnlyField(source='content_object.__str__')
+    object_label = serializers.SerializerMethodField()
 
     def get_row(self, instance):
         return instance.row + 1
+
+    def get_object_label(self, instance):
+        return str(instance.content_object)
 
     class Meta:
         model = Record
