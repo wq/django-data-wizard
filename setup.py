@@ -62,9 +62,6 @@ setup(
         'Topic :: Database :: Database Engines/Servers',
     ],
     test_suite='tests',
-    tests_require=[
-        'psycopg2',
-    ],
     setup_requires=[
         'setuptools_scm',
     ],

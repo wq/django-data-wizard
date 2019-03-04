@@ -54,19 +54,10 @@ matrix:
       name: "Code Lint"
       env:
         - LINT="flake8"
-before_script:
- - createdb -Upostgres data_wizard_test
- - psql -Upostgres data_wizard_test -c "CREATE EXTENSION postgis;"
 install:
  - pip install $DJANGO $CELERY $DRF $WQIO $WQDB $REVERSION $LINT
- - pip install psycopg2
  - pip install .
 script:
  - ./runtests.sh
 services:
  - redis-server
-addons:
-  postgresql: "10"
-  apt:
-    packages:
-     - postgresql-10-postgis-2.4

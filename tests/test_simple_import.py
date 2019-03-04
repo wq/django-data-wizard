@@ -159,7 +159,7 @@ class IncompleteTestCase(BaseImportTestCase):
         ])
 
     def check_data(self, run):
-        self.assert_status(run, 3)
+        self.assert_status(run, 4)
         self.assert_ranges(run, [
             "Data Column 'date -> date' at Rows 1-5, Column 0",
             "Data Column 'color -> color' at Rows 1-5, Column 1",
@@ -169,8 +169,8 @@ class IncompleteTestCase(BaseImportTestCase):
             "imported '2017-06-01: red (Test Note 1)' at row 1",
             "imported '2017-06-02: green (Test Note 2)' at row 2",
             "imported '2017-06-03: blue (Test Note 3)' at row 3",
-            "failed at row 4: DataError('value too long for type character"
-            " varying(5)\\n')",
+            # SQLite ignores varchar field size
+            "imported '2017-06-04: orange (Test Note 4)' at row 4",
             "failed at row 5: ValidationError([\"'2017-06-50' value has the"
             " correct format (YYYY-MM-DD) but it is an invalid date.\"])"
         ])
