@@ -14,7 +14,7 @@ By default, Django Data Wizard supports any format supported by [wq.io] (Excel, 
 
 The Data Wizard supports straightforward one-to-one mappings from spreadsheet columns to database fields, as well as more complex scenarios like [natural keys] and [Entity-Attribute-Value] (or "wide") table mappings.  It was originally developed for use with the [ERAV data model][ERAV] provided by [vera].
 
-[![Latest PyPI Release](https://img.shields.io/pypi/v/data-wizard.svg)](https://pypi.python.org/pypi/data-wizard)
+[![Latest PyPI Release](https://img.shields.io/pypi/v/data-wizard.svg)](https://pypi.org/project/data-wizard)
 [![Release Notes](https://img.shields.io/github/release/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/releases)
 [![License](https://img.shields.io/pypi/l/data-wizard.svg)](https://wq.io/license)
 [![GitHub Stars](https://img.shields.io/github/stars/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/stargazers)
@@ -22,8 +22,8 @@ The Data Wizard supports straightforward one-to-one mappings from spreadsheet co
 [![GitHub Issues](https://img.shields.io/github/issues/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/issues)
 
 [![Travis Build Status](https://img.shields.io/travis/wq/django-data-wizard.svg)](https://travis-ci.org/wq/django-data-wizard)
-[![Python Support](https://img.shields.io/pypi/pyversions/data-wizard.svg)](https://pypi.python.org/pypi/data-wizard)
-[![Django Support](https://img.shields.io/badge/Django-1.8%2C%201.9%2C%201.10%2C%201.11-blue.svg)](https://pypi.python.org/pypi/data-wizard)
+[![Python Support](https://img.shields.io/pypi/pyversions/data-wizard.svg)](https://pypi.org/project/data-wizard)
+[![Django Support](https://img.shields.io/pypi/djversions/data-wizard.svg)](https://pypi.org/project/data-wizard)
 
 # Usage
 
@@ -45,21 +45,16 @@ See <https://github.com/wq/django-data-wizard> to report any issues.
 
 Within a new or existing Django or wq project, configure the following:
 
- 1. Celery / Redis
+ 1. A Data Wizard task backend
  2. A model for (up)loading source data
  3. One or more serializers for populating the destination models
  4. wq/progress.js plugin (if using wq)
 
-### Celery
 
-Django Data Wizard requires [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.  These should be configured first or the REST API may not work.  On Ubuntu, run the following command:
+### Task Backends
 
-```bash
-# Install redis on Ubuntu
-sudo apt-get install redis-server
-```
+As of version 1.1.0, Django Data Wizard **no longer requires** the use of `celery` as a task runner.  Any of the following backends can be configured with via the `DATA_WIZARD_BACKEND` setting:
 
-Once Redis is installed, you should be able to add the following to your project settings:
 ```python
 # myproject/settings.py
 
@@ -69,11 +64,38 @@ INSTALLED_APPS = (
    'myapp',
 )
 
-CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost:6379/1'
+DATA_WIZARD_BACKEND = "data_wizard.backends.threading"  # Default in 1.1.x
+DATA_WIZARD_BACKEND = "data_wizard.backends.immediate"
+DATA_WIZARD_BACKEND = "data_wizard.backends.celery"     # Only choice in 1.0.x
 ```
 
-Then, define a celery app:
+For backwards compatibility with 1.0.x, the default backend reverts to `celery` if you have `CELERY_RESULT_BACKEND` defined in your project settings.  However, it is recommended to explicitly set `DATA_WIZARD_BACKEND`, as this behavior may change in a future major version of Data Wizard.
+
+#### `data_wizard.backends.threading`
+
+The `threading` backend creates a separate thread for long-running asynchronous tasks (i.e. `auto` and `data`).  The threading backend leverages the Django cache to pass results back to the status API.  As of Django Data Wizard 1.1.0, **this backend is the default** unless you have configured Celery.
+
+#### `data_wizard.backends.immmediate`
+
+The `immediate` backend completes all processing before returning a result to the client, even for the otherwise "asynchronous" tasks (`auto` and `data`).  This backend is suitable for small spreadsheets, or for working around threading issues.  This backend maintains minimal state, and is not recommended for use cases involving large spreadsheets or multiple simultanous import processes.
+
+#### `data_wizard.backends.celery`
+
+The `celery` backend leverages [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.
+**Celery is no longer required to use Django Data Wizard,** unless you would like to use the `celery` backend.  If so, be sure to configure these libraries first or the REST API may not work as expected.  You can use these steps on Ubuntu:
+
+```bash
+# Install redis and celery
+sudo apt-get install redis-server
+pip install celery redis
+```
+
+Once Redis is installed, configure the following files in your project:
 ```python
+# myproject/settings.py
+DATA_WIZARD_BACKEND = 'data_wizard.backends.celery'
+CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost:6379/1'
+
 # myproject/celery.py
 from __future__ import absolute_import
 from celery import Celery
@@ -81,24 +103,14 @@ from django.conf import settings
 app = Celery('myproject')
 app.config_from_object('django.conf:settings')
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
-```
 
-And reference it from your project:
-
-```python
 # myproject/__init__.py
 from .celery import app as celery_app
 ```
 
-Finally, make sure that celery is running in the background.  You can test with the following command, then move to a more stable configuration (e.g. [daemonization]).
+Finally, run celery with `celery -A myproject`.  You may want to use celery's [daemonization] to keep the process running in the background.  Any time you change your serializer registration, be sure to reload celery in addition to restarting the Django WSGI instance.
 
-```bash
-# celery.sh
-export DJANGO_SETTINGS_MODULE=myproject.settings
-celery -A myproject worker -l info
-```
-
-Note that any time you change your serializer registration, you should reload celery in addition to restarting the Django WSGI  instance.
+> Note that the requirement for an extra daemon means this backend can break more easily after a server restart.  Even worse, you may not notice that the backend is down for several months (e.g. until a user tries to import a spreadsheet).  For this reason, **we recommend using one of the other backends** unless you are already using celery for other background processing tasks.
 
 ### Data Loader
 
@@ -292,7 +304,7 @@ The `status` API is used to check the status of an asynchronous task (one of `au
 }
 ```
 
-Note that the `status` field is directly derived from the underlying [Celery task state].  When running an `auto` task, the result is `SUCCESS` whenever the task ends without errors, even if there is additional input needed to fully complete the run.
+The potential values for the  `status` field are the same as common [Celery task states], even when not using the `celery` backend.  When running an `auto` task, the result is `SUCCESS` whenever the task ends without errors, even if there is additional input needed to fully complete the run.
 
 The default [run_auto.html] and [run_data.html] templates include a `<progress>` element for use with [wq/progress.js] and the status task.
 
@@ -405,7 +417,7 @@ The `records` task provides a list of imported rows (including errors).  It is r
 [Redis]: https://redis.io/
 [daemonization]: http://docs.celeryproject.org/en/latest/userguide/daemonizing.html
 [wq.app]: https://wq.io/wq.app
-[Celery task state]: http://docs.celeryproject.org/en/latest/userguide/tasks.html#task-states
+[Celery task states]: http://docs.celeryproject.org/en/latest/userguide/tasks.html#task-states
 
 [PrimaryKeyRelatedField]: http://www.django-rest-framework.org/api-guide/relations/#primarykeyrelatedfield
 [SlugRelatedField]: http://www.django-rest-framework.org/api-guide/relations/#slugrelatedfield
