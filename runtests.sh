@@ -4,6 +4,8 @@ if [ "$LINT" ]; then
     flake8 data_wizard/migrations --ignore E501
 else
     python -c "import tests"
-    celery worker -A tests &
+    if [ "$CELERY" ]; then
+        celery worker -A tests &
+    fi;
     python setup.py test
 fi

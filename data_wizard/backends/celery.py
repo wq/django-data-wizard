@@ -4,7 +4,7 @@ from celery.result import AsyncResult
 from .base import DataWizardBackend
 
 
-class CeleryBackend(DataWizardBackend):
+class Backend(DataWizardBackend):
     def run_async(self, task_name, run_id, user_id, post):
         task = run_async.delay(task_name, run_id, user_id, post)
         return task.task_id

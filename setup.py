@@ -37,8 +37,6 @@ setup(
         'wq.io',
         'natural-keys',
         'html-json-forms',
-        'celery',
-        'redis',
         'python-dateutil'
     ],
     classifiers=[

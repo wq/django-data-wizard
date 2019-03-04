@@ -5,7 +5,6 @@ env:
     - DRF="djangorestframework==3.9.1"
     - DJANGO="django==2.1.7"
     - WQIO="wq.io==1.1.0"
-    - CELERY="celery==4.3.0rc1"
 matrix:
   include:
     - python: "2.7"
@@ -13,21 +12,38 @@ matrix:
       env:
         - DJANGO="django==1.8.19"
         - DRF="djangorestframework==3.6.4"
+    - python: "2.7"
+      name: "Python 2.7 (Django 1.8) + celery"
+      env:
+        - DJANGO="django==1.8.19"
+        - DRF="djangorestframework==3.6.4"
         - CELERY="celery==4.2.1"
+        - REDIS="redis"
     - python: "3.5"
       name: "Python 3.5 (Django 1.8)"
       env:
         - DJANGO="django==1.8.19"
         - DRF="djangorestframework==3.6.4"
-        - CELERY="celery==4.2.1"
     - python: "2.7"
       name: "Python 2.7 (Django 1.11)"
       env:
         - DJANGO="django==1.11.20"
+    - python: "2.7"
+      name: "Python 2.7 (Django 1.11) + celery"
+      env:
+        - DJANGO="django==1.11.20"
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
     - python: "3.7"
       name: "Python 3.7 (Django 1.11)"
       env:
         - DJANGO="django==1.11.20"
+    - python: "3.7"
+      name: "Python 3.7 (Django 1.11) + celery"
+      env:
+        - DJANGO="django==1.11.20"
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
     - python: "3.4"
       name: "Python 3.4"
       env:
@@ -42,6 +58,15 @@ matrix:
       name: "Python 3.7"
       env: []
     - python: "3.7"
+      name: "Python 3.7 + immediate"
+      env:
+        - NOTHREADING="1"
+    - python: "3.7"
+      name: "Python 3.7 + celery"
+      env:
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
+    - python: "3.7"
       name: "Python 3.7 + wq.db"
       env:
         - WQDB="wq.db==1.1.2"
@@ -51,11 +76,18 @@ matrix:
         - WQDB="wq.db==1.1.2"
         - REVERSION="django-reversion"
     - python: "3.7"
+      name: "Python 3.7 + wq.db + reversion + celery"
+      env:
+        - WQDB="wq.db==1.1.2"
+        - REVERSION="django-reversion"
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
+    - python: "3.7"
       name: "Code Lint"
       env:
         - LINT="flake8"
 install:
- - pip install $DJANGO $CELERY $DRF $WQIO $WQDB $REVERSION $LINT
+ - pip install $DJANGO $CELERY $REDIS $DRF $WQIO $WQDB $REVERSION $LINT
  - pip install .
 script:
  - ./runtests.sh

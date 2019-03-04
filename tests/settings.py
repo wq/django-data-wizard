@@ -45,7 +45,14 @@ DATABASES = {
 ROOT_URLCONF = "tests.urls"
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')
 
-CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost/0'
+WITH_CELERY = os.environ.get('CELERY', False)
+
+if WITH_CELERY:
+    CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost/0'
 
 if WITH_WQDB:
     from wq.db.default_settings import *  # noqa
+
+NO_THREADING = os.environ.get('NOTHREADING', False)
+if NO_THREADING:
+    DATA_WIZARD_BACKEND = 'data_wizard.backends.immediate'
