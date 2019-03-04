@@ -1,10 +1,8 @@
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
-from data_wizard import tasks
 from data_wizard import registry
-from wq.io.exceptions import IoException
-from celery.result import AsyncResult
+import data_wizard
 from .serializers import RunSerializer, RecordSerializer
 from .models import Run
 
@@ -14,46 +12,38 @@ class RunViewSet(ModelViewSet):
     record_serializer_class = RecordSerializer
     queryset = Run.objects.all()
 
+    @property
+    def backend(self):
+        return data_wizard.backend
+
     @detail_route()
     def status(self, request, *args, **kwargs):
-        taskid = request.GET.get('task', None)
-        if not taskid:
-            return Response({})
+        task_id = request.GET.get('task', None)
+        result = self.backend.get_async_status(task_id)
+        action = result.get('action', None)
+        if not action and result['status'] == 'SUCCESS':
+            action = 'records'
+        if action:
+            url = '/datawizard/{pk}/{action}'.format(
+                pk=self.get_object().pk,
+                action=action,
+            )
+            result['location'] = url
+        elif result['status'] == 'FAILURE':
+            result['error'] = "Failure"
+        return Response(result)
 
-        result = AsyncResult(taskid)
-        response = {
-            'status': result.state
-        }
-        if result.state in ('PROGRESS', 'SUCCESS'):
-            response.update(result.result)
-            action = result.result.get('action', None)
-            if not action and result.state == 'SUCCESS':
-                action = 'records'
-            if action:
-                url = '/datawizard/{pk}/{action}'.format(
-                    pk=self.get_object().pk,
-                    action=action,
-                )
-                response['location'] = url
-        elif result.state == 'FAILURE':
-            response['error'] = str(result.result)
-        return Response(response)
-
-    def run_task(self, name, use_async=False):
-        response = self.retrieve(self.request, **self.kwargs)
-
+    def run_task(self, name, use_async=False, post=None):
         run = self.get_object()
         user = self.request.user
+        return self.backend.run(
+            name, run.pk, user.pk, use_async, post,
+        )
 
-        task = getattr(tasks, name).delay(run.pk, user.pk)
-        if use_async:
-            response.data['task_id'] = task.task_id
-        else:
-            try:
-                response.data['result'] = task.get()
-            except IoException as e:
-                response.data['error'] = str(e)
-
+    def retrieve_and_run(self, task_name, use_async=False, post=None):
+        response = self.retrieve(self.request, **self.kwargs)
+        result = self.run_task(task_name, use_async, post)
+        response.data.update(result)
         return response
 
     @detail_route()
@@ -78,42 +68,38 @@ class RunViewSet(ModelViewSet):
 
     @detail_route()
     def columns(self, request, *args, **kwargs):
-        return self.run_task('read_columns')
+        return self.retrieve_and_run('read_columns')
 
     @detail_route(methods=['post'])
     def updatecolumns(self, request, *args, **kwargs):
-        response = self.run_task('read_columns')
+        response = self.retrieve_and_run('read_columns')
         self.action = 'columns'
-        result = tasks.update_columns.delay(
-            self.get_object().pk, request.user.pk, post=request.POST
-        )
-        response.data['result'] = result.get()
+        result = self.run_task('update_columns', post=request.POST)
+        response.data.update(result)
         return response
 
     @detail_route()
     def ids(self, request, *args, **kwargs):
-        return self.run_task('read_row_identifiers')
+        return self.retrieve_and_run('read_row_identifiers')
 
     @detail_route(methods=['post'])
     def updateids(self, request, *args, **kwargs):
-        response = self.run_task('read_row_identifiers')
+        response = self.retrieve_and_run('read_row_identifiers')
         self.action = 'ids'
-        result = tasks.update_row_identifiers.delay(
-            self.get_object().pk, request.user.pk, post=request.POST
-        )
-        response.data['result'] = result.get()
+        result = self.run_task('update_row_identifiers', post=request.POST)
+        response.data.update(result)
         return response
 
     @detail_route(methods=['post'])
     def data(self, request, *args, **kwargs):
-        return self.run_task('import_data', use_async=True)
+        return self.retrieve_and_run('import_data', use_async=True)
 
     @detail_route(methods=['post', 'get'])
     def auto(self, request, *args, **kwargs):
         if request.method == 'GET':
             self.action = 'retrieve'
             return self.retrieve(request, **kwargs)
-        return self.run_task('auto_import', use_async=True)
+        return self.retrieve_and_run('auto_import', use_async=True)
 
     @detail_route()
     def records(self, request, *args, **kwargs):

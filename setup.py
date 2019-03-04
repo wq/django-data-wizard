@@ -25,6 +25,7 @@ setup(
     long_description=readme(),
     packages=[
         'data_wizard',
+        'data_wizard.backends',
         'data_wizard.migrations',
     ],
     package_data={

@@ -1,8 +1,7 @@
-from celery import task, current_task
 from xlrd import colname
 from collections import OrderedDict
 from .models import Run, Identifier
-from .signals import import_complete, new_metadata
+from .signals import progress, import_complete, new_metadata
 from functools import wraps
 
 from django.db import transaction
@@ -51,10 +50,15 @@ def get_id(obj, field):
         return field.to_representation(obj)
 
 
-def update_state(state, meta):
-    if not current_task:
-        return
-    current_task.update_state(state=state, meta=meta)
+def send_progress(sender, run):
+    def send(state, meta):
+        progress.send(
+            sender=sender,
+            run=run,
+            state=state,
+            meta=meta
+        )
+    return send
 
 
 def lookuprun(fn):
@@ -68,7 +72,6 @@ def lookuprun(fn):
     return wrapped
 
 
-@task
 @lookuprun
 def auto_import(run, user):
     """
@@ -76,13 +79,15 @@ def auto_import(run, user):
     IO.  Meant to be called asynchronously.  Automatically suspends import if
     any additional input is needed from the user.
     """
+    send = send_progress(auto_import, run)
+
     run.add_event('auto_import')
     if not run.serializer:
         result = {
             'action': 'serializers',
             'message': 'Input Needed'
         }
-        update_state(state='SUCCESS', meta=result)
+        send('SUCCESS', result)
         return result
 
     # Preload IO to catch any load errors early
@@ -92,7 +97,7 @@ def auto_import(run, user):
         'current': 1,
         'total': 4,
     }
-    update_state(state='PROGRESS', meta=status)
+    send('PROGRESS', status)
     run.load_io()
 
     # Parse columns
@@ -100,12 +105,12 @@ def auto_import(run, user):
         message="Parsing Columns...",
         current=2,
     )
-    update_state(state='PROGRESS', meta=status)
+    send('PROGRESS', status)
     result = read_columns(run, user)
     if result['unknown_count']:
         result['action'] = "columns"
         result['message'] = "Input Needed"
-        update_state(state='SUCCESS', meta=result)
+        send('SUCCESS', result)
         return result
 
     # Parse row identifiers
@@ -113,18 +118,19 @@ def auto_import(run, user):
         message="Parsing Identifiers...",
         current=3,
     )
-    update_state(state='PROGRESS', meta=status)
+    send('PROGRESS', status)
     result = read_row_identifiers(run, user)
     if result['unknown_count']:
         result['action'] = "ids"
         result['message'] = "Input Needed"
-        update_state(state='SUCCESS', meta=result)
+        send('SUCCESS', result)
         return result
 
     status.update(
         message="Importing Data...",
         current=4,
     )
+    send('PROGRESS', status)
 
     # The rest is the same as import_data
     return do_import(run, user)
@@ -259,7 +265,6 @@ def get_choice_ids(run):
     return [choice['id'] for choice in get_choices(run)]
 
 
-@task
 @lookuprun
 def read_columns(run, user=None):
     matched = get_columns(run)
@@ -430,7 +435,6 @@ def parse_column(run, name, **kwargs):
     )
 
 
-@task
 @lookuprun
 def update_columns(run, user, post={}):
     run.add_event('update_columns')
@@ -469,7 +473,6 @@ def update_columns(run, user, post={}):
     return read_columns(run)
 
 
-@task
 @lookuprun
 def read_row_identifiers(run, user=None):
     if run.range_set.filter(type='data').exists():
@@ -606,7 +609,6 @@ def load_row_identifiers(run):
     }
 
 
-@task
 @lookuprun
 def update_row_identifiers(run, user, post={}):
     run.add_event('update_row_identifiers')
@@ -637,7 +639,6 @@ def update_row_identifiers(run, user, post={}):
     return read_row_identifiers(run, user)
 
 
-@task
 @lookuprun
 def import_data(run, user):
     """
@@ -659,6 +660,7 @@ def do_import(run, user):
 
 
 def _do_import(run, user):
+    send = send_progress(import_data, run)
     run.add_event('do_import')
 
     # (Re-)Load data and column information
@@ -701,7 +703,7 @@ def _do_import(run, user):
 
     for i, row in enumerate(table):
         # Update state (for status() on view)
-        update_state(state='PROGRESS', meta={
+        send('PROGRESS', {
             'message': "Importing Data...",
             'stage': 'data',
             'current': i,
@@ -737,12 +739,9 @@ def _do_import(run, user):
     run.add_event('import_complete')
     run.record_count = run.record_set.filter(success=True).count()
     run.save()
+    send('SUCCESS', status)
     import_complete.send(sender=import_data, run=run, status=status)
 
-    # FIXME: Shouldn't this happen automatically?
-    update_state(state='SUCCESS', meta=status)
-
-    # Return status (thereby updating task state for status() on view)
     return status
 
 
