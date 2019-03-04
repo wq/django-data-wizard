@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from .base import DataWizardBackend
 from django.core.cache import cache
 import threading
