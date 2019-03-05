@@ -20,18 +20,20 @@ class ContentTypeIdField(serializers.RelatedField):
             return self.get_queryset().get(
                 app_label=app_label,
                 model=model,
-            ).pk
+            )
         except ContentType.DoesNotExist:
             self.fail('does_not_exist', app_label=app_label, model=model)
 
-    def to_representation(self, content_type_id):
-        ct = ContentType.objects.get(pk=content_type_id)
-        return '%s.%s' % (ct.app_label, ct.model)
+    def to_representation(self, value):
+        return '%s.%s' % (value.app_label, value.model)
 
 
 class RunSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    content_type_id = ContentTypeIdField(queryset=ContentType.objects.all())
+    content_type_id = ContentTypeIdField(
+        source="content_type",
+        queryset=ContentType.objects.all()
+    )
     object_label = serializers.StringRelatedField(
         source='content_object', read_only=True
     )
