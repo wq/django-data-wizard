@@ -116,6 +116,25 @@ class SimpleTestCase(BaseImportTestCase):
             'import_complete',
         ])
 
+    def test_auto_url(self):
+        self.create_identifier('field notes', 'notes')
+        run = self.download_url(
+            'https://raw.githubusercontent.com/wq/django-data-wizard'
+            '/master/tests/media/simplemodel.csv'
+        )
+        self.auto_import(run, expect_input_required=False)
+
+        # Verify results
+        self.check_data(run)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'parse_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])
+
     def check_data(self, run):
         self.assert_status(run, 3)
         self.assert_ranges(run, [

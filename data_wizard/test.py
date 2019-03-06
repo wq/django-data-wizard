@@ -100,6 +100,25 @@ class WizardTestCase(APITransactionTestCase):
         run = Run.objects.get(pk=response.data['id'])
         return run
 
+    def download_url(self, url, skip_serializer=False):
+        """
+        1. Download data from url
+        """
+        url_id = self.url_model.objects.create(url=url).pk
+        post = {
+            'content_type_id': self.url_content_type,
+            'object_id': url_id,
+        }
+        if not skip_serializer:
+            post['serializer'] = self.serializer_name
+
+        response = self.client.post('/datawizard/?format=json', post)
+        self.assertEqual(
+            response.status_code, status.HTTP_201_CREATED, response.data
+        )
+        run = Run.objects.get(pk=response.data['id'])
+        return run
+
     def set_serializer(self, run):
         """
         1b. Set serializer class
@@ -244,7 +263,7 @@ class WizardTestCase(APITransactionTestCase):
         """
         run = Run.objects.get(pk=run.pk)
         self.assertEqual(expect_count, run.record_count)
-        self.assertEqual('data_wizard.loaders.FileLoader', run.loader)
+        self.assertTrue(run.loader)
         self.assertEqual(self.serializer_name, run.serializer)
 
     def assert_ranges(self, run, expect_ranges):

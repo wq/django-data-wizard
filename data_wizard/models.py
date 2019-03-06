@@ -2,15 +2,8 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
-from rest_framework.settings import import_from_string
 from data_wizard import registry
-from django.urls import reverse
-
-
-LOADER_PATH = getattr(
-    settings, 'DATA_WIZARD_LOADER', 'data_wizard.loaders.FileLoader'
-)
-Loader = import_from_string(LOADER_PATH, 'DATA_WIZARD_LOADER')
+from .compat import reverse
 
 
 class Run(models.Model):
@@ -21,7 +14,7 @@ class Run(models.Model):
         'self', null=True, blank=True, on_delete=models.PROTECT
     )
     record_count = models.IntegerField(null=True, blank=True)
-    loader = models.CharField(max_length=255, default=LOADER_PATH)
+    loader = models.CharField(max_length=255, null=True, blank=True)
     serializer = models.CharField(max_length=255, null=True, blank=True)
 
     content_type = models.ForeignKey(
@@ -37,12 +30,18 @@ class Run(models.Model):
         return reverse('data_wizard:run-detail', kwargs={'pk': self.pk})
 
     def save(self, *args, **kwargs):
+        if not self.loader:
+            self.loader = registry.get_loader_name(
+                type(self.content_object)
+            )
+
         is_new = not self.id
         super(Run, self).save(*args, **kwargs)
         if is_new:
             self.add_event('created')
 
     def load_io(self):
+        Loader = registry.get_loader(self.loader)
         loader = Loader(self)
         return loader.load_io()
 

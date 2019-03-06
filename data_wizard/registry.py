@@ -1,18 +1,22 @@
 from django.core.exceptions import ImproperlyConfigured
 from collections import OrderedDict
+from rest_framework.settings import import_from_string
+from django.conf import settings
 
 
 class Registry(object):
-    _registry = OrderedDict()
+    _serializers = OrderedDict()
     _serializer_names = {}
+    _loaders = {}
+    _loader_classes = {}
 
     def get_class_name(self, serializer):
         return "%s.%s" % (serializer.__module__, serializer.__name__)
 
     def register(self, name, serializer):
         class_name = self.get_class_name(serializer)
-        if name in self._registry:
-            other_class = self.get_class_name(self._registry[name])
+        if name in self._serializers:
+            other_class = self.get_class_name(self._serializers[name])
             raise ImproperlyConfigured(
                 "Could not register serializer %s: "
                 "the name '%s' was already registered for %s"
@@ -32,12 +36,12 @@ class Registry(object):
                 "%s.Meta is missing a model!" % class_name
             )
 
-        self._registry[name] = serializer
+        self._serializers[name] = serializer
         self._serializer_names[class_name] = name
 
     def get_serializers(self):
         serializers = []
-        for name, serializer in self._registry.items():
+        for name, serializer in self._serializers.items():
             serializers.append({
                 'name': name,
                 'serializer': serializer,
@@ -50,17 +54,35 @@ class Registry(object):
 
     def get_serializer(self, name):
         name = self.get_serializer_name(name)
-        if name not in self._registry:
+        if name not in self._serializers:
             raise ImproperlyConfigured(
                 "%s is not a registered serializer!" % name
             )
-        return self._registry[name]
+        return self._serializers[name]
 
     def get_choices(self):
         return [
             (s['class_name'], s['name'])
             for s in self.get_serializers()
         ]
+
+    def set_loader(self, model, loader_name):
+        self._loaders[model] = loader_name
+
+    def get_loader_name(self, model):
+        default_loader = getattr(
+            settings, 'DATA_WIZARD_LOADER', 'data_wizard.loaders.FileLoader'
+        )
+        return self._loaders.get(model, default_loader)
+
+    def get_loader(self, loader_name):
+        reg = self._loader_classes
+        if loader_name in reg:
+            Loader = reg[loader_name]
+        else:
+            Loader = import_from_string(loader_name, 'DATA_WIZARD_LOADER')
+            reg[loader_name] = Loader
+        return Loader
 
 
 registry = Registry()
