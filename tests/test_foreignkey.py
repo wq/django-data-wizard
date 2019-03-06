@@ -9,7 +9,7 @@ class BaseFKTestCase(BaseImportTestCase):
         Type.objects.create(pk=2, name="Type #2")
 
     def check_data(self, run, expect_last_record=None, extra_ranges=[]):
-        if 'imported' in expect_last_record:
+        if 'Imported' in expect_last_record:
             total = 4
         else:
             total = 3
@@ -20,9 +20,9 @@ class BaseFKTestCase(BaseImportTestCase):
             "Data Column 'notes -> notes' at Rows 1-4, Column 1",
         ] + extra_ranges)
         self.assert_records(run, [
-            "imported 'Type #1 (Test Note 1)' at row 1",
-            "imported 'Type #1 (Test Note 2)' at row 2",
-            "imported 'Type #2 (Test Note 3)' at row 3",
+            "Imported 'Type #1 (Test Note 1)' at row 1",
+            "Imported 'Type #1 (Test Note 2)' at row 2",
+            "Imported 'Type #2 (Test Note 3)' at row 3",
             expect_last_record
         ])
         self.assert_urls(run, 'fkmodels/%s')
@@ -44,7 +44,7 @@ class ForeignKeyTestCase(BaseFKTestCase):
 
         # Verify results
         self.check_data(
-            run, expect_last_record="failed at row 4: %s" % row4_error
+            run, expect_last_record="Failed at row 4: %s" % row4_error
         )
         self.assert_log(run, [
             'created',
@@ -81,7 +81,7 @@ class SlugTestCase(BaseFKTestCase):
 
         # Verify results
         self.check_data(
-            run, expect_last_record="failed at row 4: %s" % row4_error
+            run, expect_last_record="Failed at row 4: %s" % row4_error
         )
         self.assert_log(run, [
             'created',
@@ -112,7 +112,7 @@ class SlugTestCase(BaseFKTestCase):
         self.auto_import(run, expect_input_required=False)
         self.check_data(
             run,
-            expect_last_record="imported 'Type #2 (Test Note 4)' at row 4",
+            expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
                 "Cell value 'Type #1 -> Type #1 (type)' at Rows 1-2, Column 0",
                 "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0",
@@ -141,7 +141,7 @@ class SlugTestCase(BaseFKTestCase):
         self.auto_import(run, expect_input_required=False)
         self.check_data(
             run,
-            expect_last_record="imported 'Type #2 (Test Note 4)' at row 4",
+            expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
                 "Cell value 'Type #1 -> Type #1 (type)' at Rows 1-2, Column 0",
                 "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0",
@@ -186,7 +186,7 @@ class SplitTestCase(BaseFKTestCase):
 
         # Verify results
         self.check_data(
-            run, expect_last_record="failed at row 4: %s" % row4_error
+            run, expect_last_record="Failed at row 4: %s" % row4_error
         )
         self.assert_log(run, [
             'created',
@@ -236,7 +236,7 @@ class SplitTestCase(BaseFKTestCase):
         self.auto_import(run, expect_input_required=False)
         self.check_data(
             run,
-            expect_last_record="imported 'Type #2 (Test Note 4)' at row 4",
+            expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
                 "Cell value 'Type #1 -> Type #1 (type)'"
                 " at Rows 1-2, Column 0-1",
@@ -272,7 +272,7 @@ class SplitTestCase(BaseFKTestCase):
         self.auto_import(run, expect_input_required=False)
         self.check_data(
             run,
-            expect_last_record="imported 'Type #2 (Test Note 4)' at row 4",
+            expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
                 "Cell value 'Type #1 -> Type #1 (type)'"
                 " at Rows 1-2, Column 0-1",
@@ -291,7 +291,7 @@ class SplitTestCase(BaseFKTestCase):
         ])
 
     def check_data(self, run, expect_last_record=None, extra_ranges=[]):
-        if 'imported' in expect_last_record:
+        if 'Imported' in expect_last_record:
             total = 4
         else:
             total = 3
@@ -303,9 +303,9 @@ class SplitTestCase(BaseFKTestCase):
             "Data Column 'notes 2 -> notes' at Rows 1-4, Column 3",
         ] + extra_ranges)
         self.assert_records(run, [
-            "imported 'Type #1 (Test Note 1)' at row 1",
-            "imported 'Type #1 (Test Note 2)' at row 2",
-            "imported 'Type #2 (Test Note 3)' at row 3",
+            "Imported 'Type #1 (Test Note 1)' at row 1",
+            "Imported 'Type #1 (Test Note 2)' at row 2",
+            "Imported 'Type #2 (Test Note 3)' at row 3",
             expect_last_record,
         ])
         self.assert_urls(run, 'fkmodels/%s')
@@ -330,7 +330,7 @@ class NestedTestCase(BaseImportTestCase):
         self.start_import(run, [])
         self.assert_status(run, 2)
         self.assert_records(run, [
-            "imported 'Type #1' at row 1",
-            "imported 'Type #2' at row 2",
+            "Imported 'Type #1' at row 1",
+            "Imported 'Type #2' at row 2",
         ])
         self.assertEqual(FKModel.objects.count(), 2)

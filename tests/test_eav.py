@@ -95,8 +95,8 @@ class EAVTestCase(BaseImportTestCase):
             " at Rows 1-2, Column 5",
         ])
         self.assert_records(run, [
-            "imported 'Minneapolis' at row 1",
-            "imported 'Chicago' at row 2",
+            "Imported 'Minneapolis' at row 1",
+            "Imported 'Chicago' at row 2",
         ])
 
         values = [str(value) for value in Value.objects.order_by('pk')]

@@ -1,0 +1,18 @@
+{% extends "data_wizard/base_site.html" %}
+{% load static %}
+{% block extrahead %}
+<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'data_wizard/js/progress.js' %}"></script>
+{% endblock %}
+{% block content %}
+{% block wizardstep %}
+<h2>Processing</h2>
+{% endblock %}
+{% include "data_wizard/progress.html" %}
+<ul class="messagelist" style="margin-top:1em;">
+  <li id="status">Loading...</li>
+</ul>
+<div class="submit-row" style="display:none;">
+  {% include "data_wizard/back.html" %}
+</div>
+{% endblock %}

@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
 from rest_framework.settings import import_from_string
 from data_wizard import registry
+from django.urls import reverse
 
 
 LOADER_PATH = getattr(
@@ -32,6 +33,9 @@ class Run(models.Model):
     def __str__(self):
         return "Run for %s" % self.content_object
 
+    def get_absolute_url(self):
+        return reverse('data_wizard:run-detail', kwargs={'pk': self.pk})
+
     def save(self, *args, **kwargs):
         is_new = not self.id
         super(Run, self).save(*args, **kwargs)
@@ -41,6 +45,13 @@ class Run(models.Model):
     def load_io(self):
         loader = Loader(self)
         return loader.load_io()
+
+    @property
+    def serializer_label(self):
+        if self.serializer:
+            return registry.get_serializer_name(self.serializer)
+
+    serializer_label.fget.short_description = 'serializer'
 
     def get_serializer(self):
         if self.serializer:
@@ -56,6 +67,15 @@ class Run(models.Model):
             event=name
         )
 
+    @property
+    def last_update(self):
+        last = self.log.last()
+        if last:
+            return last.date
+
+    class Meta:
+        ordering = ('-pk',)
+
 
 class RunLog(models.Model):
     run = models.ForeignKey(Run, related_name='log', on_delete=models.CASCADE)
@@ -63,7 +83,7 @@ class RunLog(models.Model):
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return "%s: %s at %s" % (self.run, self.event, self.date)
+        return self.event
 
     class Meta:
         ordering = ('date',)
@@ -150,8 +170,7 @@ class Range(models.Model):
         elif self.type == "value" and self.header_col != self.start_col - 1:
             header = " (header starts in Column %s)" % self.header_col
 
-        return "{run} contains {type} '{ident}' at {row}, {col}{head}".format(
-            run=self.run,
+        return "{type} '{ident}' at {row}, {col}{head}".format(
             type=self.get_type_display(),
             ident=self.identifier,
             row=row,
@@ -177,16 +196,13 @@ class Record(models.Model):
 
     def __str__(self):
         if self.success:
-            return "{run} imported '{obj}' at row {row}".format(
-                run=self.run,
+            return "Imported '{obj}' at row {row}".format(
                 obj=self.content_object,
                 row=self.row,
             )
         else:
-            return "{run} failed at row {row}: {fail_reason}".format(
-                run=self.run,
+            return "Failed at row {row}".format(
                 row=self.row,
-                fail_reason=self.fail_reason,
             )
 
     class Meta:

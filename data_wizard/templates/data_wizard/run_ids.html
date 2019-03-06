@@ -1,0 +1,67 @@
+{% extends "data_wizard/base_site.html" %}
+
+{% block content %}
+{% if not result.unknown_count %}
+<h2>Mapped Identifiers</h2>
+<ul class="messagelist">
+  <li>The following identifiers are mapped.</li>
+</ul>
+{% else %}
+<h2>Unknown Identifiers</h2>
+<ul class="messagelist">
+  <li class="warning">
+    This file contains {{result.unknown_count}} identifier(s) that are not yet
+    recognized by this database.
+  </li>
+</ul>
+<form action="{% url 'data_wizard:run-updateids' pk=id %}" method="post">
+{% csrf_token %}
+{% endif %}
+
+{% for type in result.types %}
+<h3>{{type.type_label}} Identifiers</h3>
+<table class="mappings">
+  <thead>
+    <tr>
+      <th>Identifier</th>
+      <th>Occurences</th>
+      <th>{{type.type_label}}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for id in type.ids %}
+    <tr>
+      <th>{{id.value}}</th>
+      <td>{{id.count}}</td>
+      <td>
+        {% if id.unknown %}
+        <select name="ident_{{id.ident_id}}_id">
+          <option value="">Select...</option>
+          {% for choice in id.choices %}
+          <option value="{{choice.id}}">{{choice.label}}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        {{id.match}}
+        {% endif %}
+      </td>
+      <td>
+        {% for m in id.meta %}
+        <em>{{m.name}}</em>: {{m.value}}<br>
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+{% if not result.unknown_count %}
+{% include "data_wizard/continue.html" %}
+{% else %}
+<div class="submit-row">
+  <input type="submit" value="Save Selections">
+</div>
+</form>
+{% endif %}
+{% endblock %}

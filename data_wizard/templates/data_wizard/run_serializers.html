@@ -1,0 +1,38 @@
+{% extends "data_wizard/base_site.html" %}
+
+{% block content %}
+<h2>Data Format</h2>
+{% if serializer %}
+<ul class="messagelist">
+  <li>
+    This dataset will be parsed as "{{serializer_label}}".
+  </li>
+</ul>
+{% include "data_wizard/continue.html" %}
+{% else %}
+<ul class="messagelist">
+  <li class="warning">Select a format (serializer) to continue.</li>
+</ul>
+<form action="{% url 'data_wizard:run-updateserializer' pk=id %}" method="post">
+    {% csrf_token %}
+    <fieldset data-role="controlgroup">
+      <legend>Select Format</legend>
+      <ul class="radiolist">
+      {% for choice in serializer_choices %}
+      <li>
+      <label for="serializer-{{choice.name}}">
+        <input type="radio" name="serializer" id="serializer-{{choice.name}}"
+               value="{{choice.name}}">
+        {{choice.label}}
+      </label>
+      {% endfor %}
+      </li>
+      </ul>
+    </fieldset>
+</ul>
+<div class="submit-row">
+  <input type="submit" value="Save Selection">
+</div>
+</form>
+{% endif %}
+{% endblock %}

@@ -252,7 +252,7 @@ class WizardTestCase(APITransactionTestCase):
         8. Verify column and identifier ranges
         """
         ranges = [
-            str(rng).replace("%s contains " % run, "")
+            str(rng)
             for rng in run.range_set.all()
         ]
         self.assertEqual(expect_ranges, ranges)
@@ -261,11 +261,19 @@ class WizardTestCase(APITransactionTestCase):
         """
         9. Verify column and identifier ranges
         """
+        def make_str(record):
+            text = str(record)
+            if text.startswith('Failed'):
+                text += ": " + record.fail_reason
+            text = (
+                text.replace('[u"', '["')  # Python 2.7
+                    .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")  # DRF < 3.9
+                    .replace(',)', ')')  # Python < 3.7
+            )
+            return text
+
         records = [
-            str(record).replace("%s " % run, "")
-                       .replace('[u"', '["')  # Python 2.7
-                       .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")  # DRF < 3.9
-                       .replace(',)', ')')  # Python < 3.7
+            make_str(record)
             for record in run.record_set.all()
         ]
         self.assertEqual(expect_records, records)

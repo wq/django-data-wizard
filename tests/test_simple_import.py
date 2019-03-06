@@ -124,12 +124,12 @@ class SimpleTestCase(BaseImportTestCase):
             "Data Column 'field notes -> notes' at Rows 1-5, Column 2",
         ])
         self.assert_records(run, [
-            "imported '2017-06-01: red (Test Note 1)' at row 1",
-            "imported '2017-06-02: green (Test Note 2)' at row 2",
-            "imported '2017-06-03: blue (Test Note 3)' at row 3",
-            "failed at row 4:"
+            "Imported '2017-06-01: red (Test Note 1)' at row 1",
+            "Imported '2017-06-02: green (Test Note 2)' at row 2",
+            "Imported '2017-06-03: blue (Test Note 3)' at row 3",
+            "Failed at row 4:"
             ' {"color": ["\\"orange\\" is not a valid choice."]}',
-            "failed at row 5:"
+            "Failed at row 5:"
             ' {"date": ["Date has wrong format.'
             ' Use one of these formats instead: YYYY-MM-DD."]}'
         ])
@@ -166,12 +166,12 @@ class IncompleteTestCase(BaseImportTestCase):
             "Data Column 'field notes -> notes' at Rows 1-5, Column 2",
         ])
         self.assert_records(run, [
-            "imported '2017-06-01: red (Test Note 1)' at row 1",
-            "imported '2017-06-02: green (Test Note 2)' at row 2",
-            "imported '2017-06-03: blue (Test Note 3)' at row 3",
+            "Imported '2017-06-01: red (Test Note 1)' at row 1",
+            "Imported '2017-06-02: green (Test Note 2)' at row 2",
+            "Imported '2017-06-03: blue (Test Note 3)' at row 3",
             # SQLite ignores varchar field size
-            "imported '2017-06-04: orange (Test Note 4)' at row 4",
-            "failed at row 5: ValidationError([\"'2017-06-50' value has the"
+            "Imported '2017-06-04: orange (Test Note 4)' at row 4",
+            "Failed at row 5: ValidationError([\"'2017-06-50' value has the"
             " correct format (YYYY-MM-DD) but it is an invalid date.\"])"
         ])
         self.assert_urls(run, 'simplemodels/%s')

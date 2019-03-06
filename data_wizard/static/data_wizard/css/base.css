@@ -1,0 +1,14 @@
+table.mappings {
+    width: 100%;
+}
+table.mappings td, table.mappings th {
+    vertical-align: middle
+}
+table.mappings tr.error {
+    background-color: #ffefef;
+    color: #333;
+}
+table.mappings tr.error td {
+    background: #ffefef url(../../admin/img/icon-no.svg) 0px 12px no-repeat;
+    padding-left: 2em;
+}

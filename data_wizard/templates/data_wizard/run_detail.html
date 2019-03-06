@@ -1,0 +1,29 @@
+{% extends "data_wizard/base_site.html" %}
+{% block content %}
+{% if record_count is not None %}
+<h2>Run Details</h2>
+<table>
+  <tbody>
+    <tr>
+      <th>Serializer</th>
+      <td>{{serializer_label}}</td>
+    </tr>
+    <tr>
+      <th>Records</th>
+      <td>
+        <a href="{% url 'data_wizard:run-records' pk=id %}">
+          {{record_count}} records imported.
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <th>Last Update</th>
+      <td>{{last_update}}</td>
+    </tr>
+  </tbody>
+</table>
+{% else %}
+<h2>Start Import</h2>
+{% include "data_wizard/continue.html" %}
+{% endif %}
+{% endblock %}

@@ -30,7 +30,10 @@ setup(
     ],
     package_data={
         'data_wizard': [
-            'mustache/*.*',
+            'mustache/*.html',
+            'templates/data_wizard/*.html',
+            'static/data_wizard/js/*.js',
+            'static/data_wizard/css/*.css',
         ]
     },
     install_requires=[

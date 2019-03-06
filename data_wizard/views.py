@@ -1,14 +1,26 @@
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.pagination import PageNumberPagination
+from rest_framework import renderers
 from data_wizard import registry
 import data_wizard
 from .serializers import RunSerializer, RecordSerializer
 from .models import Run
 
 
+class PageNumberPagination(PageNumberPagination):
+    page_size = 50
+
+
 class RunViewSet(ModelViewSet):
     serializer_class = RunSerializer
+    pagination_class = PageNumberPagination
+    renderer_classes = [
+        renderers.TemplateHTMLRenderer,
+        renderers.JSONRenderer,
+        renderers.BrowsableAPIRenderer,
+    ]
     record_serializer_class = RecordSerializer
     queryset = Run.objects.all()
 
@@ -16,12 +28,27 @@ class RunViewSet(ModelViewSet):
     def backend(self):
         return data_wizard.backend
 
+    @property
+    def template_name(self):
+        if self.action == 'retrieve':
+            template = 'detail'
+        else:
+            template = self.action
+        return 'data_wizard/run_{}.html'.format(template)
+
+    def get_renderers(self):
+        if self.action == 'status':
+            return [renderers.JSONRenderer()]
+        else:
+            return super(RunViewSet, self).get_renderers()
+
     @detail_route()
     def status(self, request, *args, **kwargs):
         task_id = request.GET.get('task', None)
         result = self.backend.get_async_status(task_id)
+        status = result.get('status', 'UNKNOWN')
         action = result.get('action', None)
-        if not action and result['status'] == 'SUCCESS':
+        if not action and status == 'SUCCESS':
             action = 'records'
         if action:
             url = '/datawizard/{pk}/{action}'.format(
@@ -29,8 +56,9 @@ class RunViewSet(ModelViewSet):
                 action=action,
             )
             result['location'] = url
-        elif result['status'] == 'FAILURE':
-            result['error'] = "Failure"
+        elif status == 'FAILURE' and not result.get('error'):
+            result['error'] = "Unknown Error"
+        result['status'] = status
         return Response(result)
 
     def run_task(self, name, use_async=False, post=None):
@@ -64,7 +92,7 @@ class RunViewSet(ModelViewSet):
             run.serializer = name
             run.save()
             run.add_event('update_serializer')
-        return self.retrieve(request)
+        return self.serializers(request)
 
     @detail_route()
     def columns(self, request, *args, **kwargs):

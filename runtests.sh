@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set -e
 if [ "$LINT" ]; then
     flake8 data_wizard tests --exclude migrations

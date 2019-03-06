@@ -1,0 +1,58 @@
+{% extends "data_wizard/base_site.html" %}
+
+{% block content %}
+{% if not result.unknown_count %}
+<h2>Mapped Columns</h2>
+<ul class="messagelist">
+  <li>The following columns are mapped.</li>
+</ul>
+{% else %}
+<h2>Unknown Columns</h2>
+<ul class="messagelist">
+  <li class="warning">
+    This file contains {{result.unknown_count}} column(s) that are not yet
+    recognized by this database.
+  </li>
+</ul>
+<form action="{% url 'data_wizard:run-updatecolumns' pk=id %}" method="post">
+{% csrf_token %}
+{% endif %}
+<table class="mappings">
+  <thead>
+    <th>Column</th>
+    <th colspan="2">Mapping</th>
+  </thead>
+  <tbody>
+    {% for col in result.columns %}
+    <tr>
+      <th>{{col.column}}</th>
+      {% if col.unknown %}
+      <td>{{col.name}}</td>
+      <td>
+        <select name="rel_{{col.rel_id}}">
+          <option value="">Select...</option>
+          {% for type in col.types %}
+          <optgroup label="{{type.name}}">
+            {% for choice in type.choices %}
+            <option value="{{choice.id}}">{{choice.label}}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </td>
+      {% else %}
+      <td colspan=2>{{col.match}}</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if not result.unknown_count %}
+{% include "data_wizard/continue.html" %}
+{% else %}
+<div class="submit-row">
+  <input type="submit" value="Save Selections">
+</div>
+</form>
+{% endif %}
+{% endblock %}

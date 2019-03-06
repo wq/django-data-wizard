@@ -21,8 +21,6 @@ class RunSerializer(ModelSerializer, wizard.RunSerializer):
 
 
 class RecordSerializer(wizard.RecordSerializer):
-    object_url = serializers.SerializerMethodField()
-
     def get_object_url(self, instance):
         obj = instance.content_object
         conf = rest.router.get_model_config(type(obj))

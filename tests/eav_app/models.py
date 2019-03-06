@@ -23,8 +23,8 @@ class Value(models.Model):
         Entity, related_name='values', on_delete=models.PROTECT
     )
     attribute = models.ForeignKey(Attribute, on_delete=models.PROTECT)
-    value = models.TextField()
-    units = models.TextField(null=True, blank=True)
+    value = models.CharField(max_length=50)
+    units = models.CharField(max_length=10, null=True, blank=True)
 
     def __str__(self):
         return "%s for %s: %s%s" % (

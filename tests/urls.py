@@ -1,5 +1,6 @@
 from django.conf.urls import include, url
 from django.conf import settings
+from django.contrib import admin
 
 
 if settings.WITH_WQDB:
@@ -10,5 +11,6 @@ else:
 
 
 urlpatterns = [
+    url(r'^admin/', admin.site.urls),
     url(r'^', include(wizard_urls)),
 ]

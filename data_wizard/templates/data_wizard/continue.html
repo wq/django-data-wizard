@@ -1,0 +1,6 @@
+<form action="{% url 'data_wizard:run-auto' pk=id %}" method="post">
+{% csrf_token %}
+  <div class="submit-row">
+    <input type="submit" class="default" value="Continue">
+  </div>
+</form>

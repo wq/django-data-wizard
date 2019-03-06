@@ -16,7 +16,7 @@ class Backend(DataWizardBackend):
         task_id = uuid.uuid4()
         thread = threading.Thread(
             name=task_id,
-            target=self.run_sync,
+            target=self.try_run_sync,
             args=(task_name, run_id, user_id, post)
         )
         thread.start()

@@ -136,9 +136,9 @@ class NaturalKeyTestCase(BaseImportTestCase):
             "Data Column 'note -> note' at Rows 1-4, Column 2",
         ] + extra_ranges)
         self.assert_records(run, [
-            "imported '%s on 2017-06-01: Test Note 1' at row 1" % mpls.name,
-            "imported '%s on 2017-06-01: Test Note 2' at row 2" % mpls.name,
-            "imported '%s on 2017-06-01: Test Note 3' at row 3" % chi.name,
-            "imported '%s on 2017-06-02: Test Note 4' at row 4" % chi.name,
+            "Imported '%s on 2017-06-01: Test Note 1' at row 1" % mpls.name,
+            "Imported '%s on 2017-06-01: Test Note 2' at row 2" % mpls.name,
+            "Imported '%s on 2017-06-01: Test Note 3' at row 3" % chi.name,
+            "Imported '%s on 2017-06-02: Test Note 4' at row 4" % chi.name,
         ])
         self.assert_urls(run, 'notes/%s')

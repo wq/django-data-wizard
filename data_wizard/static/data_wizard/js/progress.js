@@ -1,13 +1,13 @@
-/*
- * wq.app 1.1.1-dev - wq/progress.js
+/* django-data-wizard 1.2.0 - progress.js
  * Simple AJAX polling for HTML5 <progress> element
- * (c) 2014-2017, S. Andrew Sheppard
+ * (c) 2014-2019, S. Andrew Sheppard
  * https://wq.io/license
  */
 
-define(['./json'], function(json) {
+/* global $ */
 
-// Exported module variable
+(function() {
+
 var progress = {
     'name': 'progress',
     'config': {
@@ -18,10 +18,6 @@ var progress = {
 // Internal setInterval ids
 var _timers = {};
 var _last = {};
-
-progress.init = function(conf) {
-    json.extend(progress.config, conf || {});
-};
 
 // wq/app.js plugin
 progress.run = function($page) {
@@ -77,13 +73,24 @@ progress.fail = function($progress, data) {
     if (progress.config.onFail) {
         progress.config.onFail($progress, data);
     }
+    $('.submit-row').show();
 };
 
 // progress.timer generates a function suitable for setInterval
 // (with $progress and url bound to scope).
 progress.timer = function($progress, url, $status) {
+    var throttle = 0,
+        i = 0;
     return function() {
-        json.get(url).then(function(data) {
+        if (i < throttle) {
+            i += 1;
+            return;
+        } else {
+            i = 0;
+        }
+        fetch(url).then(function(response) {
+            return response.json();
+        }).then(function(data) {
             var done = false;
             if (!data.total) {
                 // Set to "intermediate" state
@@ -92,13 +99,22 @@ progress.timer = function($progress, url, $status) {
 
                 // Fallback for old browsers
                 $progress.html('Loading...');
+
+                throttle++;
             } else {
                 // Set to progress level
                 if (_last[url] && data.current < _last[url]) {
                     // Assume out-of order response; no update
                     /* jshint noempty: false */
+                } else if (_last[url] == data.current) {
+                    // No change since last check; check less often
+                    throttle++;
                 } else {
+                    // Change since last check; check more often
                     _last[url] = data.current;
+                    if (throttle > 0) {
+                        throttle--;
+                    }
                     $progress.attr('value', data.current);
                     $progress.attr('max', data.total);
 
@@ -107,13 +123,25 @@ progress.timer = function($progress, url, $status) {
                 }
 
                 // Check for completion
-                if (data.current == data.total || data.status == "SUCCESS") {
+                if (data.current == data.total) {
                     progress.complete($progress, data);
                     done = true;
                 }
             }
-            if (data.status == "FAILURE") {
+            if (data.status == "SUCCESS" && !done) {
+                progress.complete($progress, data);
+                $progress.attr('value', data.total || 0);
+                $progress.attr('max', data.total || 0);
+                if ($status) {
+                     $status.removeClass('error');
+                }
+                done = true;
+            } else if (data.status == "FAILURE") {
                 $progress.attr('value', 0);
+                $progress.attr('max', data.total || 0);
+                if ($status) {
+                     $status.addClass('error');
+                }
                 progress.fail($progress, data);
             } else if (!done && progress.config.onProgress) {
                 progress.config.onProgress($progress, data);
@@ -121,13 +149,22 @@ progress.timer = function($progress, url, $status) {
             if ((data.error || data.message) && $status) {
                 $status.text(data.error || data.message);
             }
-            if (data.location && progress.app) {
-                progress.app.nav(data.location.substring(1));
+            if (data.location) {
+                window.location.href = data.location;
             }
+        })['catch'](function(err) {
+            $status.text(err).addClass('error');
+            throttle += 1;
         });
     };
 };
 
-return progress;
-
+$(document).ready(function() {
+    progress.run($('body'));
 });
+
+window.data_wizard = {
+    'progress': progress
+};
+
+})();

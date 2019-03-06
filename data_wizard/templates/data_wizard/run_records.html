@@ -1,0 +1,44 @@
+{% extends "data_wizard/base_site.html" %}
+
+{% block content %}
+<h2>Imported Records</h2>
+<ul class="messagelist">
+  <li>Import Complete!</li>
+</ul>
+<table class="mappings">
+  <thead>
+    <tr>
+      <th>Row</th>
+      <th>Record</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if not records %}
+    <tr><td colspan=2>No records imported.</td></tr>
+    {% endif %}
+    {% for record in records %}
+    <tr {% if not record.success %}class="error"{% endif %}>
+      <th>{{record.row}}</th>
+      <td>
+        {% if record.success and record.object_url %}
+        <a href="{{record.object_url}}">
+          {{record.object_label}}
+        </a>
+        {% elif record.success %}
+        {{record.object_label}}
+        {% else %}
+           {% if record.fail_reason %}
+              {{ record.fail_reason }}
+           {% else %}
+              Unknown Error
+           {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="submit-row">
+  {% include "data_wizard/back.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "data_wizard/base_site.html" %}
+
+{% load static %}
+{% block title %}Django Data Wizard{% endblock %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Admin Home</a>
+  &rsaquo;
+  Data Wizard
+</div>
+{% endblock %}
+{% block content_title %}
+<h1>Django Data Wizard</h1>
+{% endblock %}
+{% block content %}
+<table class="mappings">
+  <thead>
+    <th>Run</th>
+    <th>Serializer</th>
+    <th>Records</th>
+    <th>Last Update</th>
+  </thead>
+  <tbody>
+    {% for run in results %}
+    <tr>
+      <td>
+        <a href="{% url 'data_wizard:run-detail' pk=run.id %}">
+          {{run.label}}
+        </td>
+      </td>
+      <td>
+        {{run.serializer_label|default:"-"}}
+      </td>
+      <td>
+        {{run.record_count|default_if_none:"-"}}
+      </td>
+      <td>
+        {{run.last_update|default:"-"}}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

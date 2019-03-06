@@ -2,7 +2,32 @@ import os
 
 SECRET_KEY = '1234'
 
-MIDDLEWARE_CLASSES = tuple()
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
 WITH_WQDB = os.environ.get('WQDB', False)
 if WITH_WQDB:
@@ -16,7 +41,6 @@ else:
 WITH_REVERSION = os.environ.get('REVERSION', False)
 if WITH_REVERSION:
     REVERSION_APPS = (
-        'django.contrib.admin',
         'reversion',
     )
 else:
@@ -25,6 +49,9 @@ else:
 
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
+    'django.contrib.admin',
+    'django.contrib.sessions',
+    'django.contrib.staticfiles',
     'django.contrib.auth',
     'data_wizard',
 ) + WQ_APPS + REVERSION_APPS + (
@@ -56,3 +83,7 @@ if WITH_WQDB:
 NO_THREADING = os.environ.get('NOTHREADING', False)
 if NO_THREADING:
     DATA_WIZARD_BACKEND = 'data_wizard.backends.immediate'
+
+STATIC_URL = "/static/"
+
+DEBUG = True
