@@ -27,6 +27,8 @@ setup(
         'data_wizard',
         'data_wizard.backends',
         'data_wizard.migrations',
+        'data_wizard.sources',
+        'data_wizard.sources.migrations',
     ],
     package_data={
         'data_wizard': [
