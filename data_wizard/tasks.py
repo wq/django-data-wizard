@@ -709,6 +709,7 @@ def _do_import(run, user):
         if 'meta_value' in col:
             save_value(col, col['meta_value'], run_globals)
         elif 'attr_id' in col and not col.get('attr_field'):
+            # FIXME: Drop this in 2.0
             Serializer = run.get_serializer()
             basename = col['field_name'].split('[')[0]
             field = Serializer().get_fields().get(basename)

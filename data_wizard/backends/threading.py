@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import  # FIXME: Drop this in 2.0
 from .base import DataWizardBackend
 from django.core.cache import cache
 import threading

@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function  # FIXME: Drop this in 2.0
 
 from rest_framework.test import APITransactionTestCase
 from rest_framework import status
@@ -239,7 +239,7 @@ class WizardTestCase(APITransactionTestCase):
             self.assertIn(key, res)
         self.assertEqual('SUCCESS', res['status'])
 
-        # Can remove this once we drop older DRF/Django/Python
+        # FIXME: Drop this in 2.0
         for skipped in res['skipped']:
             skipped['reason'] = skipped['reason'].replace(
                 'YYYY[-MM[-DD]]', 'YYYY-MM-DD'
@@ -290,6 +290,7 @@ class WizardTestCase(APITransactionTestCase):
             text = str(record)
             if text.startswith('Failed'):
                 text += ": " + record.fail_reason
+            # FIXME: Drop PY2/DRF<3.9 support in 2.0
             text = (
                 text.replace('[u"', '["')  # Python 2.7
                     .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")  # DRF < 3.9

@@ -1,3 +1,5 @@
+# FIXME: Drop this support in 2.0
+
 try:
     from django.urls import reverse, NoReverseMatch
 except ImportError:
