@@ -26,14 +26,15 @@
         <table class="table-stripe ui-table">
           <thead>
             <th>Column</th>
-            <th colspan="2">Mapping</th>
+            <th>Spreadsheet Value</th>
+            <th>Mapping</th>
           </thead>
           <tbody>
             {{#columns}}
             <tr>
               <th>{{column}}</th>
-              {{#unknown}}
               <td>{{name}}</td>
+              {{#unknown}}
               <td>
                 <select name="rel_{{rel_id}}">
                   <option value="">Select...</option>
@@ -48,7 +49,7 @@
               </td>
               {{/unknown}}
               {{^unknown}}
-              <td colspan=2>{{match}}</td>
+              <td>{{mapping}}</td>
               {{/unknown}}
             </tr>
             {{/columns}}

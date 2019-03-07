@@ -14,6 +14,7 @@ from django.conf import settings
 
 class WizardTestCase(APITransactionTestCase):
     serializer_name = None
+    attr_field = None
     with_wqdb = True
 
     file_url = None
@@ -64,12 +65,17 @@ class WizardTestCase(APITransactionTestCase):
         """
         0. Preregister any necessary identifiers
         """
+        if attr_id:
+            attr_field = self.attr_field
+        else:
+            attr_field = None
         Identifier.objects.create(
             serializer=self.serializer_name,
             name=name,
             field=field,
             value=value,
             attr_id=attr_id,
+            attr_field=attr_field,
             resolved=True,
         )
 
@@ -78,7 +84,7 @@ class WizardTestCase(APITransactionTestCase):
         1. Upload spreadsheet file
         """
         filename = os.path.join(settings.MEDIA_ROOT, filename)
-        with open(filename) as f:
+        with open(filename, 'rb') as f:
             if self.with_wqdb:
                 response = self.client.post(self.file_url, {'file': f})
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)

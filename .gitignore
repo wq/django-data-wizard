@@ -1,6 +1,7 @@
-README.rst
-README-tmp.md
-*.egg*
-__pycache__
 *.pyc
-*.swp
+*.egg-info
+*.egg
+*.sw?
+build
+dist
+data_wizard_test.sqlite3

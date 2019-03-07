@@ -30,12 +30,6 @@ class Registry(object):
                 % (class_name, other_name)
             )
 
-        Meta = getattr(serializer, 'Meta', None)
-        if not Meta or not hasattr(Meta, 'model'):
-            raise ImproperlyConfigured(
-                "%s.Meta is missing a model!" % class_name
-            )
-
         self._serializers[name] = serializer
         self._serializer_names[class_name] = name
 

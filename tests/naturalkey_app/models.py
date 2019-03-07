@@ -26,6 +26,7 @@ class Event(NaturalKeyModel):
 class Note(models.Model):
     event = models.ForeignKey(Event, on_delete=models.PROTECT)
     note = models.TextField()
+    status = models.CharField(max_length=10, null=True, blank=True)
 
     def __str__(self):
         return "%s: %s" % (self.event, self.note)

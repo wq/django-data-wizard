@@ -14,9 +14,10 @@ class FixedTabularInline(admin.TabularInline):
         return False
 
 
-class RangeInline(FixedTabularInline):
+class RangeInline(admin.TabularInline):
     model = Range
-    readonly_fields = [
+    fields = [
+        'identifier',
         'type',
         'header_col',
         'start_col',
@@ -26,6 +27,7 @@ class RangeInline(FixedTabularInline):
         'end_row',
         'count'
     ]
+    extra = 0
 
 
 class RecordInline(FixedTabularInline):
@@ -54,7 +56,15 @@ class RunAdmin(admin.ModelAdmin):
 
 @admin.register(Identifier)
 class IdentifierAdmin(admin.ModelAdmin):
-    list_display = ['__str__', 'type', 'resolved']
+    list_display = [
+        'serializer_label',
+        'type_label',
+        'name',
+        'mapping_label',
+        'resolved',
+    ]
+    list_display_links = ['name', 'mapping_label']
+    list_filter = ['serializer']
 
 
 def start_data_wizard(modeladmin, request, queryset):

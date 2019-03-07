@@ -114,9 +114,9 @@ class SlugTestCase(BaseFKTestCase):
             run,
             expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
-                "Cell value 'Type #1 -> Type #1 (type)' at Rows 1-2, Column 0",
-                "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0",
-                "Cell value 'Type #2 - Alternate Name -> Type #2 (type)'"
+                "Cell value 'Type #1 -> type=Type #1' at Rows 1-2, Column 0",
+                "Cell value 'Type #2 -> type=Type #2' at Row 3, Column 0",
+                "Cell value 'Type #2 - Alternate Name -> type=Type #2'"
                 " at Row 4, Column 0",
             ]
         )
@@ -143,9 +143,9 @@ class SlugTestCase(BaseFKTestCase):
             run,
             expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
-                "Cell value 'Type #1 -> Type #1 (type)' at Rows 1-2, Column 0",
-                "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0",
-                "Cell value 'Type #2 - Alternate Name -> Type #2 (type)'"
+                "Cell value 'Type #1 -> type=Type #1' at Rows 1-2, Column 0",
+                "Cell value 'Type #2 -> type=Type #2' at Row 3, Column 0",
+                "Cell value 'Type #2 - Alternate Name -> type=Type #2'"
                 " at Row 4, Column 0",
             ]
         )
@@ -238,10 +238,10 @@ class SplitTestCase(BaseFKTestCase):
             run,
             expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
-                "Cell value 'Type #1 -> Type #1 (type)'"
+                "Cell value 'Type #1 -> type=Type #1'"
                 " at Rows 1-2, Column 0-1",
-                "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0-1",
-                "Cell value 'Type #2 - Alternate Name -> Type #2 (type)'"
+                "Cell value 'Type #2 -> type=Type #2' at Row 3, Column 0-1",
+                "Cell value 'Type #2 - Alternate Name -> type=Type #2'"
                 " at Row 4, Column 0-1",
             ]
         )
@@ -274,10 +274,10 @@ class SplitTestCase(BaseFKTestCase):
             run,
             expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
             extra_ranges=[
-                "Cell value 'Type #1 -> Type #1 (type)'"
+                "Cell value 'Type #1 -> type=Type #1'"
                 " at Rows 1-2, Column 0-1",
-                "Cell value 'Type #2 -> Type #2 (type)' at Row 3, Column 0-1",
-                "Cell value 'Type #2 - Alternate Name -> Type #2 (type)'"
+                "Cell value 'Type #2 -> type=Type #2' at Row 3, Column 0-1",
+                "Cell value 'Type #2 - Alternate Name -> type=Type #2'"
                 " at Row 4, Column 0-1",
             ]
         )

@@ -9,4 +9,13 @@ class NoteSerializer(NaturalKeyModelSerializer):
         fields = "__all__"
 
 
-registry.register('Note', NoteSerializer)
+class NoteMetaSerializer(NoteSerializer):
+    class Meta(NoteSerializer.Meta):
+        data_wizard = {
+            'header_row': 3,
+            'start_row': 4,
+        }
+
+
+registry.register('Multiple Events with Notes', NoteSerializer)
+registry.register('Single Event with Notes', NoteMetaSerializer)

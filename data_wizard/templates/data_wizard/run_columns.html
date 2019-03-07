@@ -20,14 +20,15 @@
 <table class="mappings">
   <thead>
     <th>Column</th>
-    <th colspan="2">Mapping</th>
+    <th>Spreadsheet Value</th>
+    <th>Mapping</th>
   </thead>
   <tbody>
     {% for col in result.columns %}
     <tr>
       <th>{{col.column}}</th>
-      {% if col.unknown %}
       <td>{{col.name}}</td>
+      {% if col.unknown %}
       <td>
         <select name="rel_{{col.rel_id}}">
           <option value="">Select...</option>
@@ -41,7 +42,7 @@
         </select>
       </td>
       {% else %}
-      <td colspan=2>{{col.match}}</td>
+      <td>{{col.mapping}}</td>
       {% endif %}
     </tr>
     {% endfor %}

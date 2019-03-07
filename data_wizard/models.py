@@ -10,9 +10,6 @@ class Run(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
     )
-    template = models.ForeignKey(
-        'self', null=True, blank=True, on_delete=models.PROTECT
-    )
     record_count = models.IntegerField(null=True, blank=True)
     loader = models.CharField(max_length=255, null=True, blank=True)
     serializer = models.CharField(max_length=255, null=True, blank=True)
@@ -90,21 +87,39 @@ class RunLog(models.Model):
 
 class Identifier(models.Model):
     serializer = models.CharField(max_length=255)
-    name = models.CharField(max_length=255)
-    field = models.CharField(max_length=255, null=True, blank=True)
-    value = models.CharField(max_length=255, null=True, blank=True)
-    attr_id = models.PositiveIntegerField(null=True, blank=True)
+    name = models.CharField(
+        max_length=255,
+        verbose_name='spreadsheet value',
+    )
+    value = models.CharField(
+        max_length=255, null=True, blank=True,
+        verbose_name='mapped value',
+    )
+    field = models.CharField(
+        max_length=255, null=True, blank=True,
+        verbose_name='serializer field',
+    )
+    attr_field = models.CharField(
+        max_length=255, null=True, blank=True,
+        verbose_name='EAV attribute field',
+    )
+    attr_id = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name='EAV attribute id',
+    )
     resolved = models.BooleanField(default=False)
 
     def __str__(self):
-        if self.type == 'meta':
-            return "%s -> %s" % (self.name, self.field)
-        elif self.type == 'attribute':
-            return "%s -> %s (attr=%s)" % (self.name, self.field, self.attr_id)
-        elif self.type == 'instance':
-            return "%s -> %s (%s)" % (self.name, self.value, self.field)
+        if self.mapping_label:
+            return '{name} -> {mapping}'.format(
+                name=self.name,
+                mapping=self.mapping_label
+            )
         else:
-            return "%s: %s" % (self.type.title(), self.name)
+            return "{type}: {name}".format(
+                type=self.type_label,
+                name=self.name
+            )
 
     @property
     def type(self):
@@ -120,6 +135,57 @@ class Identifier(models.Model):
                 return 'unresolved'
             else:
                 return 'unknown'
+
+    @property
+    def type_label(self):
+        if self.type == 'attribute':
+            return 'EAV Column'
+        elif self.type == 'meta':
+            return 'Column/Header'
+        elif self.type == 'instance':
+            return 'FK Value'
+        else:
+            return self.type.title()
+
+    type_label.fget.short_description = 'Type'
+
+    @property
+    def mapping_label(self):
+        if self.type == 'meta':
+            return self.field
+        elif self.type == 'attribute':
+            if '[]' in self.field:
+                prefix, field_name = self.field.split('[]')
+                field_name = field_name.strip('[]')
+            else:
+                prefix = ""
+                field_name = self.field
+            if self.attr_field and '[]' in self.attr_field:
+                attr_prefix, attr_field_name = self.attr_field.split('[]')
+                # assert attr_prefix == prefix
+                attr_field_name = attr_field_name.strip('[]')
+            else:
+                attr_field_name = 'attr'
+            return "{prefix}.{field} ({attr_field}={attr_id})".format(
+                prefix=prefix,
+                field=field_name,
+                attr_field=attr_field_name,
+                attr_id=self.attr_id,
+            )
+        elif self.type == 'instance':
+            return "{field}={value}".format(
+                field=self.field,
+                value=self.value,
+            )
+
+    mapping_label.fget.short_description = 'Mapped To'
+
+    @property
+    def serializer_label(self):
+        if self.serializer:
+            return registry.get_serializer_name(self.serializer)
+
+    serializer_label.fget.short_description = 'Serializer'
 
 
 class Range(models.Model):

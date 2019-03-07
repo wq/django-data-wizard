@@ -61,9 +61,9 @@ class NaturalKeyTestCase(BaseImportTestCase):
 
         # Verify results
         self.check_data(run, extra_ranges=[
-            "Cell value 'Minneapolis -> mpls (event[place][name])'"
+            "Cell value 'Minneapolis -> event[place][name]=mpls'"
             " at Rows 1-2, Column 0",
-            "Cell value 'Chicago -> chi (event[place][name])'"
+            "Cell value 'Chicago -> event[place][name]=chi'"
             " at Rows 3-4, Column 0",
         ])
         self.assert_log(run, [
@@ -109,9 +109,9 @@ class NaturalKeyTestCase(BaseImportTestCase):
 
         # Verify results
         self.check_data(run, extra_ranges=[
-            "Cell value 'Minneapolis -> mpls (event[place][name])'"
+            "Cell value 'Minneapolis -> event[place][name]=mpls'"
             " at Rows 1-2, Column 0",
-            "Cell value 'Chicago -> Chicago (event[place][name])'"
+            "Cell value 'Chicago -> event[place][name]=Chicago'"
             " at Rows 3-4, Column 0",
         ])
         self.assert_log(run, [

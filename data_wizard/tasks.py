@@ -12,6 +12,7 @@ from rest_framework import serializers
 from natural_keys import NaturalKeySerializer
 from html_json_forms import parse_json_form
 import json
+import logging
 
 try:
     import reversion
@@ -95,7 +96,7 @@ def auto_import(run, user):
         'message': "Loading Data...",
         'stage': 'meta',
         'current': 1,
-        'total': 4,
+        'total': 5,
     }
     send('PROGRESS', status)
     run.load_io()
@@ -140,6 +141,12 @@ def get_attribute_field(field):
     for cname, cfield in field.child.get_fields().items():
         if isinstance(cfield, serializers.RelatedField):
             return cname, cfield
+
+
+def compute_attr_field(value_field, attr_name):
+    parts = value_field.split('[')
+    parts[-1] = attr_name + ']'
+    return '['.join(parts)
 
 
 def get_choices(run):
@@ -225,10 +232,11 @@ def get_choices(run):
                     (group_name, qualname, quallabel, is_lookup, lookup_field)
                 )
 
-    load_fields(
-        Serializer(),
-        Serializer.Meta.model._meta.verbose_name.title(),
-    )
+    if hasattr(Serializer, 'Meta') and hasattr(Serializer.Meta, 'model'):
+        root_label = Serializer.Meta.model._meta.verbose_name.title()
+    else:
+        root_label = run.serializer_label
+    load_fields(Serializer(), root_label)
 
     field_choices = sorted(field_choices, key=lambda d: d[1])
 
@@ -325,6 +333,7 @@ def load_columns(run):
         ident = rng.identifier
         info = {
             'match': str(ident),
+            'mapping': ident.mapping_label,
             'rel_id': rng.pk,
             'type': ident.type,
         }
@@ -334,6 +343,7 @@ def load_columns(run):
         elif ident.type == 'attribute':
             info['field_name'] = rng.identifier.field
             info['attr_id'] = rng.identifier.attr_id
+            info['attr_field'] = rng.identifier.attr_field
         else:
             info['value'] = ident.name
 
@@ -350,6 +360,8 @@ def load_columns(run):
             info['meta_value'] = get_range_value(
                 table, rng, rng.start_col, rng.end_col
             )
+            info['colnum'] = rng.start_col
+            info['rownum'] = rng.start_row
         matched.append(info)
     matched.sort(key=lambda info: info.get('colnum', -1))
     return matched
@@ -455,12 +467,15 @@ def update_columns(run, user, post={}):
         if ';' in val:
             field, attr_info = val.split(';')
             attr_name, attr_id = attr_info.split('=')
+            attr_field = compute_attr_field(field, attr_name)
         else:
             field = val
             attr_id = None
+            attr_field = None
 
         ident.field = field
         ident.attr_id = attr_id
+        ident.attr_field = attr_field
         ident.resolved = True
         ident.save()
 
@@ -498,12 +513,25 @@ def parse_row_identifiers(run):
         info['cols'].append(col)
         info['start_col'] = min(info['start_col'], col['colnum'])
         info['end_col'] = max(info['end_col'], col['colnum'])
+
+        if 'meta_value' in col:
+            info['is_meta_value'] = True
+            info['ids'] = {
+                col['meta_value']: {
+                    'count': 1,
+                    'start_row': col['rownum'],
+                    'end_row': col['rownum'],
+                }
+            }
+
         assert(info['start_col'] < 1e10)
         assert(info['end_col'] > -1)
 
     table = run.load_io()
     for i, row in enumerate(table):
         for field_name, info in lookup_fields.items():
+            if 'is_meta_value' in info:
+                continue
             names = [str(row[col['colnum']]) for col in info['cols']]
             name = " ".join(names)
             info['ids'].setdefault(name, {
@@ -680,13 +708,13 @@ def _do_import(run, user):
     for col in matched:
         if 'meta_value' in col:
             save_value(col, col['meta_value'], run_globals)
-        elif 'attr_id' in col:
+        elif 'attr_id' in col and not col.get('attr_field'):
             Serializer = run.get_serializer()
             basename = col['field_name'].split('[')[0]
             field = Serializer().get_fields().get(basename)
             if field:
                 attr_name, attr_field = get_attribute_field(field)
-                run_globals['_attr_field'] = '%s[][%s]' % (
+                col['attr_field'] = '%s[][%s]' % (
                     basename, attr_name
                 )
 
@@ -712,7 +740,7 @@ def _do_import(run, user):
         })
 
         # Create report, capturing any errors
-        obj, error = import_row(run, row, run_globals, matched)
+        obj, error = import_row(run, i, row, run_globals, matched)
         if error:
             success = False
             fail_reason = error
@@ -745,7 +773,7 @@ def _do_import(run, user):
     return status
 
 
-def import_row(run, row, instance_globals, matched):
+def import_row(run, i, row, instance_globals, matched):
     """
     Create actual report instance from parsed values.
     """
@@ -757,7 +785,7 @@ def import_row(run, row, instance_globals, matched):
     }
 
     for col in matched:
-        if 'colnum' in col:
+        if 'colnum' in col and 'meta_value' not in col:
             val = row[col['colnum']]
             save_value(col, val, record)
 
@@ -774,7 +802,6 @@ def import_row(run, row, instance_globals, matched):
                 record[field_name] = ident.value
 
     record.pop('_attr_index', None)
-    record.pop('_attr_field', None)
 
     Serializer = run.get_serializer()
     try:
@@ -787,6 +814,13 @@ def import_row(run, row, instance_globals, matched):
             obj = None
             error = json.dumps(serializer.errors)
     except Exception as e:
+        logging.warning(
+            "{run}: Error In Row {row}".format(
+                run=run,
+                row=i,
+            )
+        )
+        logging.exception(e)
         obj = None
         error = repr(e)
     return obj, error
@@ -816,7 +850,7 @@ def save_attribute_value(col, val, obj):
     This column was identified as an EAV attribute; update nested array with
     the cell value from this row.
     """
-    if '_attr_field' not in obj:
+    if 'attr_field' not in col:
         raise Exception("Unexpected EAV value!")
     if '_attr_index' not in obj:
         obj['_attr_index'] = {
@@ -829,7 +863,7 @@ def save_attribute_value(col, val, obj):
 
     index = obj['_attr_index'][col['attr_id']]
     value_field = col['field_name'].replace('[]', '[%s]' % index)
-    attr_field = obj['_attr_field'].replace('[]', '[%s]' % index)
+    attr_field = col['attr_field'].replace('[]', '[%s]' % index)
     set_value(obj, value_field, val)
     obj[attr_field] = col['attr_id']
 

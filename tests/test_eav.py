@@ -4,6 +4,7 @@ from .eav_app.models import Attribute, Value
 
 class EAVTestCase(BaseImportTestCase):
     serializer_name = 'tests.eav_app.wizard.EAVSerializer'
+    attr_field = 'values[][attribute]'
 
     def setUp(self):
         super(EAVTestCase, self).setUp()
@@ -83,15 +84,15 @@ class EAVTestCase(BaseImportTestCase):
         self.assert_status(run, 2)
         self.assert_ranges(run, [
             "Data Column 'place -> name' at Rows 1-2, Column 0",
-            "Data Column 'temperature -> values[][value] (attr=1)'"
+            "Data Column 'temperature -> values.value (attribute=1)'"
             " at Rows 1-2, Column 1",
-            "Data Column 'temperature units -> values[][units] (attr=1)'"
+            "Data Column 'temperature units -> values.units (attribute=1)'"
             " at Rows 1-2, Column 2",
-            "Data Column 'precipitation -> values[][value] (attr=3)'"
+            "Data Column 'precipitation -> values.value (attribute=3)'"
             " at Rows 1-2, Column 3",
-            "Data Column 'precipitation units -> values[][units] (attr=3)'"
+            "Data Column 'precipitation units -> values.units (attribute=3)'"
             " at Rows 1-2, Column 4",
-            "Data Column 'notes -> values[][value] (attr=2)'"
+            "Data Column 'notes -> values.value (attribute=2)'"
             " at Rows 1-2, Column 5",
         ])
         self.assert_records(run, [
