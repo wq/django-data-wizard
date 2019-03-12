@@ -1,6 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured
 from collections import OrderedDict
-from rest_framework.settings import import_from_string
+from .settings import get_setting, import_from_string
 from django.conf import settings
 
 
@@ -64,17 +64,14 @@ class Registry(object):
         self._loaders[model] = loader_name
 
     def get_loader_name(self, model):
-        default_loader = getattr(
-            settings, 'DATA_WIZARD_LOADER', 'data_wizard.loaders.FileLoader'
-        )
-        return self._loaders.get(model, default_loader)
+        return self._loaders.get(model, get_setting('LOADER'))
 
     def get_loader(self, loader_name):
         reg = self._loader_classes
         if loader_name in reg:
             Loader = reg[loader_name]
         else:
-            Loader = import_from_string(loader_name, 'DATA_WIZARD_LOADER')
+            Loader = import_from_string(loader_name, 'LOADER')
             reg[loader_name] = Loader
         return Loader
 

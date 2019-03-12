@@ -7,6 +7,7 @@ from data_wizard import registry
 import data_wizard
 from .serializers import RunSerializer, RecordSerializer
 from .models import Run
+from .settings import import_setting
 
 
 class PageNumberPagination(PageNumberPagination):
@@ -20,6 +21,9 @@ class RunViewSet(ModelViewSet):
         renderers.TemplateHTMLRenderer,
         renderers.JSONRenderer,
         renderers.BrowsableAPIRenderer,
+    ]
+    permission_classes = [
+        import_setting('PERMISSION'),
     ]
     record_serializer_class = RecordSerializer
     queryset = Run.objects.all()

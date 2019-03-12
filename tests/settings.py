@@ -82,7 +82,9 @@ if WITH_WQDB:
 
 NO_THREADING = os.environ.get('NOTHREADING', False)
 if NO_THREADING:
-    DATA_WIZARD_BACKEND = 'data_wizard.backends.immediate'
+    DATA_WIZARD = {
+        'BACKEND': 'data_wizard.backends.immediate',
+    }
 
 STATIC_URL = "/static/"
 

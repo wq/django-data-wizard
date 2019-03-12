@@ -29,7 +29,11 @@ class WizardTestCase(APITransactionTestCase):
         ContentType.objects.bulk_create(content_types)
 
     def setUp(self):
-        self.user = User.objects.create(username='testuser', is_superuser=True)
+        self.user = User.objects.create(
+            username='testuser',
+            is_staff=True,
+            is_superuser=True,
+        )
         self.client.force_authenticate(user=self.user)
 
     def mkurl(self, run, action):
