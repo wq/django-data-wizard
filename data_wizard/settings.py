@@ -2,7 +2,6 @@ from rest_framework.settings import import_from_string as drf_import
 from django.conf import settings
 
 
-
 DEFAULTS = {
     'BACKEND': 'data_wizard.backends.threading',
     'LOADER': 'data_wizard.loaders.FileLoader',

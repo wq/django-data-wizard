@@ -1,12 +1,6 @@
 from rest_framework import serializers
 from .models import SimpleModel, Type, FKModel
-from data_wizard import registry
-
-
-class SimpleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SimpleModel
-        fields = "__all__"
+import data_wizard
 
 
 class IncompleteSerializer(serializers.ModelSerializer):
@@ -17,12 +11,6 @@ class IncompleteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SimpleModel
-        fields = "__all__"
-
-
-class FKSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FKModel
         fields = "__all__"
 
 
@@ -58,8 +46,8 @@ class NestedSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-registry.register('Simple Model', SimpleSerializer)
-registry.register('Simple Model - Incomplete', IncompleteSerializer)
-registry.register('FK Model', FKSerializer)
-registry.register('FK Model By Name', SlugSerializer)
-registry.register('New Type + FK Model', NestedSerializer)
+data_wizard.register(SimpleModel)
+data_wizard.register('Simple Model - Incomplete', IncompleteSerializer)
+data_wizard.register(FKModel)
+data_wizard.register('FK Model By Name', SlugSerializer)
+data_wizard.register('New Type + FK Model', NestedSerializer)

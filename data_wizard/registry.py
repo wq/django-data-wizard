@@ -1,7 +1,7 @@
 from django.core.exceptions import ImproperlyConfigured
 from collections import OrderedDict
 from .settings import get_setting, import_from_string
-from django.conf import settings
+from django.db import models
 
 
 class Registry(object):
@@ -13,7 +13,17 @@ class Registry(object):
     def get_class_name(self, serializer):
         return "%s.%s" % (serializer.__module__, serializer.__name__)
 
-    def register(self, name, serializer):
+    def register(self, name, serializer=None):
+        if isinstance(name, str):
+            assert serializer
+        elif isinstance(name, type) and issubclass(name, models.Model):
+            model = name
+            name = model._meta.verbose_name.title()
+            if not serializer:
+                serializer = self.create_serializer(model)
+        else:
+            raise Exception("Unexpected registration")
+
         class_name = self.get_class_name(serializer)
         if name in self._serializers:
             other_class = self.get_class_name(self._serializers[name])
@@ -32,6 +42,18 @@ class Registry(object):
 
         self._serializers[name] = serializer
         self._serializer_names[class_name] = name
+
+    def create_serializer(self, model):
+        from natural_keys import NaturalKeyModelSerializer
+        serializer = NaturalKeyModelSerializer.for_model(
+            model,
+            include_fields="__all__",
+        )
+        serializer.__qualname__ = serializer.__name__ = '{}Serializer'.format(
+            model.__name__
+        )
+        serializer.__module__ = 'data_wizard.registry'
+        return serializer
 
     def get_serializers(self):
         serializers = []

@@ -2,7 +2,7 @@ from .base import BaseImportTestCase
 
 
 class SimpleTestCase(BaseImportTestCase):
-    serializer_name = 'tests.data_app.wizard.SimpleSerializer'
+    serializer_name = 'data_wizard.registry.SimpleModelSerializer'
 
     def test_manual(self):
         run = self.upload_file('simplemodel.csv')

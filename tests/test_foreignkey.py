@@ -29,7 +29,7 @@ class BaseFKTestCase(BaseImportTestCase):
 
 
 class ForeignKeyTestCase(BaseFKTestCase):
-    serializer_name = 'tests.data_app.wizard.FKSerializer'
+    serializer_name = 'data_wizard.registry.FKModelSerializer'
 
     def test_manual(self):
         run = self.upload_file('fkid.csv')

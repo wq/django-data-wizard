@@ -1,6 +1,6 @@
-from data_wizard import registry
+import data_wizard
 from .models import FileSource, URLSource
 
 
-registry.set_loader(FileSource, 'data_wizard.loaders.FileLoader')
-registry.set_loader(URLSource, 'data_wizard.loaders.URLLoader')
+data_wizard.set_loader(FileSource, 'data_wizard.loaders.FileLoader')
+data_wizard.set_loader(URLSource, 'data_wizard.loaders.URLLoader')
