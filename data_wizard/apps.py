@@ -12,7 +12,12 @@ class WizardConfig(AppConfig):
         self.module.init_backend()
 
         # FIXME: Drop this check in 2.0
-        if reverse('data_wizard:run-list') == '/':
-            raise ImproperlyConfigured(
-                "data_wizard.urls at /, add 'datawizard/' prefix"
-            )
+        try:
+            base_url = reverse('data_wizard:run-list')
+        except Exception:
+            pass
+        else:
+            if base_url == '/':
+                raise ImproperlyConfigured(
+                    "data_wizard.urls at /, add 'datawizard/' prefix"
+                )
