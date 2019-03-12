@@ -1,4 +1,4 @@
-**Django Data Wizard** is an interactive tool for mapping structured data (e.g. Excel, XML) into a normalized database structure via [wq.io] and the [Django REST Framework].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
+**Django Data Wizard** is an interactive tool for mapping tabular data (e.g. Excel, CSV, XML, JSON) into a normalized database structure via [wq.io] and the [Django REST Framework].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
 
 <img width="33%"
      alt="Column Choices"
@@ -9,8 +9,6 @@
 <img width="33%"
      alt="Imported Records"
      src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/10-records.png">
-
-By default, Django Data Wizard supports any format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.
 
 The Data Wizard supports straightforward one-to-one mappings from spreadsheet columns to database fields, as well as more complex scenarios like [natural keys] and [Entity-Attribute-Value] (or "wide") table mappings.  It was originally developed for use with the [ERAV data model][ERAV] provided by [vera].
 
@@ -27,7 +25,7 @@ The Data Wizard supports straightforward one-to-one mappings from spreadsheet co
 
 # Usage
 
-Django Data Wizard provides a JSON (and HTML) API for specifying a data set to import (by referencing a previously-uploaded file), selecting a serializer, mapping the data columns and identifiers, and (asynchronously) importing the data into the database.
+Django Data Wizard provides a web interface and JSON API for specifying a data set to import (e.g. a previously-uploaded file), selecting a serializer, mapping the data columns and identifiers, and (asynchronously) importing the data into the database.
 
 ## Installation
 
@@ -43,209 +41,65 @@ See <https://github.com/wq/django-data-wizard> to report any issues.
 
 ## Initial Configuration
 
-Within a new or existing Django or wq project, configure the following:
-
- 1. A Data Wizard task backend
- 2. A model for (up)loading source data
- 3. One or more serializers for populating the destination models
- 4. wq/progress.js plugin (if using wq)
-
-
-### Task Backends
-
-As of version 1.1.0, Django Data Wizard **no longer requires** the use of `celery` as a task runner.  Any of the following backends can be configured with via the `DATA_WIZARD_BACKEND` setting:
+Within a new or existing Django project, add `data_wizard` to your `INSTALLED_APPS`:
 
 ```python
 # myproject/settings.py
-
 INSTALLED_APPS = (
    # ...
    'data_wizard',
-   'myapp',
+   'data_wizard.sources',  # Optional
 )
 
-DATA_WIZARD_BACKEND = "data_wizard.backends.threading"  # Default in 1.1.x
-DATA_WIZARD_BACKEND = "data_wizard.backends.immediate"
-DATA_WIZARD_BACKEND = "data_wizard.backends.celery"     # Only choice in 1.0.x
+# This can be omitted to use the defaults
+DATA_WIZARD = {
+    'BACKEND': 'data_wizard.backends.threading',
+    'LOADER': 'data_wizard.loaders.FileLoader',
+    'PERMISSION': 'rest_framework.permissions.IsAdminUser',
+}
 ```
 
-For backwards compatibility with 1.0.x, the default backend reverts to `celery` if you have `CELERY_RESULT_BACKEND` defined in your project settings.  However, it is recommended to explicitly set `DATA_WIZARD_BACKEND`, as this behavior may change in a future major version of Data Wizard.
+If you would like to use the built-in data source tables (`FileSource` and `URLSource`), also include `data_wizard.sources` in your `INSTALLED_APPS`.  Otherwise, you will want to configure one or more [custom data sources (see below)](#custom-data-sources).
 
-#### `data_wizard.backends.threading`
+> Note: In version 1.2.0 and later, Django Data Wizard uses a simple [threading backend](#data_wizard.backends.threading) for executing asynchronous tasks.  The old [celery backend](#data_wizard.backends.celery) can also be used but this is no longer required.
 
-The `threading` backend creates a separate thread for long-running asynchronous tasks (i.e. `auto` and `data`).  The threading backend leverages the Django cache to pass results back to the status API.  As of Django Data Wizard 1.1.0, **this backend is the default** unless you have configured Celery.
 
-#### `data_wizard.backends.immmediate`
-
-The `immediate` backend completes all processing before returning a result to the client, even for the otherwise "asynchronous" tasks (`auto` and `data`).  This backend is suitable for small spreadsheets, or for working around threading issues.  This backend maintains minimal state, and is not recommended for use cases involving large spreadsheets or multiple simultanous import processes.
-
-#### `data_wizard.backends.celery`
-
-The `celery` backend leverages [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.
-**Celery is no longer required to use Django Data Wizard,** unless you would like to use the `celery` backend.  If so, be sure to configure these libraries first or the REST API may not work as expected.  You can use these steps on Ubuntu:
-
-```bash
-# Install redis and celery
-sudo apt-get install redis-server
-pip install celery redis
-```
-
-Once Redis is installed, configure the following files in your project:
-```python
-# myproject/settings.py
-DATA_WIZARD_BACKEND = 'data_wizard.backends.celery'
-CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost:6379/1'
-
-# myproject/celery.py
-from __future__ import absolute_import
-from celery import Celery
-from django.conf import settings
-app = Celery('myproject')
-app.config_from_object('django.conf:settings')
-app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
-
-# myproject/__init__.py
-from .celery import app as celery_app
-```
-
-Finally, run celery with `celery -A myproject`.  You may want to use celery's [daemonization] to keep the process running in the background.  Any time you change your serializer registration, be sure to reload celery in addition to restarting the Django WSGI instance.
-
-> Note that the requirement for an extra daemon means this backend can break more easily after a server restart.  Even worse, you may not notice that the backend is down for several months (e.g. until a user tries to import a spreadsheet).  For this reason, **we recommend using one of the other backends** unless you are already using celery for other background processing tasks.
-
-### Data Loader
-
-To use Data Wizard with the default configuration, your project should provide a Django model with a `FileField` named `file`.  You will want to provide your users with the ability to upload spreadsheets and other files to this model, for example by registering it with [wq.db].  The actual import process can then be triggered after the file is uploaded, for example by adding a form to the detail page ([see below](#new-run)).
+Next, add `"data_wizard.urls"` to your URL configuration.
 
 ```python
-# myapp/models.py
-from django.db import models
 
-class FileModel(models.Model):
-    file = models.FileField(upload_to='spreadsheets')
-    # ...
-```
-
-```python
-# myapp/rest.py
-from wq.db import rest
-from .models import FileModel
-
-rest.router.register_model(
-    FileModel,
-    fields="__all__",
-)
-```
-
-#### Custom FileField Name
-You can use a model with a different `FileField` name by extending `data_wizard.loaders.FileLoader` and setting `DATA_WIZARD_LOADER`:
-
-```python
-# myapp/models.py
-from django.db import models
-
-class FileModel(models.Model):
-    spreadsheet = models.FileField(upload_to='spreadsheets')
-```
-
-```python
-# myapp/loaders.py
-from data_wizard import loaders
-
-class FileLoader(loaders.FileLoader):
-    file_attr = 'spreadsheet'
-```
-
-```python
-# myapp/settings.py
-DATA_WIZARD_LOADER = 'myapp.loaders.FileLoader'
-```
-
-#### Custom Data Source
-You can also customize the loader to load data from a [custom wq.io class].  For example, the [Climata Viewer] uses [climata] classes to load data directly from third-party webservices.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io:
-
-```python
-# myapp/models.py
-from django.db import models
-
-class WebSource(models.Model):
-    url = models.URLField()
-```
-
-```python
-# myapp/loaders.py
-from data_wizard import loaders
-
-class UrlLoader(loaders.BaseLoader):
-    def load_io(self):
-        source = self.run.content_object
-        from wq.io import load_url # or e.g. JsonNetIO
-        return load_url(source.url)
-```
-
-```python
-# myapp/settings.py
-DATA_WIZARD_LOADER = 'myapp.loaders.UrlLoader'
-```
-
-Note that there still should be a custom model to define the parameters for the IO class, even though there is no file being stored.
-
-### Serializer Registration
-
-Data Wizard uses wq.io classes (via the loader) to determine the *source columns* present on the spreadsheet or other data source.  It uses Django REST Framework's [ModelSerializer class] to determine the *destination fields* on the database model.  You can register serializers by creating a `wizard.py` in your app directory (analogous to Django's `admin.py` and wq.db's `rest.py`).  Multiple serializers can be registered with the wizard to support multiple import configurations and destination models.  
-
-```python
-# myapp/wizard.py
-from rest_framework import serializers
-from data_wizard import registry
-from .models import TimeSeries
-
-class TimeSeriesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TimeSeries
-        fields = '__all__'
-
-registry.register("Time Series", TimeSeriesSerializer)
-```
-
-At least one serializer should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
-
-### Progress Bar Support
-
-If you are using the built-in Data Wizard interface for wq, be sure to enable the [wq/progress.js] plugin.
-
-```javascript
-// myapp/main.js
-define(['wq/app', 'wq/progress', ...],
-function(app, progress, ...) {
-    app.use(progress);
-    app.init(config).then(...);
-});
-```
-
-## Run-Time Usage (REST API)
-
-The Data Wizard REST API provides the following capabilities.  If you are using wq.db, the wizard will automatically register itself with the router.  Otherwise, be sure to include `data_wizard.urls` in your URL configuration:
-
-```python
-# with wq.db (automatic)
-# rest.router.register_model(data_wizard.models.Run, ...)
-
-# without wq.db
-from django.conf.urls import include, url
+# myproject/urls.py
+from django.urls import path, include
 
 urlpatterns = [
     # ...
-    url(r'^datawizard/', include('data_wizard.urls')),
+    path('datawizard/', include('data_wizard.urls')),
 ]
 ```
 
-The API is accessible as JSON and as HTML - though the HTML interface is (currently) only accessible when using the Mustache template engine (i.e. with wq.db).
+Finally, register one or more target models with the wizard.  Like the Django admin and `admin.py`, Data Wizard will look for a `wizard.py` file in your app directory:
+
+```
+# myapp/wizard.py
+import data_wizard
+from .models import MyModel
+
+data_wizard.register(MyModel)
+```
+
+If needed, you can use a [custom serializer class](#custom-serializers) to configure how the target model is validated and populated.
+
+Once everything is configured, create a data source in the Django admin, select "Import via data wizard" from the admin actions menu, and navigate through the screens described below.
+
+## API Documentation
+
+Django Data Wizard is implemented as a series of views that can be accessed via the Django admin as well as via a JSON API.
 
 ### New Run
 
 #### `POST /datawizard/`
 
-Create a new instance of the wizard (i.e. a `Run`).  The returned run `id` should be used in all subsequent calls to the API.  Each `Run` is tied to the model containing the actual data via a [generic foreign key].
+Creates a new instance of the wizard (i.e. a `Run`).  If you are using the Django admin integration, this step is executed when you select "Import via Data Wizard" from the admin actions menu.  If you are using the JSON API, the returned run `id` should be used in all subsequent calls to the API.  Each `Run` is tied to the model containing the actual data via a [generic foreign key].
 
 parameter         | description
 ------------------|----------------------------------------
@@ -253,21 +107,6 @@ parameter         | description
 `content_type_id` | The app label and model name of the referenced model (in the format `app_label.modelname`).
 `loader` | (Optional) The class name to use for loading the dataset via wq.io.  The default loader (`data_wizard.loaders.FileLoader`) assumes that the referenced model contains a `FileField` named `file`.
 `serializer` | (Optional) The class name to use for serialization.  This can be left unset to allow the user to select it during the wizard run.
-
-If you are using wq.db, you could allow the user to initiate an import run by adding the following to the detail HTML for your model:
-
-```html
-<!-- filemodel_detail.html -->
-<h1>{{label}}</h1>
-<a href="{{rt}}/media/{{file}}" rel="external">Download File</a>
-
-<form action="{{rt}}/datawizard/" method="post" data-ajax="true" data-wq-json="false">
-  {{>csrf}}
-  <input type="hidden" name="content_type_id" value="myapp.filemodel">
-  <input type="hidden" name="object_id" value="{{id}}">
-  <button type="submit">Import Data from This File</button>
-</form>
-```
 
 ### auto
 #### `POST /datawizard/[id]/auto`
@@ -278,12 +117,12 @@ If you are using wq.db, you could allow the user to initiate an import run by ad
 
 The `auto` task attempts to run the entire data wizard process from beginning to end.  If any input is needed, the import will halt and redirect to the necessary screen.  If no input is needed, the `auto` task is equivalent to starting the `data` task directly.  This is an asynchronous method, and returns a `task_id` to be used with the status API.
 
-The default [run_detail.html] template provides an example form to initiate the `auto` task.
+The [run_detail.html] template provides an example form that initiates the `auto` task.  The `auto` task itself uses the [run_auto.html] template.  
 
 ### status
 #### `GET /datawizard/[id]/status.json?task=[task]`
 
-The `status` API is used to check the status of an asynchronous task (one of `auto` or `data`).  The API is designed to be used in conjunction with the [wq/progress.js] plugin for [wq.app], which can be used as a reference for custom implementations.  Unlike the other methods, this API should always be called as JSON (either as `status.json` or `status?format=json`).  An object of the following format will be returned:
+The `status` API is used to check the status of an asynchronous task (one of `auto` or `data`).  The API is used by the provided [data_wizard/js/progress.js] to update the `<progress>` bar in the [run_auto.html] and [run_data.html] templates.  Unlike the other methods, this API is JSON-only and has no HTML equivalent.  An object of the following format will be returned:
 
 ```js
 {
@@ -386,7 +225,7 @@ parameter            | description
 
 The `data` task starts the actual import process (and is called by `auto` behind the scenes).  Unlike `auto`, calling `data` directly will not cause a redirect to one of the other tasks if any meta input is needed.  Instead, `data` will attempt to import each record as-is, and report any errors that occured due to e.g. missing fields or unmapped foreign keys.
 
-This is an asynchronous method, and returns a `task_id` to be used with the `status` API.  The default [run_data.html] template includes a `<progress>` element for use with [wq/progress.js] and the status task.
+This is an asynchronous method, and returns a `task_id` to be used with the `status` API.  The default [run_data.html] template includes a `<progress>` element for use with status task.
 
 ### records
 #### `GET /datawizard/[id]/records`
@@ -395,7 +234,193 @@ This is an asynchronous method, and returns a `task_id` to be used with the `sta
      alt="Imported Records"
      src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/10-records.png">
 
-The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When used with wq.db, the `records` task includes links to the detail page for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
+The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When possible, the `records` task includes links to the `get_absolute_url()` or to the admin screen for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
+
+## Custom Serializers
+
+Data Wizard uses instances of Django REST Framework's [Serializer class][ModelSerializer] to determine the destination fields on the database model.  Specifically, the default serializer is [NaturalKeyModelSerializer], which is based on [ModelSerializer].
+
+You can override the default serializer by calling `data_wizard.register()` with a name and a serializer class instead of a model class.  Multiple serializers can be registered with the wizard to support multiple import configurations and destination models.  
+
+```python
+# myapp/wizard.py
+from rest_framework import serializers
+import data_wizard
+from .models import TimeSeries
+
+
+class TimeSeriesSerializer(serializers.ModelSerializer):
+    # (custom fields here)
+    class Meta:
+        model = TimeSeries
+        fields = '__all__'
+
+# Use default serializer
+data_wizard.register(TimeSeries)
+
+# Use custom name & serializer
+data_wizard.register("Time Series - Custom Serializer", TimeSeriesSerializer)
+```
+
+At least one serializer or model should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering a serializer.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
+
+## Custom Data Sources
+
+Django Data Wizard uses [wq.io] to determine the source columns present on the spreadsheet or other data source.  Django Data Wizard can use any Django model instance as a source for its data, provided there is a registered loader that can convert the source model into a [wq.io] iterable.  Data Wizard provides two out-of-the the box loaders, [FileLoader] and [URLLoader], that can be used with the provided models in `data_wizard.sources` (`FileSource` and `URLSource`, respectively).
+
+### Extending FileLoader
+The default `FileLoader` can be used with any Django model with a `FileField` named `file`.  You can use a model with a different `FileField` name by creating a subclass of `data_wizard.loaders.FileLoader` and setting it as the loader for your model.
+
+```python
+# myapp/models.py
+from django.db import models
+
+class FileModel(models.Model):
+    spreadsheet = models.FileField(upload_to='spreadsheets')
+```
+
+```python
+# myapp/loaders.py
+from data_wizard import loaders
+
+class FileLoader(loaders.FileLoader):
+    file_attr = 'spreadsheet'
+```
+
+```python
+# myapp/wizard.py
+import data_wizard
+from .models import FileModel
+
+data_wizard.set_loader(FileModel, "myapp.loaders.FileLoader")
+```
+
+You can also set the default loader globally:
+
+```python
+# myapp/settings.py
+DATA_WIZARD = {
+    'LOADER': 'myapp.loaders.FileLoader'
+}
+```
+
+### Custom Loader
+The default loaders support any file format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.  For example, the [Climata Viewer] uses [climata] classes to load data directly from third-party webservices.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io:
+
+```python
+# myapp/models.py
+from django.db import models
+
+class CustomIOSource(models.Model):
+    some_option = models.TextField()
+```
+
+```python
+# myapp/loaders.py
+from data_wizard import loaders
+from .io import CustomIO
+
+class CustomIOLoader(loaders.BaseLoader):
+    def load_io(self):
+        source = self.run.content_object
+        return CustomIO(some_option=source.some_option)
+```
+
+```python
+# myapp/wizard.py
+import data_wizard
+from .models import CustomIOSource
+
+data_wizard.set_loader(CustomIOSource, "myapp.loaders.CustomIOLoader")
+```
+
+
+## Task Backends
+
+As of version 1.1.0, Django Data Wizard **no longer requires** the use of `celery` as a task runner.  Any of the following backends can be configured with via the `BACKEND` setting:
+
+```python
+# myproject/settings.py
+
+DATA_WIZARD = {
+   "BACKEND": "data_wizard.backends.threading"  # Default in 1.1.x
+              "data_wizard.backends.immediate"
+              "data_wizard.backends.celery"     # Only choice in 1.0.x
+}
+```
+
+For backwards compatibility with 1.0.x, the default backend reverts to `celery` if you have `CELERY_RESULT_BACKEND` defined in your project settings.  However, it is recommended to explicitly set `BACKEND`, as this behavior may change in a future major version of Data Wizard.
+
+### `data_wizard.backends.threading`
+
+The `threading` backend creates a separate thread for long-running asynchronous tasks (i.e. `auto` and `data`).  The threading backend leverages the Django cache to pass results back to the status API.  As of Django Data Wizard 1.1.0, **this backend is the default** unless you have configured Celery.
+
+### `data_wizard.backends.immmediate`
+
+The `immediate` backend completes all processing before returning a result to the client, even for the otherwise "asynchronous" tasks (`auto` and `data`).  This backend is suitable for small spreadsheets, or for working around threading issues.  This backend maintains minimal state, and is not recommended for use cases involving large spreadsheets or multiple simultanous import processes.
+
+### `data_wizard.backends.celery`
+
+The `celery` backend leverages [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.
+**Celery is no longer required to use Django Data Wizard,** unless you would like to use the `celery` backend.  If so, be sure to configure these libraries first or the REST API may not work as expected.  You can use these steps on Ubuntu:
+
+```bash
+# Install redis and celery
+sudo apt-get install redis-server
+pip install celery redis
+```
+
+Once Redis is installed, configure the following files in your project:
+```python
+# myproject/settings.py
+DATA_WIZARD {
+    'BACKEND': 'data_wizard.backends.celery'
+}
+CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost:6379/1'
+
+# myproject/celery.py
+from __future__ import absolute_import
+from celery import Celery
+from django.conf import settings
+app = Celery('myproject')
+app.config_from_object('django.conf:settings')
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+# myproject/__init__.py
+from .celery import app as celery_app
+```
+
+Finally, run celery with `celery -A myproject`.  You may want to use celery's [daemonization] to keep the process running in the background.  Any time you change your serializer registration, be sure to reload celery in addition to restarting the Django WSGI instance.
+
+> Note that the requirement for an extra daemon means this backend can break more easily after a server restart.  Even worse, you may not notice that the backend is down for several months (e.g. until a user tries to import a spreadsheet).  For this reason, **we recommend using one of the other backends** unless you are already using celery for other background processing tasks.
+
+## wq Framework integration
+
+The Django Data Wizard has built-in support for integration with the [wq framework].  Configuration is mostly the same, except that you do not need to add `"data_wizard.urls"` to your urls.py as the wizard with register itself with [wq.db] instead.
+
+Data Wizard includes mustache templates for each of the above tasks to integrate with the wq.app UI.  Be sure to enable the [wq/progress.js] plugin for use with the `run_auto.html` and `run_data.html` template.  You could allow the user to initiate an import run by adding the following to the detail HTML for your model:
+
+```html
+<!-- filemodel_detail.html -->
+<h1>{{label}}</h1>
+<a href="{{rt}}/media/{{file}}" rel="external">Download File</a>
+
+<form action="{{rt}}/datawizard/" method="post" data-ajax="true" data-wq-json="false">
+  {{>csrf}}
+  <input type="hidden" name="content_type_id" value="myapp.filemodel">
+  <input type="hidden" name="object_id" value="{{id}}">
+  <button type="submit">Import Data from This File</button>
+</form>
+```
+
+```javascript
+// myapp/main.js
+define(['wq/app', 'wq/progress', ...],
+function(app, progress, ...) {
+    app.use(progress);
+    app.init(config).then(...);
+});
+```
 
 [wq.io]: https://wq.io/wq.io
 [Django REST Framework]: http://www.django-rest-framework.org/
@@ -410,8 +435,12 @@ The `records` task provides a list of imported rows (including errors).  It is r
 [climata]: https://github.com/heigeo/climata
 [wq framework]: https://wq.io/
 [wq.db.rest]: https://wq.io/docs/about-rest
-[ModelSerializer class]: http://www.django-rest-framework.org/api-guide/serializers/#modelserializer
+[ModelSerializer]: http://www.django-rest-framework.org/api-guide/serializers/#modelserializer
+[NaturalKeyModelSerializer]: https://github.com/wq/django-natural-keys#naturalkeymodelserializer
+[FileLoader]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/loaders.py
+[URLLoader]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/loaders.py
 [generic foreign key]: https://docs.djangoproject.com/en/1.11/ref/contrib/contenttypes/
+[data_wizard/js/progress.js]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/static/data_wizard/js/progress.js
 [wq/progress.js]: https://wq.io/docs/progress-js
 [Celery]: http://www.celeryproject.org/
 [Redis]: https://redis.io/
@@ -422,13 +451,13 @@ The `records` task provides a list of imported rows (including errors).  It is r
 [PrimaryKeyRelatedField]: http://www.django-rest-framework.org/api-guide/relations/#primarykeyrelatedfield
 [SlugRelatedField]: http://www.django-rest-framework.org/api-guide/relations/#slugrelatedfield
 
-[run_detail.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_detail.html
-[run_auto.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_auto.html
-[run_serializers.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_serializers.html
-[run_columns.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_columns.html
-[run_ids.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_ids.html
-[run_data.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_data.html
-[run_records.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/mustache/run_records.html
+[run_detail.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_detail.html
+[run_auto.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_auto.html
+[run_serializers.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_serializers.html
+[run_columns.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_columns.html
+[run_ids.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_ids.html
+[run_data.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_data.html
+[run_records.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_records.html
 
 [naturalkey_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/naturalkey_app/wizard.py
 [eav_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/eav_app/wizard.py
