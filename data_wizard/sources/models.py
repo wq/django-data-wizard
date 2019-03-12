@@ -3,7 +3,7 @@ from django.db import models
 
 class FileSource(models.Model):
     name = models.CharField(max_length=255, null=True, blank=True)
-    file = models.FileField()
+    file = models.FileField(upload_to='datawizard/')
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
