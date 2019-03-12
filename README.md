@@ -61,13 +61,12 @@ DATA_WIZARD = {
 
 If you would like to use the built-in data source tables (`FileSource` and `URLSource`), also include `data_wizard.sources` in your `INSTALLED_APPS`.  Otherwise, you will want to configure one or more [custom data sources (see below)](#custom-data-sources).
 
-> Note: In version 1.2.0 and later, Django Data Wizard uses a simple [threading backend](#data_wizard.backends.threading) for executing asynchronous tasks.  The old [celery backend](#data_wizard.backends.celery) can also be used but this is no longer required.
+> Note: In version 1.1.0 and later, Django Data Wizard uses a simple [threading backend](#data_wizardbackendsthreading) for executing asynchronous tasks.  The old [celery backend](#data_wizardbackendscelery) can also be used but this is no longer required.
 
 
 Next, add `"data_wizard.urls"` to your URL configuration.
 
 ```python
-
 # myproject/urls.py
 from django.urls import path, include
 
@@ -79,7 +78,7 @@ urlpatterns = [
 
 Finally, register one or more target models with the wizard.  Like the Django admin and `admin.py`, Data Wizard will look for a `wizard.py` file in your app directory:
 
-```
+```python
 # myapp/wizard.py
 import data_wizard
 from .models import MyModel
@@ -145,7 +144,7 @@ The `status` API is used to check the status of an asynchronous task (one of `au
 
 The potential values for the  `status` field are the same as common [Celery task states], even when not using the `celery` backend.  When running an `auto` task, the result is `SUCCESS` whenever the task ends without errors, even if there is additional input needed to fully complete the run.
 
-The default [run_auto.html] and [run_data.html] templates include a `<progress>` element for use with [wq/progress.js] and the status task.
+The default [run_auto.html] and [run_data.html] templates include a `<progress>` element for use with the status task.
 
 ### serializers
 #### `GET /datawizard/[id]/serializers`
@@ -305,7 +304,7 @@ DATA_WIZARD = {
 ```
 
 ### Custom Loader
-The default loaders support any file format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.  For example, the [Climata Viewer] uses [climata] classes to load data directly from third-party webservices.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io:
+The default loaders support any file format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io:
 
 ```python
 # myapp/models.py
