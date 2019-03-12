@@ -5,12 +5,11 @@ from django.contrib import admin
 
 if settings.WITH_WQDB:
     from wq.db import rest
-    wizard_urls = rest.router.urls
+    wizard_urls = [rest.router.urls]
 else:
-    wizard_urls = 'data_wizard.urls'
+    wizard_urls = [url(r'^datawizard/', include('data_wizard.urls'))]
 
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', include(wizard_urls)),
-]
+] + wizard_urls

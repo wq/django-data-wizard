@@ -3,7 +3,7 @@ from .views import RunViewSet
 
 
 router = routers.SimpleRouter()
-router.register(r'datawizard', RunViewSet)
+router.register(r'', RunViewSet)
 
 app_name = 'data_wizard'
 urlpatterns = router.urls
