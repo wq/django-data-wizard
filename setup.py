@@ -1,4 +1,3 @@
-from os.path import join, dirname
 from setuptools import setup
 
 LONG_DESCRIPTION = """
@@ -23,6 +22,7 @@ setup(
     license='MIT',
     description=LONG_DESCRIPTION.strip(),
     long_description=readme(),
+    long_description_content_type='text/markdown',
     packages=[
         'data_wizard',
         'data_wizard.backends',
