@@ -165,6 +165,8 @@ The default [run_auto.html] and [run_data.html] templates include a `<progress>`
      
 The `serializers` task provides a list of all registered serializers.  This screen is shown by the `auto` task if a serializer was not specified when the `Run` was created.  The default [run_serializers.html] template includes an interface for selecting a registered serializer.  If a serializer is already selected, the template will display the label and a button to (re)start the `auto` task.
 
+<br>
+
 ---
 
 <img align="right" width=320 height=240
@@ -271,6 +273,8 @@ This is an asynchronous method, and returns a `task_id` to be used with the `sta
 
 The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When possible, the `records` task includes links to the `get_absolute_url()` or to the admin screen for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
 
+<br>
+
 ---
 
 <img align="right" width=320 height=240
@@ -282,6 +286,8 @@ The `records` task provides a list of imported rows (including errors).  It is r
 
 Django Data Wizard provides a list view that summarises prior runs and the number of records imported by each.  Incomplete runs can also be restarted from this list.
 
+<br><br>
+
 ---
 
 <img align="right" width=320 height=240
@@ -292,6 +298,8 @@ Django Data Wizard provides a list view that summarises prior runs and the numbe
 #### `GET /admin/data_wizard/identifer/`
 
 As of version 1.1.0, Django Data Wizard identifier mappings can be viewed and edited via the Django Admin.  Runs can also be viewed through the admin - though the Run List above will generally be more useful.
+
+<br>
 
 ## Custom Serializers
 
