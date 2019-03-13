@@ -88,6 +88,10 @@ data_wizard.register(MyModel)
 
 If needed, you can use a [custom serializer class](#custom-serializers) to configure how the target model is validated and populated.
 
+<img align="right" width=320 height=240
+     alt="Select Source & Start Import"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/A2-source-list.png">
+
 Once everything is configured, create a data source in the Django admin, select "Import via data wizard" from the admin actions menu, and navigate through the screens described below.
 
 ## API Documentation
@@ -234,6 +238,24 @@ This is an asynchronous method, and returns a `task_id` to be used with the `sta
      src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/10-records.png">
 
 The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When possible, the `records` task includes links to the `get_absolute_url()` or to the admin screen for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
+
+### Run List
+#### `GET /datawizard/`
+
+<img align="right" width=320 height=240
+     alt="Run List"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/11-run-list.png">
+
+Django Data Wizard provides a list view that summarises prior runs and the number of records imported by each.  Incomplete runs can also be restarted from this list.
+
+### Identifier Admin
+#### `GET /admin/data_wizard/identifer/`
+
+<img align="right" width=320 height=240
+     alt="Identifier Admin"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/A3-identifiers.png">
+
+As of version 1.1.0, Django Data Wizard identifier mappings can be viewed and edited via the Django Admin.  Runs can also be viewed through the admin - though the Run List above will generally be more useful.
 
 ## Custom Serializers
 
