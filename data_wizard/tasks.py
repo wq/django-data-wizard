@@ -806,7 +806,14 @@ def import_row(run, i, row, instance_globals, matched):
 
     Serializer = run.get_serializer()
     try:
-        serializer = Serializer(data=parse_json_form(record))
+        serializer = Serializer(
+            data=parse_json_form(record),
+            context={
+                'data_wizard': {
+                    'run': run,
+                }
+            },
+        )
         if serializer.is_valid():
             with transaction.atomic():
                 obj = serializer.save()
