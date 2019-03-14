@@ -26,6 +26,8 @@ setup(
     packages=[
         'data_wizard',
         'data_wizard.backends',
+        'data_wizard.management',
+        'data_wizard.management.commands',
         'data_wizard.migrations',
         'data_wizard.sources',
         'data_wizard.sources.migrations',

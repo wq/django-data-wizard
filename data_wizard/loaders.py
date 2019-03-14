@@ -1,6 +1,21 @@
 class BaseLoader(object):
+    default_serializer = None
+
     def __init__(self, run):
         self.run = run
+
+    def get_serializer_name(self):
+        return self.default_serializer
+
+    @property
+    def content_object(self):
+        obj = self.run.content_object
+        if not obj:
+            raise Exception("Could not find {} with pk={}".format(
+                self.run.content_type,
+                self.run.object_id,
+            ))
+        return obj
 
     def load_io_options(self):
         serializer = self.run.get_serializer()
@@ -12,8 +27,7 @@ class FileLoader(BaseLoader):
 
     @property
     def file(self):
-        obj = self.run.content_object
-        return getattr(obj, self.file_attr)
+        return getattr(self.content_object, self.file_attr)
 
     def load_io(self):
         from wq.io import load_file
@@ -26,8 +40,7 @@ class URLLoader(BaseLoader):
 
     @property
     def url(self):
-        obj = self.run.content_object
-        return getattr(obj, self.url_attr)
+        return getattr(self.content_object, self.url_attr)
 
     def load_io(self):
         from wq.io import load_url

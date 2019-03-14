@@ -25,7 +25,7 @@ The Data Wizard supports straightforward one-to-one mappings from spreadsheet co
 
 # Usage
 
-Django Data Wizard provides a web interface and JSON API for specifying a data set to import (e.g. a previously-uploaded file), selecting a serializer, mapping the data columns and identifiers, and (asynchronously) importing the data into the database.
+Django Data Wizard provides a [web interface](#api-documentation), [JSON API](#api-documentation), and [CLI](#command-line-interface) for specifying a [data source](#custom-data-sources) to import (e.g. a previously-uploaded file), selecting a [serializer](#custom-serializers), mapping the data [columns](#columns) and [identifiers](#ids), and (asynchronously) importing the [data](#data) into the database.
 
 ## Installation
 
@@ -301,6 +301,23 @@ As of version 1.1.0, Django Data Wizard identifier mappings can be viewed and ed
 
 <br>
 
+## Command-Line Interface
+
+Django Data Wizard provides a single [management command], `runwizard`, that can be used to initiate the `auto` task from the command line.  This can be used to facilitate automated processing, for example as part of a regular cron job.  Note that the CLI does not (currently) support interactively mapping columns and ids, so these should be pre-mapped using the web or JSON API.
+
+Usage:
+
+```bash
+./manage.py runwizard myapp.mymodel 123 \
+    --loader myapp.loaders.customloader \
+    --serializer myapp.serializer.customserializer \
+    --username myusername
+```
+
+The basic usage is similar to the [New Run API](#new-run).  Only a content type and object id are required, while the other arguments will be auto-detected if possible.  In particular, you may want to use [set_loader()][#custom-loader] to predefine the default `loader` and `serializer` for any models you plan to use with the CLI.
+
+The `runwizard` command will create a new `Run` and immediately start the `auto` task.  Errors will be shown on the console.
+
 ## Custom Serializers
 
 Data Wizard uses instances of Django REST Framework's [Serializer class][ModelSerializer] to determine the destination fields on the database model.  Specifically, the default serializer is [NaturalKeyModelSerializer], which is based on [ModelSerializer].
@@ -370,7 +387,9 @@ DATA_WIZARD = {
 ```
 
 ### Custom Loader
-The default loaders support any file format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io:
+The default loaders support any file format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io, as in the example below.
+
+It is likely that you will want to use a specific serializer with your custom loader.  If so, override `default_serializer` or `get_serializer_name()` on the loader.  By default, these return `None`, which requires the user to specify the serializer when creating or executing the `Run`.
 
 ```python
 # myapp/models.py
@@ -386,6 +405,7 @@ from data_wizard import loaders
 from .io import CustomIO
 
 class CustomIOLoader(loaders.BaseLoader):
+    default_serializer = 'mydataapp.wizard.CustomSerializer'
     def load_io(self):
         source = self.run.content_object
         return CustomIO(some_option=source.some_option)
@@ -526,3 +546,4 @@ function(app, progress, ...) {
 
 [naturalkey_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/naturalkey_app/wizard.py
 [eav_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/eav_app/wizard.py
+[management command]: https://docs.djangoproject.com/en/2.1/ref/django-admin/

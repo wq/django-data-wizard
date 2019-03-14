@@ -67,9 +67,12 @@ class RunViewSet(ModelViewSet):
 
     def run_task(self, name, use_async=False, post=None):
         run = self.get_object()
-        user = self.request.user
-        return self.backend.run(
-            name, run.pk, user.pk, use_async, post,
+        return run.run_task(
+            name,
+            use_async=use_async,
+            post=post,
+            backend=self.backend,
+            user=self.request.user,
         )
 
     def retrieve_and_run(self, task_name, use_async=False, post=None):

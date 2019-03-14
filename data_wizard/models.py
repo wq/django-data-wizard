@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
+import data_wizard
 from data_wizard import registry
 from .compat import reverse
 
@@ -32,6 +33,14 @@ class Run(models.Model):
                 type(self.content_object)
             )
 
+        if self.loader and not self.serializer:
+            try:
+                Loader = registry.get_loader(self.loader)
+            except ImportError:
+                pass
+            else:
+                self.serializer = Loader(self).get_serializer_name()
+
         is_new = not self.id
         super(Run, self).save(*args, **kwargs)
         if is_new:
@@ -41,6 +50,16 @@ class Run(models.Model):
         Loader = registry.get_loader(self.loader)
         loader = Loader(self)
         return loader.load_io()
+
+    def run_task(self, name, use_async=False, post=None,
+                 backend=None, user=None):
+        if not backend:
+            backend = data_wizard.backend
+        if not user:
+            user = self.user
+        return backend.run(
+            name, self.pk, user.pk, use_async, post,
+        )
 
     @property
     def serializer_label(self):

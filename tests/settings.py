@@ -59,6 +59,7 @@ INSTALLED_APPS = (
     'tests.data_app',
     'tests.naturalkey_app',
     'tests.eav_app',
+    'tests.source_app',
 )
 
 
