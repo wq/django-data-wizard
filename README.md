@@ -1,4 +1,4 @@
-**Django Data Wizard** is an interactive tool for mapping tabular data (e.g. Excel, CSV, XML, JSON) into a normalized database structure via [wq.io] and the [Django REST Framework].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
+**Django Data Wizard** is an interactive tool for mapping tabular data (e.g. Excel, CSV, XML, JSON) into a normalized database structure via [Django REST Framework] and [wq.io].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
 
 <img width="33%"
      alt="Column Choices"
@@ -318,7 +318,7 @@ Usage:
     --username myusername
 ```
 
-The basic usage is similar to the [New Run API](#new-run).  Only a content type and object id are required, while the other arguments will be auto-detected if possible.  In particular, you may want to use [set_loader()][#custom-loader] to predefine the default `loader` and `serializer` for any models you plan to use with the CLI.
+The basic usage is similar to the [New Run API](#new-run).  Only a content type and object id are required, while the other arguments will be auto-detected if possible.  In particular, you may want to use [set_loader()](#custom-loader) to predefine the default `loader` and `serializer` for any models you plan to use with the CLI.
 
 The `runwizard` command will create a new `Run` and immediately start the `auto` task.  Errors will be shown on the console.
 
@@ -341,7 +341,7 @@ class TimeSeriesSerializer(serializers.ModelSerializer):
         model = TimeSeries
         fields = '__all__'
 
-# Use default serializer
+# Use default name & serializer
 data_wizard.register(TimeSeries)
 
 # Use custom name & serializer
@@ -444,7 +444,7 @@ For backwards compatibility with 1.0.x, the default backend reverts to `celery` 
 
 The `threading` backend creates a separate thread for long-running asynchronous tasks (i.e. `auto` and `data`).  The threading backend leverages the Django cache to pass results back to the status API.  As of Django Data Wizard 1.1.0, **this backend is the default** unless you have configured Celery.
 
-### `data_wizard.backends.immmediate`
+### `data_wizard.backends.immediate`
 
 The `immediate` backend completes all processing before returning a result to the client, even for the otherwise "asynchronous" tasks (`auto` and `data`).  This backend is suitable for small spreadsheets, or for working around threading issues.  This backend maintains minimal state, and is not recommended for use cases involving large spreadsheets or multiple simultanous import processes.
 
