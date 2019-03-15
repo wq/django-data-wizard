@@ -76,6 +76,8 @@ urlpatterns = [
 ]
 ```
 
+> Note: If you are upgrading from 1.0, you will need to update your URLs to add the `datawizard/` prefix as shown above.
+
 Finally, register one or more target models with the wizard.  Like the Django admin and `admin.py`, Data Wizard will look for a `wizard.py` file in your app directory:
 
 ```python
@@ -86,10 +88,6 @@ from .models import MyModel
 data_wizard.register(MyModel)
 ```
 
-<img align="right" width=320 height=240
-     alt="Select Source & Start Import"
-     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/A2-source-list.png">
-
 If needed, you can use a [custom serializer class](#custom-serializers) to configure how the target model is validated and populated.
 
 Once everything is configured, create a data source in the Django admin, select "Import via data wizard" from the admin actions menu, and navigate through the screens described below.
@@ -97,6 +95,12 @@ Once everything is configured, create a data source in the Django admin, select 
 ## API Documentation
 
 Django Data Wizard is implemented as a series of views that can be accessed via the Django admin as well as via a JSON API.
+
+---
+
+<img align="right" width=320 height=240
+     alt="Select Source & Start Import"
+     src="https://raw.githubusercontent.com/wq/django-data-wizard/master/images/A2-source-list.png">
 
 ### New Run
 
