@@ -15,7 +15,7 @@ class CLITestCase(TestCase):
         data = '[{"date": "2019-03-14", "color": "blue", "notes": "Test"}]'
         source = CustomSource.objects.create(json_data=data)
         call_command(
-            'runwizard', 'source_app.customsource', source.pk,
+            'runwizard', 'source_app.customsource', str(source.pk),
             username='testuser',
         )
         instance = SimpleModel.objects.filter(
@@ -30,7 +30,7 @@ class CLITestCase(TestCase):
         source = CustomSource.objects.create(json_data=data)
         with self.assertRaises(CommandError) as e:
             call_command(
-                'runwizard', 'source_app.customsource', source.pk,
+                'runwizard', 'source_app.customsource', str(source.pk),
                 username='testuser',
             )
         self.assertEqual(str(e.exception), "Input Needed for 2 columns")
@@ -51,7 +51,7 @@ class CLITestCase(TestCase):
             resolved=True,
         )
         call_command(
-            'runwizard', 'source_app.customsource', source.pk,
+            'runwizard', 'source_app.customsource', str(source.pk),
             serializer="tests.naturalkey_app.wizard.NoteSerializer",
             username='testuser',
         )
@@ -71,7 +71,7 @@ class CLITestCase(TestCase):
         source = CustomSource.objects.create(json_data=data)
         with self.assertRaises(CommandError) as e:
             call_command(
-                'runwizard', 'source_app.customsource', source.pk,
+                'runwizard', 'source_app.customsource', str(source.pk),
                 serializer="tests.naturalkey_app.wizard.NoteSerializer",
                 username='testuser',
             )
