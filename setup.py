@@ -18,7 +18,7 @@ setup(
     use_scm_version=True,
     author='S. Andrew Sheppard',
     author_email='andrew@wq.io',
-    url='https://wq.io/django-data-wizard',
+    url='https://github.com/wq/django-data-wizard',
     license='MIT',
     description=LONG_DESCRIPTION.strip(),
     long_description=readme(),
