@@ -12,6 +12,8 @@ class Backend(DataWizardBackend):
         return task.task_id
 
     def update_async_status(self, state, meta):
+        if not current_task:
+            return
         current_task.update_state(
             state=state,
             meta=meta,

@@ -8,6 +8,14 @@ import uuid
 CACHE_PREFIX = 'data-wizard-'
 
 
+def is_uuid(task_id):
+    if not task_id:
+        return False
+    if len(task_id) != 36:
+        return False
+    return True
+
+
 class Backend(DataWizardBackend):
     current_state = None
     current_result = None
@@ -24,7 +32,7 @@ class Backend(DataWizardBackend):
 
     def update_async_status(self, state, meta):
         task_id = threading.current_thread().name
-        if not task_id:
+        if not is_uuid(task_id):
             return
         cache.set(CACHE_PREFIX + task_id, {
             'state': state,

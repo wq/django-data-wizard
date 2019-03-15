@@ -33,7 +33,7 @@ class Command(BaseCommand):
         objid = options['object_id']
         try:
             ct.get_object_for_this_type(pk=objid)
-        except ct.model_class().DoesNotExist as e:
+        except ct.model_class().DoesNotExist:
             raise CommandError(
                 "Could not find {} with pk={}".format(ct, objid)
             )
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             user = User.objects.get(**{
                 User.USERNAME_FIELD: username
             })
-        except User.DoesNotExist as e:
+        except User.DoesNotExist:
             raise CommandError("No such user '{}'".format(username))
 
         run = Run.objects.create(
