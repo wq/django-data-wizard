@@ -18,12 +18,16 @@ class BaseLoader(object):
         return obj
 
     def load_io_options(self):
-        serializer = self.run.get_serializer()
-        return getattr(serializer.Meta, 'data_wizard', {})
+        return {
+            key: val
+            for key, val in self.run.get_serializer_options().items()
+            if key in self.valid_options
+        }
 
 
 class FileLoader(BaseLoader):
     file_attr = 'file'
+    valid_options = {'header_row', 'start_row'}
 
     @property
     def file(self):
@@ -37,6 +41,7 @@ class FileLoader(BaseLoader):
 
 class URLLoader(BaseLoader):
     url_attr = 'url'
+    valid_options = {'header_row', 'start_row'}
 
     @property
     def url(self):

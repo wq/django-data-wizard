@@ -62,6 +62,7 @@ class Registry(object):
                 'name': name,
                 'serializer': serializer,
                 'class_name': self.get_class_name(serializer),
+                'options': self.get_serializer_options(name),
             })
         return serializers
 
@@ -75,6 +76,14 @@ class Registry(object):
                 "%s is not a registered serializer!" % name
             )
         return self._serializers[name]
+
+    def get_serializer_options(self, name):
+        serializer = self.get_serializer(name)
+        meta = getattr(serializer, 'Meta', None)
+        if not meta:
+            return {}
+        options = getattr(meta, 'data_wizard', {})
+        return options
 
     def get_choices(self):
         return [

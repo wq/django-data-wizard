@@ -84,10 +84,13 @@ class RunViewSet(ModelViewSet):
     @detail_route()
     def serializers(self, request, *args, **kwargs):
         response = self.retrieve(request, **self.kwargs)
-        response.data['serializer_choices'] = [{
-            'name': s['class_name'],
-            'label': s['name'],
-        } for s in registry.get_serializers()]
+        response.data['serializer_choices'] = [
+            {
+                'name': s['class_name'],
+                'label': s['name'],
+            } for s in registry.get_serializers()
+            if s['options'].get('show_in_list', True)
+        ]
         return response
 
     @detail_route(methods=['post'])

@@ -74,6 +74,12 @@ class Run(models.Model):
         else:
             raise Exception("No serializer specified!")
 
+    def get_serializer_options(self):
+        if self.serializer:
+            return registry.get_serializer_options(self.serializer)
+        else:
+            raise Exception("No serializer specified!")
+
     def already_parsed(self):
         return self.range_set.count()
 

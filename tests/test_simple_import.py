@@ -194,3 +194,21 @@ class IncompleteTestCase(BaseImportTestCase):
             " correct format (YYYY-MM-DD) but it is an invalid date.\"])"
         ])
         self.assert_urls(run, 'simplemodels/%s')
+
+
+class SerializerTestCase(BaseImportTestCase):
+    def test_serializer_list(self):
+        run = self.upload_file('simplemodel.csv', skip_serializer=True)
+        result = self.get_url(run, 'serializers')
+        choices = {
+            row['name']: row['label']
+            for row in result.data['serializer_choices']
+        }
+        self.assertIn(
+            'tests.data_app.wizard.SlugSerializer',
+            choices,
+        )
+        self.assertNotIn(
+            'tests.data_app.wizard.IncompleteSerializer',
+            choices,
+        )

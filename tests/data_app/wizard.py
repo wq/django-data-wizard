@@ -12,6 +12,9 @@ class IncompleteSerializer(serializers.ModelSerializer):
     class Meta:
         model = SimpleModel
         fields = "__all__"
+        data_wizard = {
+            'show_in_list': False,
+        }
 
 
 class SlugSerializer(serializers.ModelSerializer):
