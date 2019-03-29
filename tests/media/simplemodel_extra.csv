@@ -1,0 +1,6 @@
+date,color,notes,extra
+2017-06-01,red,Test Note 1,IGNORE
+2017-06-02,green,Test Note 2,TEST
+2017-06-03,blue,Test Note 3,SKIP
+2017-06-04,orange,Test Note 4,EXTRA
+2017-06-50,red,Test Note 4,PASS

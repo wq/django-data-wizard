@@ -179,7 +179,10 @@ class Identifier(models.Model):
     @property
     def mapping_label(self):
         if self.type == 'meta':
-            return self.field
+            if self.field == '__ignore__':
+                return '(ignored)'
+            else:
+                return self.field
         elif self.type == 'attribute':
             if '[]' in self.field:
                 prefix, field_name = self.field.split('[]')

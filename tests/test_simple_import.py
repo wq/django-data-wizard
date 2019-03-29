@@ -154,6 +154,54 @@ class SimpleTestCase(BaseImportTestCase):
         ])
         self.assert_urls(run, 'simplemodels/%s')
 
+    def test_auto_ignore_extra(self):
+        # Should abort due to unknown column
+        run = self.upload_file('simplemodel_extra.csv')
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+        ])
+
+        # Set column and try again, should work now
+        self.update_columns(run, {
+            'Other': {
+                'extra': '__ignore__',
+            }
+        })
+        self.auto_import(run, expect_input_required=False)
+
+        # Verify results
+        self.assert_status(run, 3)
+        self.assert_ranges(run, [
+            "Data Column 'date -> date' at Rows 1-5, Column 0",
+            "Data Column 'color -> color' at Rows 1-5, Column 1",
+            "Data Column 'notes -> notes' at Rows 1-5, Column 2",
+            "Data Column 'extra -> (ignored)' at Rows 1-5, Column 3",
+        ])
+        self.assert_records(run, [
+            "Imported '2017-06-01: red (Test Note 1)' at row 1",
+            "Imported '2017-06-02: green (Test Note 2)' at row 2",
+            "Imported '2017-06-03: blue (Test Note 3)' at row 3",
+            "Failed at row 4:"
+            ' {"color": ["\\"orange\\" is not a valid choice."]}',
+            "Failed at row 5:"
+            ' {"date": ["Date has wrong format.'
+            ' Use one of these formats instead: YYYY-MM-DD."]}'
+        ])
+        self.assert_urls(run, 'simplemodels/%s')
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'update_columns',
+            'auto_import',
+            'parse_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])
+
 
 class IncompleteTestCase(BaseImportTestCase):
     serializer_name = 'tests.data_app.wizard.IncompleteSerializer'

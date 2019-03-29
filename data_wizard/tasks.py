@@ -238,6 +238,10 @@ def get_choices(run):
         root_label = run.serializer_label
     load_fields(Serializer(), root_label)
 
+    field_choices.add(
+        ('Other', '__ignore__', 'Ignore this Column', False, None)
+    )
+
     field_choices = sorted(field_choices, key=lambda d: d[1])
 
     choices = [{
