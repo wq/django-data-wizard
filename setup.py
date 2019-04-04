@@ -41,6 +41,7 @@ setup(
         ]
     },
     install_requires=[
+        'djangorestframework',
         'wq.io',
         'natural-keys',
         'html-json-forms',

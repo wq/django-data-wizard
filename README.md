@@ -78,7 +78,9 @@ urlpatterns = [
 
 > Note: If you are upgrading from 1.0, you will need to update your URLs to add the `datawizard/` prefix as shown above.
 
-Finally, register one or more target models with the wizard.  Like the Django admin and `admin.py`, Data Wizard will look for a `wizard.py` file in your app directory:
+### Model Registration
+
+In order to use the wizard, you must register one or more target models and/or serializers.  Like the Django admin and `admin.py`, Data Wizard will look for a `wizard.py` file in your app directory:
 
 ```python
 # myapp/wizard.py
@@ -88,7 +90,7 @@ from .models import MyModel
 data_wizard.register(MyModel)
 ```
 
-If needed, you can use a [custom serializer class](#custom-serializers) to configure how the target model is validated and populated.
+The wizard will automatically create a serializer class corresponding to the target model.  If needed, you can also use a [custom serializer class](#custom-serializers) to configure how the target model is validated and populated.
 
 Once everything is configured, create a data source in the Django admin, select "Import via data wizard" from the admin actions menu, and navigate through the screens described below.
 
