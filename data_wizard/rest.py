@@ -4,6 +4,7 @@ from wq.db.rest.views import ModelViewSet
 from wq.db.rest.serializers import ModelSerializer
 from .models import Run
 from data_wizard import views as wizard
+from rest_framework.settings import api_settings
 
 
 # wq.db-compatible serializers
@@ -34,6 +35,7 @@ class RecordSerializer(wizard.RecordSerializer):
 
 class RunViewSet(ModelViewSet, wizard.RunViewSet):
     record_serializer_class = RecordSerializer
+    pagination_class = api_settings.DEFAULT_PAGINATION_CLASS
 
 
 # wq.db router registration
