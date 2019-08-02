@@ -3,7 +3,7 @@ from wq.db import rest
 from wq.db.rest.views import ModelViewSet
 from wq.db.rest.serializers import ModelSerializer
 from .models import Run
-from data_wizard import views as wizard
+from . import views as wizard
 from rest_framework.settings import api_settings
 
 

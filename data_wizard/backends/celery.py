@@ -33,5 +33,5 @@ class Backend(DataWizardBackend):
 
 @task
 def run_async(task_name, run_id, user_id, post):
-    from data_wizard import backend
+    from .. import backend
     return backend.try_run_sync(task_name, run_id, user_id, post)

@@ -1,16 +1,16 @@
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import pagination
 from rest_framework import renderers
-from data_wizard import registry
-import data_wizard
+from . import registry
+from . import backend as data_wizard_backend
 from .serializers import RunSerializer, RecordSerializer
 from .models import Run
 from .settings import import_setting
 
 
-class PageNumberPagination(PageNumberPagination):
+class PageNumberPagination(pagination.PageNumberPagination):
     page_size = 50
 
 
@@ -30,7 +30,7 @@ class RunViewSet(ModelViewSet):
 
     @property
     def backend(self):
-        return data_wizard.backend
+        return data_wizard_backend
 
     @property
     def template_name(self):

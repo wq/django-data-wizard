@@ -2,8 +2,8 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
-import data_wizard
-from data_wizard import registry
+from . import registry
+from . import backend as data_wizard_backend
 from .compat import reverse
 
 
@@ -55,8 +55,10 @@ class Run(models.Model):
 
     def run_task(self, name, use_async=False, post=None,
                  backend=None, user=None):
+        print(data_wizard_backend)
+        print("iuuhdd2")
         if not backend:
-            backend = data_wizard.backend
+            backend = data_wizard_backend
         if not user:
             user = self.user
         return backend.run(

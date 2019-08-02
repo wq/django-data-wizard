@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
-from data_wizard.models import Run
+from ...models import Run
 from django.contrib.contenttypes.models import ContentType
-from data_wizard.serializers import ContentTypeIdField
-from data_wizard.backends import immediate
+from ...serializers import ContentTypeIdField
+from ...backends import immediate
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 import getpass

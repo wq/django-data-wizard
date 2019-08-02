@@ -3,8 +3,8 @@ from django.conf import settings
 
 
 DEFAULTS = {
-    'BACKEND': 'data_wizard.backends.threading',
-    'LOADER': 'data_wizard.loaders.FileLoader',
+    'BACKEND': '.backends.threading',
+    'LOADER': '.loaders.FileLoader',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
 }
 
@@ -12,7 +12,7 @@ DEFAULTS = {
 def get_setting(name):
     #  FIXME: Drop this in 2.0
     if getattr(settings, 'CELERY_RESULT_BACKEND', None):
-        DEFAULTS['BACKEND'] = 'data_wizard.backends.celery'
+        DEFAULTS['BACKEND'] = '.backends.celery'
 
     wizard_settings = getattr(settings, 'DATA_WIZARD', {})
     return wizard_settings.get(name, DEFAULTS[name])

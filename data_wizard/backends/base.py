@@ -1,4 +1,4 @@
-from data_wizard import tasks
+from .. import tasks
 import logging
 
 

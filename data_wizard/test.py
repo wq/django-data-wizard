@@ -8,7 +8,7 @@ from time import sleep
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.core.files import File
-from data_wizard.models import Run, Identifier
+from .models import Run, Identifier
 from django.conf import settings
 
 

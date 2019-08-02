@@ -1,6 +1,6 @@
-import data_wizard
+from . import set_loader
 from .models import FileSource, URLSource
 
 
-data_wizard.set_loader(FileSource, 'data_wizard.loaders.FileLoader')
-data_wizard.set_loader(URLSource, 'data_wizard.loaders.URLLoader')
+set_loader(FileSource, '.loaders.FileLoader')
+set_loader(URLSource, '.loaders.URLLoader')
