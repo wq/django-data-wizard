@@ -26,7 +26,7 @@
       <td>
         <a href="{% url 'data_wizard:run-detail' pk=run.id %}">
           {{run.label}}
-        </td>
+        </a>
       </td>
       <td>
         {{run.serializer_label|default:"-"}}
