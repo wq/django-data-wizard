@@ -55,8 +55,6 @@ class Run(models.Model):
 
     def run_task(self, name, use_async=False, post=None,
                  backend=None, user=None):
-        print(data_wizard_backend)
-        print("iuuhdd2")
         if not backend:
             backend = data_wizard_backend
         if not user:
