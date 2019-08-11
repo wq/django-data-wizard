@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from .models import Run, RunLog, Identifier, Range, Record
 from .compat import reverse
 from django.http import HttpResponseRedirect
+from django.utils.translation import ugettext_lazy as _
 
 
 class FixedTabularInline(admin.TabularInline):
@@ -69,12 +70,12 @@ class IdentifierAdmin(admin.ModelAdmin):
 
 def start_data_wizard(modeladmin, request, queryset):
     if queryset.count() != 1:
-        modeladmin.message_user(
-            request,
-            'Select a single row to start data wizard.',
-            level=messages.ERROR,
-        )
-        return
+            modeladmin.message_user(
+                request,
+                'Select a single row to start data wizard.',
+                level=messages.ERROR,
+            )
+            return
     instance = queryset.first()
     if isinstance(instance, Run):
         run = instance
@@ -90,6 +91,15 @@ def start_data_wizard(modeladmin, request, queryset):
     )
 
 
-start_data_wizard.short_description = "Import via data wizard"
+start_data_wizard.short_description = _("Import via data wizard")
 
-admin.site.add_action(start_data_wizard, 'data_wizard')
+
+class ImportActionMixin(object):
+    """
+    Mixin with import functionality implemented as an admin action.
+    """
+    actions = [start_data_wizard]
+
+
+class ImportActionModelAdmin(ImportActionMixin, admin.ModelAdmin):
+    pass

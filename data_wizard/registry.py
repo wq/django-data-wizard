@@ -52,7 +52,7 @@ class Registry(object):
         serializer.__qualname__ = serializer.__name__ = '{}Serializer'.format(
             model.__name__
         )
-        serializer.__module__ = '.registry'
+        serializer.__module__ = 'data_wizard.registry'
         return serializer
 
     def get_serializers(self):

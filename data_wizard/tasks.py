@@ -700,7 +700,7 @@ def _do_import(run, user):
     matched = get_columns(run)
 
     # Set global defaults for metadata values
-    if not user.is_authenticated:
+    if user and not user.is_authenticated:
         user = None
 
     run_globals = {

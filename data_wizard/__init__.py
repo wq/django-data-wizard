@@ -31,3 +31,6 @@ def register(*args, **kwargs):
 
 def set_loader(*args, **kwargs):
     registry.set_loader(*args, **kwargs)
+
+
+default_app_config = 'data_wizard.apps.WizardConfig'

@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class SourcesConfig(AppConfig):
-    name = '.sources'
+    name = 'data_wizard.sources'
     verbose_name = 'Data Wizard - Sources'

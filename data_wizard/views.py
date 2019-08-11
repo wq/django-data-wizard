@@ -1,3 +1,4 @@
+from django.urls import reverse
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
@@ -55,11 +56,8 @@ class RunViewSet(ModelViewSet):
         if not action and status == 'SUCCESS':
             action = 'records'
         if action:
-            url = '/datawizard/{pk}/{action}'.format(
-                pk=self.get_object().pk,
-                action=action,
-            )
-            result['location'] = url
+            result['location'] = reverse('data_wizard:run-'+action,
+                                         kwargs={'pk': self.get_object().pk})
         elif status == 'FAILURE' and not result.get('error'):
             result['error'] = "Unknown Error"
         result['status'] = status
@@ -72,7 +70,7 @@ class RunViewSet(ModelViewSet):
             use_async=use_async,
             post=post,
             backend=self.backend,
-            user=self.request.user,
+            user=self.request.user
         )
 
     def retrieve_and_run(self, task_name, use_async=False, post=None):
