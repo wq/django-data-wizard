@@ -70,12 +70,12 @@ class IdentifierAdmin(admin.ModelAdmin):
 
 def start_data_wizard(modeladmin, request, queryset):
     if queryset.count() != 1:
-            modeladmin.message_user(
-                request,
-                'Select a single row to start data wizard.',
-                level=messages.ERROR,
-            )
-            return
+        modeladmin.message_user(
+            request,
+            'Select a single row to start data wizard.',
+            level=messages.ERROR,
+        )
+        return
     instance = queryset.first()
     if isinstance(instance, Run):
         run = instance
