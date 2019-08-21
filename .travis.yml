@@ -69,16 +69,16 @@ matrix:
     - python: "3.7"
       name: "Python 3.7 + wq.db"
       env:
-        - WQDB="wq.db==1.1.2"
+        - WQDB="wq.db==1.1.4"
     - python: "3.7"
       name: "Python 3.7 + wq.db + reversion"
       env:
-        - WQDB="wq.db==1.1.2"
+        - WQDB="wq.db==1.1.4"
         - REVERSION="django-reversion"
     - python: "3.7"
       name: "Python 3.7 + wq.db + reversion + celery"
       env:
-        - WQDB="wq.db==1.1.2"
+        - WQDB="wq.db==1.1.4"
         - REVERSION="django-reversion"
         - CELERY="celery==4.3.0rc1"
         - REDIS="redis"
