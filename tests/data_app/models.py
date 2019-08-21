@@ -38,3 +38,14 @@ class FKModel(models.Model):
             self.type,
             self.notes,
         )
+
+
+class Address(models.Model):
+    city = models.CharField(max_length=50)
+    postal_code = models.CharField(max_length=10)
+
+    def __str__(self):
+        return "%s %s" % (
+            self.city,
+            self.postal_code,
+        )

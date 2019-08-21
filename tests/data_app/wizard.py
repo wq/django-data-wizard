@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SimpleModel, Type, FKModel
+from .models import SimpleModel, Type, FKModel, Address
 import data_wizard
 
 
@@ -49,8 +49,25 @@ class NestedSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class NumericCharField(serializers.CharField):
+    def to_internal_value(self, data):
+        if isinstance(data, float):
+            data = int(data)
+        return str(data)
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    postal_code = NumericCharField()
+
+    class Meta:
+        model = Address
+        fields = "__all__"
+
+
 data_wizard.register(SimpleModel)
 data_wizard.register('Simple Model - Incomplete', IncompleteSerializer)
 data_wizard.register(FKModel)
 data_wizard.register('FK Model By Name', SlugSerializer)
 data_wizard.register('New Type + FK Model', NestedSerializer)
+data_wizard.register(Address)
+data_wizard.register('Address with Zip Code', AddressSerializer)
