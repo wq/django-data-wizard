@@ -3,18 +3,18 @@ python: 3.7
 dist: xenial
 env:
   global:
-    - DRF="djangorestframework==3.9.1"
-    - DJANGO="django==2.1.7"
+    - DRF="djangorestframework==3.10.2"
+    - DJANGO="django==2.2.4"
     - WQIO="wq.io==1.1.0"
 matrix:
   include:
-    - name: "Defaults (Python 3.7, Django 2.1, DRF 3.9)"
+    - name: "Defaults (Python 3.7, Django 2.2, DRF 3.10)"
     - name: "+ immediate"
       env:
         - NOTHREADING="1"
     - name: "+ celery"
       env:
-        - CELERY="celery==4.3.0rc1"
+        - CELERY="celery==4.3.0"
         - REDIS="redis"
     - name: "+ wq.db"
       env:
@@ -23,48 +23,29 @@ matrix:
       env:
         - WQDB="wq.db==1.1.4"
         - REVERSION="django-reversion"
-    - name: "+ wq.db + reversion + celery"
-      env:
-        - WQDB="wq.db==1.1.4"
-        - REVERSION="django-reversion"
-        - CELERY="celery==4.3.0rc1"
-        - REDIS="redis"
     - name: "Python 3.6"
       python: "3.6"
     - name: "Python 3.5"
       python: "3.5"
+    - name: "Django 2.1"
+      env:
+        - DJANGO="django==2.1.11"
     - name: "Django 1.11"
       env:
-        - DJANGO="django==1.11.20"
-    - name: "Django 1.11 + celery"
+        - DJANGO="django==1.11.23"
+    - name: "DRF 3.9"
       env:
-        - DJANGO="django==1.11.20"
-        - CELERY="celery==4.3.0rc1"
-        - REDIS="redis"
-    - name: "Python 3.5, Django 1.8, DRF 3.6"
-      python: "3.5"
-      env:
-        - DJANGO="django==1.8.19"
-        - DRF="djangorestframework==3.6.4"
-    - name: "Python 3.4, Django 2.0"
+        - DRF="djangorestframework==3.9.4"
+    - name: "Python 3.4, Django 1.11, DRF 3.9"
       python: "3.4"
       env:
-        - DJANGO="django==2.0.13"
-    - name: "Python 2.7, Django 1.11"
+        - DJANGO="django==1.11.23"
+        - DRF="djangorestframework==3.9.4"
+    - name: "Python 2.7, Django 1.11, DRF 3.9"
       python: "2.7"
       env:
-        - DJANGO="django==1.11.20"
-    - name: "Python 2.7, Django 1.11 + celery"
-      python: "2.7"
-      env:
-        - DJANGO="django==1.11.20"
-        - CELERY="celery==4.3.0rc1"
-        - REDIS="redis"
-    - name: "Python 2.7, Django 1.8, DRF 3.6"
-      python: "2.7"
-      env:
-        - DJANGO="django==1.8.19"
-        - DRF="djangorestframework==3.6.4"
+        - DJANGO="django==1.11.23"
+        - DRF="djangorestframework==3.9.4"
     - name: "Python 2.7, Django 1.8, DRF 3.6 + celery"
       python: "2.7"
       env:
