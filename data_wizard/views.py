@@ -1,6 +1,5 @@
-from .compat import reverse
+from .compat import reverse, action
 from rest_framework.response import Response
-from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import pagination
 from rest_framework import renderers
@@ -47,7 +46,7 @@ class RunViewSet(ModelViewSet):
         else:
             return super(RunViewSet, self).get_renderers()
 
-    @detail_route()
+    @action(detail=True)
     def status(self, request, *args, **kwargs):
         task_id = request.GET.get('task', None)
         result = self.backend.get_async_status(task_id)
@@ -84,7 +83,7 @@ class RunViewSet(ModelViewSet):
         response.data.update(result)
         return response
 
-    @detail_route()
+    @action(detail=True)
     def serializers(self, request, *args, **kwargs):
         response = self.retrieve(request, **self.kwargs)
         response.data['serializer_choices'] = [
@@ -96,7 +95,7 @@ class RunViewSet(ModelViewSet):
         ]
         return response
 
-    @detail_route(methods=['post'])
+    @action(detail=True, methods=['post'])
     def updateserializer(self, request, *args, **kwargs):
         run = self.get_object()
         self.action = 'serializers'
@@ -107,11 +106,11 @@ class RunViewSet(ModelViewSet):
             run.add_event('update_serializer')
         return self.serializers(request)
 
-    @detail_route()
+    @action(detail=True)
     def columns(self, request, *args, **kwargs):
         return self.retrieve_and_run('read_columns')
 
-    @detail_route(methods=['post'])
+    @action(detail=True, methods=['post'])
     def updatecolumns(self, request, *args, **kwargs):
         response = self.retrieve_and_run('read_columns')
         self.action = 'columns'
@@ -119,11 +118,11 @@ class RunViewSet(ModelViewSet):
         response.data.update(result)
         return response
 
-    @detail_route()
+    @action(detail=True)
     def ids(self, request, *args, **kwargs):
         return self.retrieve_and_run('read_row_identifiers')
 
-    @detail_route(methods=['post'])
+    @action(detail=True, methods=['post'])
     def updateids(self, request, *args, **kwargs):
         response = self.retrieve_and_run('read_row_identifiers')
         self.action = 'ids'
@@ -131,18 +130,18 @@ class RunViewSet(ModelViewSet):
         response.data.update(result)
         return response
 
-    @detail_route(methods=['post'])
+    @action(detail=True, methods=['post'])
     def data(self, request, *args, **kwargs):
         return self.retrieve_and_run('import_data', use_async=True)
 
-    @detail_route(methods=['post', 'get'])
+    @action(detail=True, methods=['post', 'get'])
     def auto(self, request, *args, **kwargs):
         if request.method == 'GET':
             self.action = 'retrieve'
             return self.retrieve(request, **kwargs)
         return self.retrieve_and_run('auto_import', use_async=True)
 
-    @detail_route()
+    @action(detail=True)
     def records(self, request, *args, **kwargs):
         response = self.retrieve(self.request, **kwargs)
         response.data['records'] = self.record_serializer_class(
