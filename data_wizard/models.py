@@ -258,7 +258,7 @@ class Range(models.Model):
         elif self.end_col is not None:
             col = "Column %s-%s" % (self.start_col, self.end_col)
         else:
-            row = "Column %s onward" % (self.start_col,)
+            col = "Column %s onward" % (self.start_col,)
         header = ""
         if self.type == "list" and self.header_row != self.start_row - 1:
             header = " (header starts in Row %s)" % self.header_row
