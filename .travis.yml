@@ -1,4 +1,5 @@
 language: python
+python: 3.7
 dist: xenial
 env:
   global:
@@ -7,83 +8,71 @@ env:
     - WQIO="wq.io==1.1.0"
 matrix:
   include:
-    - python: "2.7"
-      name: "Python 2.7 (Django 1.8)"
+    - name: "Defaults (Python 3.7, Django 2.1, DRF 3.9)"
+    - name: "+ immediate"
+      env:
+        - NOTHREADING="1"
+    - name: "+ celery"
+      env:
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
+    - name: "+ wq.db"
+      env:
+        - WQDB="wq.db==1.1.4"
+    - name: "+ wq.db + reversion"
+      env:
+        - WQDB="wq.db==1.1.4"
+        - REVERSION="django-reversion"
+    - name: "+ wq.db + reversion + celery"
+      env:
+        - WQDB="wq.db==1.1.4"
+        - REVERSION="django-reversion"
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
+    - name: "Python 3.6"
+      python: "3.6"
+    - name: "Python 3.5"
+      python: "3.5"
+    - name: "Django 1.11"
+      env:
+        - DJANGO="django==1.11.20"
+    - name: "Django 1.11 + celery"
+      env:
+        - DJANGO="django==1.11.20"
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
+    - name: "Python 3.5, Django 1.8, DRF 3.6"
+      python: "3.5"
       env:
         - DJANGO="django==1.8.19"
         - DRF="djangorestframework==3.6.4"
-    - python: "2.7"
-      name: "Python 2.7 (Django 1.8) + celery"
+    - name: "Python 3.4, Django 2.0"
+      python: "3.4"
+      env:
+        - DJANGO="django==2.0.13"
+    - name: "Python 2.7, Django 1.11"
+      python: "2.7"
+      env:
+        - DJANGO="django==1.11.20"
+    - name: "Python 2.7, Django 1.11 + celery"
+      python: "2.7"
+      env:
+        - DJANGO="django==1.11.20"
+        - CELERY="celery==4.3.0rc1"
+        - REDIS="redis"
+    - name: "Python 2.7, Django 1.8, DRF 3.6"
+      python: "2.7"
+      env:
+        - DJANGO="django==1.8.19"
+        - DRF="djangorestframework==3.6.4"
+    - name: "Python 2.7, Django 1.8, DRF 3.6 + celery"
+      python: "2.7"
       env:
         - DJANGO="django==1.8.19"
         - DRF="djangorestframework==3.6.4"
         - CELERY="celery==4.2.1"
         - REDIS="redis"
-    - python: "3.5"
-      name: "Python 3.5 (Django 1.8)"
-      env:
-        - DJANGO="django==1.8.19"
-        - DRF="djangorestframework==3.6.4"
-    - python: "2.7"
-      name: "Python 2.7 (Django 1.11)"
-      env:
-        - DJANGO="django==1.11.20"
-    - python: "2.7"
-      name: "Python 2.7 (Django 1.11) + celery"
-      env:
-        - DJANGO="django==1.11.20"
-        - CELERY="celery==4.3.0rc1"
-        - REDIS="redis"
-    - python: "3.7"
-      name: "Python 3.7 (Django 1.11)"
-      env:
-        - DJANGO="django==1.11.20"
-    - python: "3.7"
-      name: "Python 3.7 (Django 1.11) + celery"
-      env:
-        - DJANGO="django==1.11.20"
-        - CELERY="celery==4.3.0rc1"
-        - REDIS="redis"
-    - python: "3.4"
-      name: "Python 3.4"
-      env:
-        - DJANGO="django==2.0.13"
-    - python: "3.5"
-      name: "Python 3.5"
-      env: []
-    - python: "3.6"
-      name: "Python 3.6"
-      env: []
-    - python: "3.7"
-      name: "Python 3.7"
-      env: []
-    - python: "3.7"
-      name: "Python 3.7 + immediate"
-      env:
-        - NOTHREADING="1"
-    - python: "3.7"
-      name: "Python 3.7 + celery"
-      env:
-        - CELERY="celery==4.3.0rc1"
-        - REDIS="redis"
-    - python: "3.7"
-      name: "Python 3.7 + wq.db"
-      env:
-        - WQDB="wq.db==1.1.4"
-    - python: "3.7"
-      name: "Python 3.7 + wq.db + reversion"
-      env:
-        - WQDB="wq.db==1.1.4"
-        - REVERSION="django-reversion"
-    - python: "3.7"
-      name: "Python 3.7 + wq.db + reversion + celery"
-      env:
-        - WQDB="wq.db==1.1.4"
-        - REVERSION="django-reversion"
-        - CELERY="celery==4.3.0rc1"
-        - REDIS="redis"
-    - python: "3.7"
-      name: "Code Lint"
+    - name: "Code Lint"
       env:
         - LINT="flake8"
 install:
