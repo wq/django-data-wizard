@@ -36,6 +36,7 @@ class RecordSerializer(wizard.RecordSerializer):
 class RunViewSet(ModelViewSet, wizard.RunViewSet):
     record_serializer_class = RecordSerializer
     pagination_class = api_settings.DEFAULT_PAGINATION_CLASS
+    _namespace = 'wq'
 
 
 # wq.db router registration

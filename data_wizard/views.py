@@ -1,4 +1,4 @@
-from django.urls import reverse
+from .compat import reverse
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet
@@ -56,12 +56,17 @@ class RunViewSet(ModelViewSet):
         if not action and status == 'SUCCESS':
             action = 'records'
         if action:
-            result['location'] = reverse('data_wizard:run-'+action,
-                                         kwargs={'pk': self.get_object().pk})
+            result['location'] = self.get_action_url(action)
         elif status == 'FAILURE' and not result.get('error'):
             result['error'] = "Unknown Error"
         result['status'] = status
         return Response(result)
+
+    _namespace = 'data_wizard'
+
+    def get_action_url(self, action):
+        name = self._namespace + ':run-' + action
+        return reverse(name, kwargs={'pk': self.get_object().pk})
 
     def run_task(self, name, use_async=False, post=None):
         run = self.get_object()
