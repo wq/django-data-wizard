@@ -382,7 +382,21 @@ from .models import FileModel
 
 data_wizard.set_loader(FileModel, "myapp.loaders.FileLoader")
 ```
+You have to add a custom Admin model to add the Import action in the admin panel for your model.
 
+```python
+# myapp/admin.py
+from django.contrib import admin
+from data_wizard.admin import ImportActionModelAdmin
+
+from .models import FileModel
+
+
+@admin.register(FileModel)
+class FileModelAdmin(ImportActionModelAdmin):
+    pass
+```
+    
 You can also set the default loader globally:
 
 ```python
