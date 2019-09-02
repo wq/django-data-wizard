@@ -343,6 +343,13 @@ class TimeSeriesSerializer(serializers.ModelSerializer):
         model = TimeSeries
         fields = '__all__'
 
+        # Optional - see options below
+        data_wizard = {
+            'header_row': 0,
+            'start_row': 1,
+            'show_in_list': True,
+        }
+
 # Use default name & serializer
 data_wizard.register(TimeSeries)
 
@@ -351,6 +358,16 @@ data_wizard.register("Time Series - Custom Serializer", TimeSeriesSerializer)
 ```
 
 At least one serializer or model should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering a serializer.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
+
+### Serializer Options
+
+Data Wizard also supports custom configuration by setting a `data_wizard` attribute on the `Meta` class of the serializer.  The following options are supported.
+
+name | default | notes
+--|--|--
+`header_row` | 0 | Specifies the first row of the spreadsheet that contains column headers.  If this is greater than 0, the space above the column headers will be scanned for anything that looks like a one-off "global" value intended to be applied to every row in the imported data.
+`start_row` | 1 | The first row of data.  If this is greater than `header_row + 1`, the column headers will be assumed to span multiple rows.  A common case is when parameter hames are on the first row and units are on the second.
+`show_in_list` | `True` | **New in 1.2**.  If set to `False`, the serializer will be available through the API but not listed in the wizard views.  This is useful if you have a serializer that should only be used during fully automated workflows.
 
 ## Custom Data Sources
 
@@ -382,7 +399,17 @@ from .models import FileModel
 
 data_wizard.set_loader(FileModel, "myapp.loaders.FileLoader")
 ```
-You have to add a custom Admin model to add the Import action in the admin panel for your model.
+
+If you have a generic loader that can work with multiple source models, you can also set the default loader globally:
+
+```python
+# myapp/settings.py
+DATA_WIZARD = {
+    'LOADER': 'myapp.loaders.FileLoader'
+}
+```
+
+As of Django Data Wizard 1.2, you should register a custom `ModelAdmin` class to add the Import action in the admin panel for your model.
 
 ```python
 # myapp/admin.py
@@ -397,15 +424,6 @@ class FileModelAdmin(ImportActionModelAdmin):
     pass
 ```
     
-You can also set the default loader globally:
-
-```python
-# myapp/settings.py
-DATA_WIZARD = {
-    'LOADER': 'myapp.loaders.FileLoader'
-}
-```
-
 ### Custom Loader
 The default loaders support any file format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io, as in the example below.
 
