@@ -366,7 +366,7 @@ Data Wizard also supports custom configuration by setting a `data_wizard` attrib
 name | default | notes
 --|--|--
 `header_row` | 0 | Specifies the first row of the spreadsheet that contains column headers.  If this is greater than 0, the space above the column headers will be scanned for anything that looks like a one-off "global" value intended to be applied to every row in the imported data.
-`start_row` | 1 | The first row of data.  If this is greater than `header_row + 1`, the column headers will be assumed to span multiple rows.  A common case is when parameter hames are on the first row and units are on the second.
+`start_row` | 1 | The first row of data.  If this is greater than `header_row + 1`, the column headers will be assumed to span multiple rows.  A common case is when parameter names are on the first row and units are on the second.
 `show_in_list` | `True` | **New in 1.2**.  If set to `False`, the serializer will be available through the API but not listed in the wizard views.  This is useful if you have a serializer that should only be used during fully automated workflows.
 
 ## Custom Data Sources
@@ -519,7 +519,7 @@ Finally, run celery with `celery -A myproject`.  You may want to use celery's [d
 
 ## wq Framework integration
 
-The Django Data Wizard has built-in support for integration with the [wq framework].  Configuration is mostly the same, except that you do not need to add `"data_wizard.urls"` to your urls.py as the wizard with register itself with [wq.db] instead.
+The Django Data Wizard has built-in support for integration with the [wq framework].  Configuration is mostly the same, except that you do not need to add `"data_wizard.urls"` to your urls.py as the wizard will register itself with [wq.db] instead.
 
 Data Wizard includes mustache templates for each of the above tasks to integrate with the wq.app UI.  Be sure to enable the [wq/progress.js] plugin for use with the `run_auto.html` and `run_data.html` template.  You could allow the user to initiate an import run by adding the following to the detail HTML for your model:
 
