@@ -25,7 +25,25 @@ The Data Wizard supports straightforward one-to-one mappings from spreadsheet co
 
 # Usage
 
-Django Data Wizard provides a [web interface](#api-documentation), [JSON API](#api-documentation), and [CLI](#command-line-interface) for specifying a [data source](#custom-data-sources) to import (e.g. a previously-uploaded file), selecting a [serializer](#custom-serializers), mapping the data [columns](#columns) and [identifiers](#ids), and (asynchronously) importing the [data](#data) into the database.
+Django Data Wizard provides a [web interface](#api-documentation), [JSON API](#api-documentation), and [CLI](#command-line-interface) for specifying a [data source](#custom-data-sources) to import (e.g. a previously-uploaded file), selecting a [serializer](#custom-serializers), mapping the data [columns](#columns) and [identifiers](#ids), and (asynchronously) importing the [data](#data) into any target model in the database.
+
+Data Wizard is designed to allow users to iteratively refine their data import flow.  For example, decisions made during an initial data import are preserved for future imports of files with the same structure.  The included [data model](#data-model) makes this workflow possible. 
+
+### Table Of Contents
+ 
+ 1. **Getting Started**
+    * [Installation](#installation)
+    * [Initial Configuration](#initial-configuration)
+    * [**Target Model Registration (required)**](#target-model-registration)
+ 2. **API Documentation**
+    * [Run API & Admin Screens](#api-documentation)
+    * [Data Model](#data-model)
+    * [Command-Line Interface](#command-line-interface)
+ 3. **Advanced Customization**
+    * [Custom Serializers](#custom-serializers)
+    * [Custom Data Sources](#custom-data-sources)
+    * [Task Backends](#task-backends)
+    * [wq Framework Integration](#wq-framework-integration)
 
 ## Installation
 
@@ -78,9 +96,11 @@ urlpatterns = [
 
 > Note: If you are upgrading from 1.0, you will need to update your URLs to add the `datawizard/` prefix as shown above.
 
-### Model Registration
+### Target Model Registration
 
-In order to use the wizard, you must register one or more target models and/or serializers.  Like the Django admin and `admin.py`, Data Wizard will look for a `wizard.py` file in your app directory:
+In order to use the wizard, you **must** register one or more target models and/or serializers.  Target model registration helps the wizard know where to put the data it finds in each row of the source spreadsheet.  (Source model registration is optional as long as you are using the provided `data_wizard.sources` app.)
+
+The registration API is modeled after the  Django admin and `admin.py`.  Specifically, Data Wizard will look for a `wizard.py` file in your app directory, which should have the following structure:
 
 ```python
 # myapp/wizard.py
@@ -90,9 +110,9 @@ from .models import MyModel
 data_wizard.register(MyModel)
 ```
 
-The wizard will automatically create a serializer class corresponding to the target model.  If needed, you can also use a [custom serializer class](#custom-serializers) to configure how the target model is validated and populated.
+Internally, the wizard will automatically create a Django REST Framework serializer class corresponding to the target model.  If needed, you can also specify a [custom serializer class](#custom-serializers) to configure how the target model is validated and populated.
 
-Once everything is configured, create a data source in the Django admin, select "Import via data wizard" from the admin actions menu, and navigate through the screens described below.
+Once everything is configured, upload a source file in the Django admin, select "Import via data wizard" from the admin actions menu, and navigate through the screens described below.
 
 ## API Documentation
 
@@ -108,7 +128,7 @@ Django Data Wizard is implemented as a series of views that can be accessed via 
 
 #### `POST /datawizard/`
 
-Creates a new instance of the wizard (i.e. a `Run`).  If you are using the Django admin integration, this step is executed when you select "Import via Data Wizard" from the admin actions menu.  If you are using the JSON API, the returned run `id` should be used in all subsequent calls to the API.  Each `Run` is tied to the model containing the actual data via a [generic foreign key].
+Creates a new instance of the wizard (i.e. a `Run`).  If you are using the Django admin integration, this step is executed when you select "Import via Data Wizard" from the admin actions menu.  If you are using the JSON API, the returned run `id` should be used in all subsequent calls to the API.  Each `Run` is tied to the model containing the actual source data via a [generic foreign key].
 
 parameter         | description
 ------------------|----------------------------------------
@@ -277,7 +297,7 @@ This is an asynchronous method, and returns a `task_id` to be used with the `sta
 ### records
 #### `GET /datawizard/[id]/records`
 
-The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  When possible, the `records` task includes links to the `get_absolute_url()` or to the admin screen for each newly imported record.  The default [run_records.html] template includes an interface for displaying the record details.
+The `records` task provides a list of imported rows (including errors).  It is redirected to by the `auto` and `data` tasks upon completion.  Successfully imported `Record` instances will have a [generic foreign key] pointing to the target model.  The `records` task will include links to the `get_absolute_url()` or admin screen for each newly imported target model instance.  The default [run_records.html] template includes an interface for displaying the record details.
 
 <br>
 
@@ -307,6 +327,23 @@ As of version 1.1.0, Django Data Wizard identifier mappings can be viewed and ed
 
 <br>
 
+## Data Model
+
+Django Data Wizard provides a number of Django models that help track the import process, and preserve data mapping decisions for future reuse.  While a *source* model is required, your *target* data model(s) generally do not to be changed in any way to support Data Wizard integration.
+
+step | description | model
+-----|-------------|--------
+0 | Upload **source** file | Create `FileSource` (or custom source model)
+1 | Start data wizard run | Create `Run`
+2 | Select serializer (& target model) | Update `Run`
+3 | Map columns to database field names | One `Identifier` per column, if needed
+4 | Map cell values to natural keys | One `Identifier` per unique value
+5 | Import data into **target** model | One `Record` + one target model instance per row
+
+The `Run` model includes a [generic foreign key] pointing to the source model (e.g. `FileSource`.)  Each row in the source spreadsheet will be mapped to a `Record`.  If the row was successfully imported, a new instance of the target data model will be created, and the `Record` will have a generic foreign key pointing to it.  The `Identifier` model contains no foreign keys, since identifier mappings are reused for subsequent imports.  Instead, a separate `Range` model tracks the location(s) (rows/columns) of each `Identifier` in each `Run`.
+
+Note that the above workflow just describes the most common use case.  You can create [custom serializers](#custom-serializers) that update more than one target data model per spreadsheet row.  And you can specify [custom data sources](#custom-data-sources) that might not be a spreadsheet or even a file.
+
 ## Command-Line Interface
 
 Django Data Wizard provides a single [management command], `runwizard`, that can be used to initiate the `auto` task from the command line.  This can be used to facilitate automated processing, for example as part of a regular cron job.  Note that the CLI does not (currently) support interactively mapping columns and ids, so these should be pre-mapped using the web or JSON API.
@@ -326,9 +363,9 @@ The `runwizard` command will create a new `Run` and immediately start the `auto`
 
 ## Custom Serializers
 
-Data Wizard uses instances of Django REST Framework's [Serializer class][ModelSerializer] to determine the destination fields on the database model.  Specifically, the default serializer is [NaturalKeyModelSerializer], which is based on [ModelSerializer].
+Data Wizard uses instances of Django REST Framework's [Serializer class][ModelSerializer] to determine the destination fields on the target model.  Specifically, the default serializer is [NaturalKeyModelSerializer], which is based on [ModelSerializer].
 
-You can override the default serializer by calling `data_wizard.register()` with a name and a serializer class instead of a model class.  Multiple serializers can be registered with the wizard to support multiple import configurations and destination models.  
+You can override the default serializer by calling `data_wizard.register()` with a name and a serializer class instead of a model class.  Multiple serializers can be registered with the wizard to support multiple import configurations and target models.  
 
 ```python
 # myapp/wizard.py
@@ -360,6 +397,8 @@ data_wizard.register("Time Series - Custom Serializer", TimeSeriesSerializer)
 At least one serializer or model should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering a serializer.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
 
 ### Serializer Options
+
+In general, custom serializers have all the capabilities of regular [Django REST Framework serializers][ModelSerializer], including custom validation rules and the ability to populate multiple target models.  While the `request` context is not available, information about the run (including the user) can be retrieved through the `data_wizard` context instead.
 
 Data Wizard also supports custom configuration by setting a `data_wizard` attribute on the `Meta` class of the serializer.  The following options are supported.
 
