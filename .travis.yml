@@ -5,7 +5,7 @@ env:
   global:
     - DRF="djangorestframework==3.10.2"
     - DJANGO="django==2.2.4"
-    - WQIO="wq.io==1.1.0"
+    - ITERTABLE="itertable==2.0.0b1"
 matrix:
   include:
     - name: "Defaults (Python 3.7, Django 2.2, DRF 3.10)"
@@ -57,7 +57,7 @@ matrix:
       env:
         - LINT="flake8"
 install:
- - pip install $DJANGO $CELERY $REDIS $DRF $WQIO $WQDB $REVERSION $LINT
+ - pip install $DJANGO $CELERY $REDIS $DRF $ITERTABLE $WQDB $REVERSION $LINT
  - pip install .
 script:
  - ./runtests.sh

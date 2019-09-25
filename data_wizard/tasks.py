@@ -77,7 +77,7 @@ def lookuprun(fn):
 def auto_import(run, user):
     """
     Walk through all the steps necessary to interpret and import data from an
-    IO.  Meant to be called asynchronously.  Automatically suspends import if
+    Iter.  Meant to be called asynchronously.  Automatically suspends import if
     any additional input is needed from the user.
     """
     send = send_progress(auto_import, run)
@@ -91,7 +91,7 @@ def auto_import(run, user):
         send('SUCCESS', result)
         return result
 
-    # Preload IO to catch any load errors early
+    # Preload Iter to catch any load errors early
     status = {
         'message': "Loading Data...",
         'stage': 'meta',
@@ -99,7 +99,7 @@ def auto_import(run, user):
         'total': 5,
     }
     send('PROGRESS', status)
-    run.load_io()
+    run.load_iter()
 
     # Parse columns
     status.update(
@@ -330,7 +330,7 @@ def get_lookup_columns(run):
 
 
 def load_columns(run):
-    table = run.load_io()
+    table = run.load_iter()
     cols = list(table.field_map.keys())
     matched = []
     for rng in run.range_set.exclude(type='data'):
@@ -384,7 +384,7 @@ def get_range_value(table, rng, scol, ecol):
 
 def parse_columns(run):
     run.add_event('parse_columns')
-    table = run.load_io()
+    table = run.load_iter()
     if table.tabular:
         for r in table.extra_data:
             row = table.extra_data[r]
@@ -531,7 +531,7 @@ def parse_row_identifiers(run):
         assert(info['start_col'] < 1e10)
         assert(info['end_col'] > -1)
 
-    table = run.load_io()
+    table = run.load_iter()
     for i, row in enumerate(table):
         for field_name, info in lookup_fields.items():
             if 'is_meta_value' in info:
@@ -674,7 +674,7 @@ def update_row_identifiers(run, user, post={}):
 @lookuprun
 def import_data(run, user):
     """
-    Import all parseable data from the dataset instance's IO class.
+    Import all parseable data from the dataset instance's Iter class.
     """
     result = do_import(run, user)
     return result
@@ -696,7 +696,7 @@ def _do_import(run, user):
     run.add_event('do_import')
 
     # (Re-)Load data and column information
-    table = run.load_io()
+    table = run.load_iter()
     matched = get_columns(run)
 
     # Set global defaults for metadata values

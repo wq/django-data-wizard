@@ -17,7 +17,7 @@ class BaseLoader(object):
             ))
         return obj
 
-    def load_io_options(self):
+    def load_iter_options(self):
         return {
             key: val
             for key, val in self.run.get_serializer_options().items()
@@ -33,9 +33,9 @@ class FileLoader(BaseLoader):
     def file(self):
         return getattr(self.content_object, self.file_attr)
 
-    def load_io(self):
-        from wq.io import load_file
-        options = self.load_io_options()
+    def load_iter(self):
+        from itertable import load_file
+        options = self.load_iter_options()
         return load_file(self.file.path, options=options)
 
 
@@ -47,7 +47,7 @@ class URLLoader(BaseLoader):
     def url(self):
         return getattr(self.content_object, self.url_attr)
 
-    def load_io(self):
-        from wq.io import load_url
-        options = self.load_io_options()
+    def load_iter(self):
+        from itertable import load_url
+        options = self.load_iter_options()
         return load_url(self.url, options=options)

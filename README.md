@@ -1,4 +1,4 @@
-**Django Data Wizard** is an interactive tool for mapping tabular data (e.g. Excel, CSV, XML, JSON) into a normalized database structure via [Django REST Framework] and [wq.io].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
+**Django Data Wizard** is an interactive tool for mapping tabular data (e.g. Excel, CSV, XML, JSON) into a normalized database structure via [Django REST Framework] and [IterTable].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
 
 <img width="33%"
      alt="Column Choices"
@@ -14,7 +14,7 @@ The Data Wizard supports straightforward one-to-one mappings from spreadsheet co
 
 [![Latest PyPI Release](https://img.shields.io/pypi/v/data-wizard.svg)](https://pypi.org/project/data-wizard)
 [![Release Notes](https://img.shields.io/github/release/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/releases)
-[![License](https://img.shields.io/pypi/l/data-wizard.svg)](https://wq.io/license)
+[![License](https://img.shields.io/pypi/l/data-wizard.svg)](https://github.com/wq/django-data-wizard/blob/master/LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/network)
 [![GitHub Issues](https://img.shields.io/github/issues/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/issues)
@@ -134,7 +134,7 @@ parameter         | description
 ------------------|----------------------------------------
 `object_id` | The primary key of the *source* model instance containing the data to be imported.
 `content_type_id` | The *source* model's app label and model name (in the format `app_label.modelname`).
-`loader` | (Optional) The class name to use for loading the source dataset via wq.io.  The default loader (`data_wizard.loaders.FileLoader`) assumes that the source model contains a `FileField` named `file`.
+`loader` | (Optional) The class name to use for loading the source dataset via [IterTable].  The default loader (`data_wizard.loaders.FileLoader`) assumes that the source model contains a `FileField` named `file`.
 `serializer` | (Optional) The serializer class to use when populating the *target* model.  This can be left unset to allow the user to select the target during the wizard run.
 
 ---
@@ -412,7 +412,7 @@ name | default | notes
 
 ## Custom Data Sources
 
-Django Data Wizard uses [wq.io] to determine the source columns present on the spreadsheet or other data source.  Django Data Wizard can use any Django model instance as a source for its data, provided there is a registered loader that can convert the source model into a [wq.io] iterable.  Data Wizard provides two out-of-the the box loaders, [FileLoader] and [URLLoader], that can be used with the provided models in `data_wizard.sources` (`FileSource` and `URLSource`, respectively).
+Django Data Wizard uses [IterTable] to determine the source columns present on the spreadsheet or other data source.  Django Data Wizard can use any Django model instance as a source for its data, provided there is a registered loader that can convert the source model into a [Iter class][IterTable].  Data Wizard provides two out-of-the the box loaders, [FileLoader] and [URLLoader], that can be used with the provided models in `data_wizard.sources` (`FileSource` and `URLSource`, respectively).
 
 ### Extending FileLoader
 The default `FileLoader` can be used with any Django model with a `FileField` named `file`.  You can use a model with a different `FileField` name by creating a subclass of `data_wizard.loaders.FileLoader` and setting it as the loader for your model.
@@ -466,7 +466,7 @@ class FileModelAdmin(ImportActionModelAdmin):
 ```
     
 ### Custom Loader
-The default loaders support any file format supported by [wq.io] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom wq.io class] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s wq.io-based web service client.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_io()` function that returns the data from wq.io, as in the example below.
+The default loaders support any file format supported by [IterTable] (Excel, CSV, JSON, and XML).  Additional formats can be integrating by creating a [custom IterTable class][custom-iter] and then registering it with the wizard.  For example, the [Climata Viewer] uses Django Data Wizard to import data from [climata]'s IterTable-based web service client.  To do this, extend `data_wizard.loaders.BaseLoader` with a custom `load_iter()` function that returns the data from IterTable, as in the example below.
 
 It is likely that you will want to use a specific serializer with your custom loader.  If so, override `default_serializer` or `get_serializer_name()` on the loader.  By default, these return `None`, which requires the user to specify the serializer when creating or executing the `Run`.
 
@@ -474,28 +474,28 @@ It is likely that you will want to use a specific serializer with your custom lo
 # myapp/models.py
 from django.db import models
 
-class CustomIOSource(models.Model):
+class CustomIterSource(models.Model):
     some_option = models.TextField()
 ```
 
 ```python
 # myapp/loaders.py
 from data_wizard import loaders
-from .io import CustomIO
+from .iter import CustomIter
 
-class CustomIOLoader(loaders.BaseLoader):
+class CustomIterLoader(loaders.BaseLoader):
     default_serializer = 'mydataapp.wizard.CustomSerializer'
-    def load_io(self):
+    def load_iter(self):
         source = self.run.content_object
-        return CustomIO(some_option=source.some_option)
+        return CustomIter(some_option=source.some_option)
 ```
 
 ```python
 # myapp/wizard.py
 import data_wizard
-from .models import CustomIOSource
+from .models import CustomIterSource
 
-data_wizard.set_loader(CustomIOSource, "myapp.loaders.CustomIOLoader")
+data_wizard.set_loader(CustomIterSource, "myapp.loaders.CustomIterLoader")
 ```
 
 
@@ -586,7 +586,7 @@ function(app, progress, ...) {
 });
 ```
 
-[wq.io]: https://wq.io/wq.io
+[IterTable]: https://github.com/wq/itertable
 [Django REST Framework]: http://www.django-rest-framework.org/
 [natural keys]: https://github.com/wq/django-natural-keys
 [Entity-Attribute-Value]: https://wq.io/docs/eav-vs-relational
@@ -594,7 +594,7 @@ function(app, progress, ...) {
 [vera]: https://wq.io/vera
 
 [wq.db]: https://wq.io/wq.db
-[custom wq.io class]: https://wq.io/docs/custom-io
+[custom-iter]: https://github.com/wq/itertable/blob/master/docs/about.md
 [Climata Viewer]: https://github.com/heigeo/climata-viewer
 [climata]: https://github.com/heigeo/climata
 [wq framework]: https://wq.io/

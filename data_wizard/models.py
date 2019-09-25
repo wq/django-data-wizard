@@ -46,12 +46,12 @@ class Run(models.Model):
         if is_new:
             self.add_event('created')
 
-    def load_io(self):
-        if not hasattr(self, '_io_data'):
+    def load_iter(self):
+        if not hasattr(self, '_iter_data'):
             Loader = registry.get_loader(self.loader)
             loader = Loader(self)
-            self._io_data = loader.load_io()
-        return self._io_data
+            self._iter_data = loader.load_iter()
+        return self._iter_data
 
     def run_task(self, name, use_async=False, post=None,
                  backend=None, user=None):

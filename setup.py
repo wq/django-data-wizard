@@ -42,7 +42,7 @@ setup(
     },
     install_requires=[
         'djangorestframework',
-        'wq.io',
+        'itertable',
         'natural-keys',
         'html-json-forms',
         'python-dateutil'
