@@ -300,6 +300,19 @@ class WizardTestCase(APITransactionTestCase):
                     .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")  # DRF < 3.9
                     .replace(',)', ')')  # Python < 3.7
             )
+            if 'ValidationError(["\'' in text:
+                # Django < 3.0
+                text = (
+                    text.replace("'", "__QUOTE__")
+                        .replace('"', "'")
+                        .replace("__QUOTE__", '"')
+                )
+            elif 'ValidationError' in text:
+                # Django 3.0+
+                text = (
+                     text.replace(u'\u201c', '"')
+                         .replace(u'\u201d', '"')
+                )
             return text
 
         records = [

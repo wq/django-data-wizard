@@ -238,8 +238,8 @@ class IncompleteTestCase(BaseImportTestCase):
             "Imported '2017-06-03: blue (Test Note 3)' at row 3",
             # SQLite ignores varchar field size
             "Imported '2017-06-04: orange (Test Note 4)' at row 4",
-            "Failed at row 5: ValidationError([\"'2017-06-50' value has the"
-            " correct format (YYYY-MM-DD) but it is an invalid date.\"])"
+            "Failed at row 5: ValidationError(['\"2017-06-50\" value has the"
+            " correct format (YYYY-MM-DD) but it is an invalid date.'])"
         ])
         self.assert_urls(run, 'simplemodels/%s')
 

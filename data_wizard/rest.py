@@ -9,8 +9,13 @@ from rest_framework.settings import api_settings
 
 # wq.db-compatible serializers
 class CurrentUserDefault(serializers.CurrentUserDefault):
-    def __call__(self):
-        user = super(CurrentUserDefault, self).__call__()
+    def __call__(self, serializer=None):
+        if getattr(self, 'requires_context', None):
+            # DRF 3.11+
+            user = super(CurrentUserDefault, self).__call__(serializer)
+        else:
+            # DRF 3.10 and earlier
+            user = super(CurrentUserDefault, self).__call__()
         return user.pk
 
 
