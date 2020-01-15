@@ -18,10 +18,10 @@ matrix:
         - REDIS="redis"
     - name: "+ wq.db"
       env:
-        - WQDB="git+https://github.com/wq/wq.db.git#egg=wq.db"
+        - WQDB="wq.db==1.2.0"
     - name: "+ wq.db + reversion"
       env:
-        - WQDB="git+https://github.com/wq/wq.db.git#egg=wq.db"
+        - WQDB="wq.db==1.2.0"
         - REVERSION="django-reversion"
     - name: "Python 3.7"
       python: "3.7"
