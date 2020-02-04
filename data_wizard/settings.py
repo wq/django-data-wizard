@@ -5,6 +5,7 @@ from django.conf import settings
 DEFAULTS = {
     'BACKEND': 'data_wizard.backends.threading',
     'LOADER': 'data_wizard.loaders.FileLoader',
+    'AUTHENTICATION': 'rest_framework.authentication.SessionAuthentication',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
 }
 

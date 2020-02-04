@@ -21,6 +21,9 @@ class RunViewSet(ModelViewSet):
         renderers.JSONRenderer,
         renderers.BrowsableAPIRenderer,
     ]
+    authentication_classes = [
+        import_setting('AUTHENTICATION'),
+    ]
     permission_classes = [
         import_setting('PERMISSION'),
     ]
