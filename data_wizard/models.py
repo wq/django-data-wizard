@@ -3,7 +3,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
 from . import registry
-from . import backend as data_wizard_backend
 from .compat import reverse
 
 
@@ -59,6 +58,7 @@ class Run(models.Model):
 
     def run_task(self, name, use_async=False, post=None,
                  backend=None, user=None):
+        from . import backend as data_wizard_backend
         if not backend:
             backend = data_wizard_backend
         if not user:
