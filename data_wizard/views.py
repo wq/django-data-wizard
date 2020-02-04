@@ -4,7 +4,6 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework import pagination
 from rest_framework import renderers
 from . import registry
-from . import backend as data_wizard_backend
 from .serializers import RunSerializer, RecordSerializer
 from .models import Run
 from .settings import import_setting
@@ -30,6 +29,7 @@ class RunViewSet(ModelViewSet):
 
     @property
     def backend(self):
+        from . import backend as data_wizard_backend
         return data_wizard_backend
 
     @property

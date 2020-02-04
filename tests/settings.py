@@ -53,9 +53,9 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.staticfiles',
     'django.contrib.auth',
+) + WQ_APPS + REVERSION_APPS + (
     'data_wizard',
     'data_wizard.sources',
-) + WQ_APPS + REVERSION_APPS + (
     'tests.data_app',
     'tests.naturalkey_app',
     'tests.eav_app',
