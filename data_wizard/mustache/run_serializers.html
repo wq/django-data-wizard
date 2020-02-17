@@ -19,8 +19,7 @@
         </p>
         {{/serializer}}
         {{^serializer}}
-	<form action="{{svc}}/datawizard/{{id}}/updateserializer" method="post"
-	      data-ajax="true" data-wq-json="false">
+	<form action="{{svc}}/datawizard/{{id}}/updateserializer" method="post">
 	{{>csrf}}
         <ul data-role="listview" data-inset="true">
           <li class="ui-field-contain">
@@ -40,8 +39,7 @@
 	</form>
 	{{/serializer}}
         {{#serializer}}
-        <form action="{{svc}}/datawizard/{{id}}/auto" method="post"
-              data-ajax="true" data-wq-json="false">
+        <form action="{{svc}}/datawizard/{{id}}/auto" method="post">
           {{>csrf}}
           <button type="submit">
             Continue

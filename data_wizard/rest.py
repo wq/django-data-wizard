@@ -62,6 +62,7 @@ rest.router.register_model(
         'list', 'detail',
         'serializers', 'columns', 'ids', 'data', 'auto', 'records',
     ],
+    postsave='datawizard/{{id}}{{#task_id}}/auto?task={{task_id}}{{/task_id}}',
     fields="__all__",
     filter=user_filter,
     cache='none',

@@ -19,8 +19,7 @@
           This file contains {{unknown_count}} identifier(s) that are not yet
           recognized by this database.
         </p>
-	<form action="{{svc}}/datawizard/{{id}}/updateids" method="post"
-	      data-ajax="true" data-wq-json="false">
+	<form action="{{svc}}/datawizard/{{id}}/updateids" method="post">
 	{{>csrf}}
         {{/unknown_count}}
         {{#types}}
@@ -71,8 +70,7 @@
 	</form>
 	{{/unknown_count}}
         {{^unknown_count}}
-        <form action="{{svc}}/datawizard/{{id}}/auto" method="post"
-              data-ajax="true" data-wq-json="false">
+        <form action="{{svc}}/datawizard/{{id}}/auto" method="post">
           {{>csrf}}
           <button type="submit">
             Continue

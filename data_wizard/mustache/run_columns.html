@@ -19,8 +19,7 @@
           This file contains {{unknown_count}} column(s) that are not yet
           recognized by this database.
         </p>
-	<form action="{{svc}}/datawizard/{{id}}/updatecolumns" method="post"
-	      data-ajax="true" data-wq-json="false">
+	<form action="{{svc}}/datawizard/{{id}}/updatecolumns" method="post">
 	{{>csrf}}
         {{/unknown_count}}
         <table class="table-stripe ui-table">
@@ -62,8 +61,7 @@
 	</form>
 	{{/unknown_count}}
         {{^unknown_count}}
-        <form action="{{svc}}/datawizard/{{id}}/auto" method="post"
-              data-ajax="true" data-wq-json="false">
+        <form action="{{svc}}/datawizard/{{id}}/auto" method="post">
           {{>csrf}}
           <button type="submit">
             Continue

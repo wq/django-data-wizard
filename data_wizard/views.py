@@ -140,8 +140,13 @@ class RunViewSet(ModelViewSet):
     @action(detail=True, methods=['post', 'get'])
     def auto(self, request, *args, **kwargs):
         if request.method == 'GET':
-            self.action = 'retrieve'
-            return self.retrieve(request, **kwargs)
+            response = self.retrieve(request, **kwargs)
+            task_id = request.GET.get('task', None)
+            if task_id:
+                response.data['task_id'] = task_id
+            else:
+                self.action = 'retrieve'
+            return response
         return self.retrieve_and_run('auto_import', use_async=True)
 
     @action(detail=True)

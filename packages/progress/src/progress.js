@@ -144,7 +144,11 @@ progress.timer = function($progress, url, $status) {
                     $status.text(data.error || data.message);
                 }
                 if (data.location) {
-                    window.location.href = data.location;
+                    if (progress.app && progress.app.nav) {
+                        progress.app.nav(data.location.slice(1));
+                    } else {
+                        window.location.href = data.location;
+                    }
                 }
             })
             .catch(function(err) {
