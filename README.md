@@ -560,30 +560,32 @@ Finally, run celery with `celery -A myproject`.  You may want to use celery's [d
 
 ## wq Framework integration
 
-The Django Data Wizard has built-in support for integration with the [wq framework].  Configuration is mostly the same, except that you do not need to add `"data_wizard.urls"` to your urls.py as the wizard will register itself with [wq.db] instead.
+The Django Data Wizard has built-in support for integration with the [wq framework].  On the server, configuration is mostly the same, except that you do not need to add `"data_wizard.urls"` to your urls.py as the wizard will register itself with [wq.db] instead.
 
-Data Wizard includes mustache templates for each of the above tasks to integrate with the wq.app UI.  Be sure to enable the [wq/progress.js] plugin for use with the `run_auto.html` and `run_data.html` template.  You could allow the user to initiate an import run by adding the following to the detail HTML for your model:
+Data Wizard provides mustache templates for each of the above tasks to integrate with the wq.app UI.  These are rendered on the server and do not need to be included in your JavaScript build.  However, you should install the [@wq/progress] plugin via NPM and register it with [@wq/app].
+
+```javascript
+// src/index.js
+import app from '@wq/app';
+import progress from '@wq/progress';
+
+app.use(progress);
+app.init(config).then(...);
+```
+
+Once everything is set up, add the following `<form>` to the detail template that wq generates for your source model.  Note that you will need to add this `<form>` manually even if the source model is one of `data_wizard.sources`.  After adding the form, be sure to skip template regeneration for the source model.
 
 ```html
-<!-- filemodel_detail.html -->
+<!-- filesource_detail.html -->
 <h1>{{label}}</h1>
 <a href="{{rt}}/media/{{file}}" rel="external">Download File</a>
 
-<form action="{{rt}}/datawizard/" method="post" data-ajax="true" data-wq-json="false">
+<form action="{{rt}}/datawizard/" method="post">
   {{>csrf}}
-  <input type="hidden" name="content_type_id" value="myapp.filemodel">
+  <input type="hidden" name="content_type_id" value="sources.filesource">
   <input type="hidden" name="object_id" value="{{id}}">
   <button type="submit">Import Data from This File</button>
 </form>
-```
-
-```javascript
-// myapp/main.js
-define(['wq/app', 'wq/progress', ...],
-function(app, progress, ...) {
-    app.use(progress);
-    app.init(config).then(...);
-});
 ```
 
 [IterTable]: https://github.com/wq/itertable
@@ -627,3 +629,6 @@ function(app, progress, ...) {
 [naturalkey_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/naturalkey_app/wizard.py
 [eav_wizard]: https://github.com/wq/django-data-wizard/blob/master/tests/eav_app/wizard.py
 [management command]: https://docs.djangoproject.com/en/2.1/ref/django-admin/
+
+[@wq/progress]: https://github.com/wq/django-data-wizard/tree/master/packages/progress
+[@wq/app]: https://wq.io/docs/app-js
