@@ -1,0 +1,30 @@
+{
+    "name": "@wq/progress",
+    "version": "1.2.0",
+    "description": "AJAX-powered auto-updating HTML5 <progress> element",
+    "main": "dist/index.js",
+    "module": "dist/index.es.js",
+    "type": "module",
+    "scripts": {
+        "test": "cd ../../ && npm run jest packages/progress",
+        "build": "cd ../../ && npm run rollup -- -c packages/progress/rollup.config.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/wq/django-data-wizard.git"
+    },
+    "keywords": [
+        "wq",
+        "progress",
+        "data-wizard"
+    ],
+    "author": "S. Andrew Sheppard",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/wq/django-data-wizard/issues"
+    },
+    "homepage": "https://github.com/wq/django-data-wizard",
+    "devDependencies": {
+        "jquery": "^3.4.1"
+    }
+}

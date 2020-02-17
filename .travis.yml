@@ -52,9 +52,19 @@ matrix:
     - name: "Code Lint"
       env:
         - LINT="flake8"
+    - name: "JavaScript Build"
+      language: node
+      node_js: 12
+      install:
+        - npm ci
+        - npm run bootstrap
+      script:
+        - npm run lint
+        - npm test
+        - npm run build
 install:
  - pip install $DJANGO $CELERY $REDIS $DRF $ITERTABLE $WQDB $REVERSION $LINT
- - pip install .
+ - pip install natural-keys python-dateutil
 script:
  - ./runtests.sh
 services:

@@ -1,8 +1,25 @@
 from setuptools import setup
+from setuptools.command.build_py import build_py
+import subprocess
+import shutil
+
 
 LONG_DESCRIPTION = """
 Interactive web-based wizard to facilitate importing structured data into Django models.
 """
+
+JS_FILES = [
+    'packages/progress/dist/progress.js',
+    'packages/progress/dist/progress.js.map',
+]
+
+class BuildJS(build_py):
+    def run(self):
+        subprocess.check_call(['npm', 'install'])
+        subprocess.check_call(['npm', 'run', 'build'])
+        for path in JS_FILES:
+            shutil.copy(path, 'data_wizard/static/data_wizard/js')
+        super().run()
 
 
 def readme():
@@ -75,4 +92,7 @@ setup(
     setup_requires=[
         'setuptools_scm',
     ],
+    cmdclass={
+       'build_py': BuildJS
+    },
 )

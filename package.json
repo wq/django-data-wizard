@@ -1,0 +1,61 @@
+{
+    "name": "django-data-wizard",
+    "scripts": {
+        "bootstrap": "lerna bootstrap",
+        "lerna": "lerna",
+        "test": "lerna run test",
+        "build": "lerna run build",
+        "jest": "jest --verbose",
+        "rollup": "rollup",
+        "prettier": "prettier --write *.js{,on} packages/*/{,src/,src/*/}*.js{,on}",
+        "lint": "eslint packages/*/{,src/,src/*/}*.js"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.8.4",
+        "@babel/preset-env": "^7.8.4",
+        "babel-eslint": "^10.0.3",
+        "eslint": "^6.8.0",
+        "eslint-plugin-jest": "^23.7.0",
+        "jest": "^25.1.0",
+        "jest-fetch-mock": "^3.0.1",
+        "lerna": "^3.20.2",
+        "prettier": "^1.19.1",
+        "rollup": "^1.31.1",
+        "rollup-plugin-babel": "^4.3.3"
+    },
+    "eslintConfig": {
+        "env": {
+            "browser": true,
+            "es6": true
+        },
+        "extends": [
+            "eslint:recommended",
+            "plugin:jest/recommended"
+        ],
+        "globals": {
+            "global": "readonly",
+            "module": "readonly"
+        },
+        "parser": "babel-eslint",
+        "parserOptions": {
+            "ecmaVersion": 2018,
+            "sourceType": "module"
+        },
+        "plugins": [
+            "jest"
+        ],
+        "ignorePatterns": [
+            "packages/*/node_modules"
+        ]
+    },
+    "lerna": {
+        "packages": [
+            "packages/*"
+        ],
+        "version": "independent"
+    },
+    "prettier": {
+        "tabWidth": 4,
+        "singleQuote": true
+    }
+}
