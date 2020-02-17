@@ -152,7 +152,11 @@ progress.timer = function($progress, url, $status) {
                 }
             })
             .catch(function(err) {
-                $status.text(err).addClass('error');
+                if ($status) {
+                    $status.text(err).addClass('error');
+                } else {
+                    console.error(err);
+                }
                 throttle += 1;
             });
     };

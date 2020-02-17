@@ -141,6 +141,7 @@ def get_attribute_field(field):
     for cname, cfield in field.child.get_fields().items():
         if isinstance(cfield, serializers.RelatedField):
             return cname, cfield
+    return None, None
 
 
 def compute_attr_field(value_field, attr_name):
@@ -190,7 +191,11 @@ def get_choices(run):
                 attr_name, attr_field = get_attribute_field(field)
 
                 if not attr_field:
-                    raise Exception("No attribute field found!")
+                    raise Exception(
+                        'Could not determine EAV attribute field'
+                        ' for nested "%s" serializer!'
+                        % qualname
+                    )
 
                 choices = make_list(attr_field.get_queryset())
                 load_fields(
@@ -719,9 +724,10 @@ def _do_import(run, user):
             field = Serializer().get_fields().get(basename)
             if field:
                 attr_name, attr_field = get_attribute_field(field)
-                col['attr_field'] = '%s[][%s]' % (
-                    basename, attr_name
-                )
+                if attr_field:
+                    col['attr_field'] = '%s[][%s]' % (
+                        basename, attr_name
+                    )
 
     # Loop through table rows and add each record
     rows = len(table)
