@@ -73,6 +73,8 @@ INSTALLED_APPS = (
 DATA_WIZARD = {
     'BACKEND': 'data_wizard.backends.threading',
     'LOADER': 'data_wizard.loaders.FileLoader',
+    'IDMAP': 'data_wizard.idmap.never',   # 'data_wizard.idmap.existing' in 2.0
+    'AUTHENTICATION': 'rest_framework.authentication.SessionAuthentication',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
 }
 ```
@@ -249,14 +251,26 @@ parameter     | description
 ### ids
 #### `GET /datawizard/[id]/ids`
 
-The `ids` task lists all of the identifiers found in the source dataset (i.e. spreadsheet) that are in a column known to correspond to a foreign key.  This screen is shown by the `auto` task if there are any identifiers that could not be automatically mapped to foreign key values.  The potential mappings depend on the serializer field used to represent the foreign key.
+The `ids` task lists all of the foreign key values found in the source dataset (i.e. spreadsheet).  If there are any unmapped foreign key values, the auto task will stop and redirect to the `ids` task.  The default [run_ids.html] template includes an interface for mapping row identifiers to foreign key values.  The potential mappings depend on the serializer field used to represent the foreign key.
 
- * Existing record ID or slug (for [PrimaryKeyRelatedField], [SlugRelatedField], and [NaturalKeySerializer][natural keys])
- * `"new"` (`NaturalKeySerializer` only)
+ * For [PrimaryKeyRelatedField], [SlugRelatedField], and [NaturalKeySerializer][natural keys], the choices will include all existing record ID or slugs.
+ * For `NaturalKeySerializer` only, a`"new"` choice will also be included, allowing for the possibility of creating new records in the foreign table on the fly.
+ 
+Once all ids are mapped, the template will display the mappings and a button to (re)start the `auto` task.
 
-The primary difference is that `NaturalKeySerializer` allows for the possibility of creating new records in the foreign table on the fly, while the regular related fields do not.
+Note that the `auto` task will skip the `ids` task entirely if any of the following are true:
+  * The file contains no foreign key columns
+  * All foreign key values were already mapped during a previous import run
+  * All foreign key values can be automatically mapped via the `DATA_WIZARD['IDMAP']` setting:
+  
+`DATA_WIZARD['IDMAP']` | notes | detail
+--|--|--
+`"data_wizard.idmap.never"` | Default&nbsp;in&nbsp;1.x | Require user to manually map all IDs the first time they are found in a file
+`"data_wizard.idmap.existing"` | New&nbsp;in&nbsp;1.3, Default&nbsp;in&nbsp;2.0 | Automatically map existing IDs, but require user to map unknown ids
+`"data_wizard.idmap.always"` | New&nbsp;in&nbsp;1.3 | Always map IDs (skip manual mapping).  Unknown IDs will be passed on as-is to the serializer, which will cause per-row errors unless using natural keys.
+(custom import path) | New&nbsp;in&nbsp;1.3 | The function should accept an identifier and a serializer field, and return the mapped value (or None) if no automatic mapping is available.  See the [built-in functions][idmap.py] for examples.
 
-The default [run_ids.html] template includes an interface for mapping row identifiers to foreign key values.   If all ids are already mapped (or indicated to be new natural keys), the template will display the mappings and a button to (re)start the `auto` task.
+Note that the configured `IDMAP` function will only be called the first time a new identifier is encountered.  Once the mapping is established (manually or automatically), it will be re-used in subsequent wizard runs.
 
 ---
 
@@ -383,6 +397,7 @@ class TimeSeriesSerializer(serializers.ModelSerializer):
             'header_row': 0,
             'start_row': 1,
             'show_in_list': True,
+            'idmap': data_wizard.idmap.existing,
         }
 
 # Use default name & serializer
@@ -409,6 +424,7 @@ name | default | notes
 `header_row` | 0 | Specifies the first row of the spreadsheet that contains column headers.  If this is greater than 0, the space above the column headers will be scanned for anything that looks like a one-off "global" value intended to be applied to every row in the imported data.
 `start_row` | 1 | The first row of data.  If this is greater than `header_row + 1`, the column headers will be assumed to span multiple rows.  A common case is when EAV parameter names are on the first row and units are on the second.
 `show_in_list` | `True` | **New in 1.2**.  If set to `False`, the serializer will be available through the API but not listed in the wizard views.  This is useful if you have a serializer that should only be used during fully automated workflows.
+`idmap` | [`IDMAP` setting](#ids) | **New in 1.3**.  Can be any of `data_wizard.idmap.*` or a custom function.  Unlike the `IDMAP` setting, this should always be an actual function and not an import path.
 
 ## Custom Data Sources
 
@@ -623,6 +639,7 @@ Once everything is set up, add the following `<form>` to the detail template tha
 [run_serializers.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_serializers.html
 [run_columns.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_columns.html
 [run_ids.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_ids.html
+[idmap.py]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/idmap.py
 [run_data.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_data.html
 [run_records.html]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/templates/data_wizard/run_records.html
 
