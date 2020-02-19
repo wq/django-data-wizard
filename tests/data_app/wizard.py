@@ -48,6 +48,7 @@ class SlugSerializer(serializers.ModelSerializer):
         model = FKModel
         fields = "__all__"
 
+
 class SlugMapExistingSerializer(SlugSerializer):
     class Meta(SlugSerializer.Meta):
         data_wizard = {
