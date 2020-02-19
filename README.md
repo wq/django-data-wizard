@@ -268,7 +268,7 @@ Note that the `auto` task will skip the `ids` task entirely if any of the follow
 `"data_wizard.idmap.never"` | Default&nbsp;in&nbsp;1.x | Require user to manually map all IDs the first time they are found in a file
 `"data_wizard.idmap.existing"` | New&nbsp;in&nbsp;1.3, Default&nbsp;in&nbsp;2.0 | Automatically map existing IDs, but require user to map unknown ids
 `"data_wizard.idmap.always"` | New&nbsp;in&nbsp;1.3 | Always map IDs (skip manual mapping).  Unknown IDs will be passed on as-is to the serializer, which will cause per-row errors unless using natural keys.
-(custom import path) | New&nbsp;in&nbsp;1.3 | The function should accept an identifier and a serializer field, and return the mapped value (or None) if no automatic mapping is available.  See the [built-in functions][idmap.py] for examples.
+(custom import path) | New&nbsp;in&nbsp;1.3 | The function should accept an identifier and a serializer field, and return the mapped value (or `None` if no automatic mapping is available).  See the [built-in functions][idmap.py] for examples.
 
 Note that the configured `IDMAP` function will only be called the first time a new identifier is encountered.  Once the mapping is established (manually or automatically), it will be re-used in subsequent wizard runs.
 
