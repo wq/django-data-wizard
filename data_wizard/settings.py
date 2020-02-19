@@ -5,6 +5,7 @@ from django.conf import settings
 DEFAULTS = {
     'BACKEND': 'data_wizard.backends.threading',
     'LOADER': 'data_wizard.loaders.FileLoader',
+    'IDMAP': 'data_wizard.idmap.never',   # FIXME: Change to 'existing' in 2.0
     'AUTHENTICATION': 'rest_framework.authentication.SessionAuthentication',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
 }

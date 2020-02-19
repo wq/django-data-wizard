@@ -508,6 +508,7 @@ def read_row_identifiers(run, user=None):
 def parse_row_identifiers(run):
     run.add_event('parse_row_identifiers')
 
+    idmap = run.get_idmap()
     lookup_cols = get_lookup_columns(run)
     lookup_fields = OrderedDict()
     for col in lookup_cols:
@@ -515,6 +516,7 @@ def parse_row_identifiers(run):
         lookup_fields.setdefault(field_name, {
             'cols': [],
             'ids': OrderedDict(),
+            'serializer_field': col['serializer_field'],
             'start_col': 1e10,
             'end_col': -1,
         })
@@ -568,10 +570,13 @@ def parse_row_identifiers(run):
             ).first()
 
             if not ident:
+                value = idmap(name, info['serializer_field'])
                 ident = Identifier.objects.create(
                     serializer=run.serializer,
                     field=field_name,
                     name=name,
+                    value=value,
+                    resolved=bool(value),
                 )
 
             run.range_set.create(

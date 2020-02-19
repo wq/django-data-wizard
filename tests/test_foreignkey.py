@@ -30,21 +30,21 @@ class BaseFKTestCase(BaseImportTestCase):
 
 class ForeignKeyTestCase(BaseFKTestCase):
     serializer_name = 'data_wizard.registry.FKModelSerializer'
+    row4_error = '{"type": ["Invalid pk \\"100\\" - object does not exist."]}'
 
     def test_manual(self):
         run = self.upload_file('fkid.csv')
-        row4_error = ('{"type": ["Invalid pk \\"100\\"'
-                      ' - object does not exist."]}')
 
         # Start data import process, wait for completion
         self.start_import(run, [{
             'row': 5,
-            'reason': row4_error,
+            'reason': self.row4_error,
         }])
 
         # Verify results
         self.check_data(
-            run, expect_last_record="Failed at row 4: %s" % row4_error
+            run,
+            expect_last_record="Failed at row 4: %s" % self.row4_error,
         )
         self.assert_log(run, [
             'created',
@@ -53,8 +53,8 @@ class ForeignKeyTestCase(BaseFKTestCase):
             'import_complete',
         ])
 
-    def test_auto(self):
-        # Should abort due to unknown type id
+    def test_auto_idmap_never(self):
+        # Should abort due to previously unmapped type ids
         run = self.upload_file('fkid.csv')
         self.auto_import(run, expect_input_required=True)
         self.assert_log(run, [
@@ -63,6 +63,59 @@ class ForeignKeyTestCase(BaseFKTestCase):
             'parse_columns',
             'parse_row_identifiers',
         ])
+        self.assert_ranges(run, [
+            "Data Column 'type -> type' at Rows 1-4, Column 0",
+            "Data Column 'notes -> notes' at Rows 1-4, Column 1",
+            "Cell value 'Unresolved: 1' at Rows 1-2, Column 0",
+            "Cell value 'Unresolved: 2' at Row 3, Column 0",
+            "Cell value 'Unresolved: 100' at Row 4, Column 0",
+        ])
+
+    def test_auto_idmap_existing(self):
+        # Should auto-map existing ids 1 & 2, but abort due to unknown id 100
+        self.serializer_name = 'tests.data_app.wizard.FKMapExistingSerializer'
+        run = self.upload_file('fkid.csv')
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'parse_row_identifiers',
+        ])
+        self.assert_ranges(run, [
+            "Data Column 'type -> type' at Rows 1-4, Column 0",
+            "Data Column 'notes -> notes' at Rows 1-4, Column 1",
+            "Cell value '1 -> type=1' at Rows 1-2, Column 0",
+            "Cell value '2 -> type=2' at Row 3, Column 0",
+            "Cell value 'Unresolved: 100' at Row 4, Column 0",
+        ])
+
+    def test_auto_idmap_always(self):
+        # Map all ids without checking, producing same result as test_manual
+
+        self.serializer_name = 'tests.data_app.wizard.FKMapAlwaysSerializer'
+        run = self.upload_file('fkid.csv')
+
+        self.auto_import(run, expect_input_required=False)
+
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'parse_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])
+
+        self.check_data(
+            run,
+            expect_last_record="Failed at row 4: %s" % self.row4_error,
+            extra_ranges=[
+                "Cell value '1 -> type=1' at Rows 1-2, Column 0",
+                "Cell value '2 -> type=2' at Row 3, Column 0",
+                "Cell value '100 -> type=100' at Row 4, Column 0",
+            ]
+        )
 
 
 class SlugTestCase(BaseFKTestCase):
@@ -90,8 +143,8 @@ class SlugTestCase(BaseFKTestCase):
             'import_complete',
         ])
 
-    def test_auto(self):
-        # Should abort due to unknown type id
+    def test_auto_idmap_never(self):
+        # Should abort due to previously unmapped type ids
         run = self.upload_file('fkname.csv')
         self.auto_import(run, expect_input_required=True)
         self.assert_log(run, [
@@ -131,7 +184,7 @@ class SlugTestCase(BaseFKTestCase):
             'import_complete',
         ])
 
-    def test_auto_preset(self):
+    def test_auto_idmap_never_preset(self):
         self.create_identifier('Type #1', 'type', 'Type #1')
         self.create_identifier('Type #2', 'type', 'Type #2')
         self.create_identifier('Type #2 - Alternate Name', 'type', 'Type #2')
@@ -154,6 +207,56 @@ class SlugTestCase(BaseFKTestCase):
             'auto_import',
             'parse_columns',
             'parse_row_identifiers',
+            'do_import',
+            'import_complete',
+        ])
+
+    def test_auto_idmap_existing(self):
+        # Should auto-map 2 existing slugs, but abort due to unknown Alt Name
+        self.serializer_name = (
+            'tests.data_app.wizard.SlugMapExistingSerializer'
+        )
+        run = self.upload_file('fkname.csv')
+        self.auto_import(run, expect_input_required=True)
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'parse_row_identifiers',
+        ])
+        self.assert_ranges(run, [
+            "Data Column 'type -> type' at Rows 1-4, Column 0",
+            "Data Column 'notes -> notes' at Rows 1-4, Column 1",
+            "Cell value 'Type #1 -> type=Type #1' at Rows 1-2, Column 0",
+            "Cell value 'Type #2 -> type=Type #2' at Row 3, Column 0",
+            "Cell value 'Unresolved: Type #2 - Alternate Name'"
+            " at Row 4, Column 0"
+        ])
+
+        # Update identifiers and try again
+        self.update_row_identifiers(run, {
+            'data_app.type': {
+                'Type #2 - Alternate Name': 'Type #2',
+            }
+        })
+        self.auto_import(run, expect_input_required=False)
+        self.check_data(
+            run,
+            expect_last_record="Imported 'Type #2 (Test Note 4)' at row 4",
+            extra_ranges=[
+                "Cell value 'Type #1 -> type=Type #1' at Rows 1-2, Column 0",
+                "Cell value 'Type #2 -> type=Type #2' at Row 3, Column 0",
+                "Cell value 'Type #2 - Alternate Name -> type=Type #2'"
+                " at Row 4, Column 0",
+            ]
+        )
+        self.assert_log(run, [
+            'created',
+            'auto_import',
+            'parse_columns',
+            'parse_row_identifiers',
+            'update_row_identifiers',
+            'auto_import',
             'do_import',
             'import_complete',
         ])

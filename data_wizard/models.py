@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
 from . import registry
 from .compat import reverse
+from .settings import import_setting
 
 
 class Run(models.Model):
@@ -85,6 +86,12 @@ class Run(models.Model):
             return registry.get_serializer_options(self.serializer)
         else:
             raise Exception("No serializer specified!")
+
+    def get_idmap(self):
+        idmap = self.get_serializer_options().get('idmap')
+        if not idmap:
+            idmap = import_setting('IDMAP')
+        return idmap
 
     def already_parsed(self):
         return self.range_set.count()

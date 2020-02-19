@@ -1,5 +1,6 @@
 from django.utils.module_loading import autodiscover_modules
 from .registry import registry
+from . import idmap
 
 
 __all__ = (
@@ -9,6 +10,7 @@ __all__ = (
     "register",
     "set_loader",
     "default_app_config",
+    "idmap",
 )
 
 
