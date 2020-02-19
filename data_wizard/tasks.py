@@ -576,7 +576,7 @@ def parse_row_identifiers(run):
                     field=field_name,
                     name=name,
                     value=value,
-                    resolved=bool(value),
+                    resolved=value is not None,
                 )
 
             run.range_set.create(
