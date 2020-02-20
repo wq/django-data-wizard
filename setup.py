@@ -2,10 +2,11 @@ from setuptools import setup
 from setuptools.command.build_py import build_py
 import subprocess
 import shutil
+import warnings
 
 
 LONG_DESCRIPTION = """
-Interactive web-based wizard to facilitate importing structured data into Django models.
+Interactive web-based wizard for importing structured data into Django models.
 """
 
 JS_FILES = [
@@ -13,12 +14,17 @@ JS_FILES = [
     'packages/progress/dist/progress.js.map',
 ]
 
+
 class BuildJS(build_py):
     def run(self):
-        subprocess.check_call(['npm', 'install'])
-        subprocess.check_call(['npm', 'run', 'build'])
-        for path in JS_FILES:
-            shutil.copy(path, 'data_wizard/static/data_wizard/js')
+        try:
+            subprocess.check_call(['npm', 'install'])
+            subprocess.check_call(['npm', 'run', 'build'])
+        except BaseException as e:
+            warnings.warn("Skipping JS build: {}".format(e))
+        else:
+            for path in JS_FILES:
+                shutil.copy(path, 'data_wizard/static/data_wizard/js')
         super().run()
 
 
@@ -29,6 +35,7 @@ def readme():
         return LONG_DESCRIPTION
     else:
         return readme.read()
+
 
 setup(
     name='data-wizard',
