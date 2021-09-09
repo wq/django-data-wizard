@@ -1,5 +1,9 @@
 import os
 
+TEST_BACKEND = os.environ.get('TEST_BACKEND', 'threading')
+TEST_VARIANT = os.environ.get('TEST_VARIANT', 'default')
+WITH_WQDB = (TEST_VARIANT == 'wq.db')
+
 SECRET_KEY = '1234'
 
 MIDDLEWARE = [
@@ -29,8 +33,7 @@ TEMPLATES = [
     },
 ]
 
-WITH_WQDB = os.environ.get('WQDB', False)
-if WITH_WQDB:
+if TEST_VARIANT == 'wq.db':
     WQ_APPS = (
         'wq.db.rest',
         'wq.db.rest.auth',
@@ -38,8 +41,7 @@ if WITH_WQDB:
 else:
     WQ_APPS = tuple()
 
-WITH_REVERSION = os.environ.get('REVERSION', False)
-if WITH_REVERSION:
+if TEST_VARIANT == 'reversion':
     REVERSION_APPS = (
         'reversion',
     )
@@ -73,19 +75,15 @@ DATABASES = {
 ROOT_URLCONF = "tests.urls"
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')
 
-WITH_CELERY = os.environ.get('CELERY', False)
-
-if WITH_CELERY:
+if TEST_BACKEND == 'celery':
     CELERY_RESULT_BACKEND = BROKER_URL = 'redis://localhost/0'
 
-if WITH_WQDB:
+if TEST_VARIANT == 'wq.db':
     from wq.db.default_settings import *  # noqa
 
-NO_THREADING = os.environ.get('NOTHREADING', False)
-if NO_THREADING:
-    DATA_WIZARD = {
-        'BACKEND': 'data_wizard.backends.immediate',
-    }
+DATA_WIZARD = {
+    'BACKEND': f'data_wizard.backends.{TEST_BACKEND}',
+}
 
 STATIC_URL = "/static/"
 

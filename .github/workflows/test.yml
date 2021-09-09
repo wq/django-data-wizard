@@ -1,0 +1,140 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.variant }} ${{ matrix.backend }} py=${{ matrix.python-version }} dj=${{ matrix.django-version }} drf=${{ matrix.drf-version }}
+    runs-on: ubuntu-20.04
+    env:
+      TEST_VARIANT: ${{ matrix.variant }}
+      TEST_BACKEND: ${{ matrix.backend }}
+    strategy:
+      matrix:
+        python-version: [3.9]
+        django-version: [3.2.7]
+        drf-version: [3.12.4]
+        variant: ['']
+        backend: [threading, immediate, celery]
+        include:
+        - python-version: 3.9
+          django-version: 3.2.7
+          drf-version: 3.12.4
+          variant: wq.db
+          backend: threading
+        - python-version: 3.9
+          django-version: 3.2.7
+          drf-version: 3.12.4
+          variant: reversion
+          backend: threading
+        - python-version: 3.9
+          django-version: 2.2.24
+          drf-version: 3.12.4
+          variant: ''
+          backend: threading
+        - python-version: 3.8
+          django-version: 3.2.7
+          drf-version: 3.12.4
+          variant: ''
+          backend: threading
+        - python-version: 3.7
+          django-version: 3.2.7
+          drf-version: 3.12.4
+          variant: ''
+          backend: threading
+        - python-version: 3.6
+          django-version: 3.2.7
+          drf-version: 3.12.4
+          variant: ''
+          backend: threading
+    services:
+      redis:
+        image: redis
+        ports:
+         - 6379:6379
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install flake8 wheel
+        python -m pip install django==${{ matrix.django-version }}
+        python -m pip install djangorestframework==${{ matrix.drf-version }}
+        python -m pip install itertable natural-keys html-json-forms
+        python -m pip install python-dateutil xlrd==1.2.0
+    - name: Install celery & redis
+      if: ${{ matrix.backend == 'celery' }}
+      run: python -m pip install celery redis
+    - name: Install wq.db
+      if: ${{ matrix.variant == 'wq.db' }}
+      run: python -m pip install wq.db
+    - name: Install reversion
+      if: ${{ matrix.variant == 'reversion' }}
+      run: python -m pip install django-reversion
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Start celery daemon
+      if: ${{ matrix.backend == 'celery' }}
+      run: |
+        python -c "import tests"
+        celery -A tests worker &
+    - name: Test with unittest
+      run: python -m unittest discover -s tests -t . -v
+  npm:
+    name: "@wq/${{ matrix.package }}"
+    runs-on: ubuntu-20.04
+    env:
+      PACKAGE: ${{ matrix.package }}
+    strategy:
+      matrix:
+        python-version: [3.9]
+        node-version: [14]
+        package:
+          - progress
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Set up Node ${{ matrix.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run lerna exec npm ci
+        npm run bootstrap
+        npm run build
+    - name: Lint with ESLint
+      run: npm run lint
+    - name: Start test server
+      run: python -m tests.server &
+    - name: Test with Jest
+      run: |
+         cd packages/$PACKAGE
+         npm run test
+    - uses: smartsquaregmbh/delete-old-packages@v0.3.1
+      if: github.event_name == 'push'
+      with:
+         keep: 5
+         names: ${{ matrix.package }}
+    - name: Publish to Github Packages
+      if: github.event_name == 'push'
+      run: |
+         ./set_dev_version.sh
+         cd packages/$PACKAGE
+         echo "registry=https://npm.pkg.github.com/wq" > .npmrc
+         echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+         npm publish

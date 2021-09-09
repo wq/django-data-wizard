@@ -19,7 +19,7 @@ The Data Wizard supports straightforward one-to-one mappings from spreadsheet co
 [![GitHub Forks](https://img.shields.io/github/forks/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/network)
 [![GitHub Issues](https://img.shields.io/github/issues/wq/django-data-wizard.svg)](https://github.com/wq/django-data-wizard/issues)
 
-[![Travis Build Status](https://img.shields.io/travis/wq/django-data-wizard.svg)](https://travis-ci.org/wq/django-data-wizard)
+[![Tests](https://github.com/wq/django-data-wizard/actions/workflows/test.yml/badge.svg)](https://github.com/wq/django-data-wizard/actions/workflows/test.yml)
 [![Python Support](https://img.shields.io/pypi/pyversions/data-wizard.svg)](https://pypi.org/project/data-wizard)
 [![Django Support](https://img.shields.io/pypi/djversions/data-wizard.svg)](https://pypi.org/project/data-wizard)
 

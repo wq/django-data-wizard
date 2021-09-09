@@ -87,14 +87,16 @@ class WizardTestCase(APITransactionTestCase):
         """
         1. Upload spreadsheet file
         """
-        filename = os.path.join(settings.MEDIA_ROOT, filename)
-        with open(filename, 'rb') as f:
+        path = os.path.join(settings.MEDIA_ROOT, filename)
+        with open(path, 'rb') as f:
             if self.with_wqdb:
                 response = self.client.post(self.file_url, {'file': f})
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
                 file_id = response.data['id']
             else:
-                file_id = self.file_model.objects.create(file=File(f)).pk
+                file_id = self.file_model.objects.create(
+                    file=File(f, name=os.path.basename(filename))
+                ).pk
 
         post = {
             'content_type_id': self.file_content_type,

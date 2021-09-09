@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import os
-if os.environ.get('CELERY'):
+if os.environ.get('TEST_BACKEND') == "celery":
     from celery import Celery
     from django.conf import settings
     app = Celery('tests')

@@ -1,5 +1,5 @@
 from __future__ import absolute_import  # FIXME: Drop this in 2.0
-from celery import task, current_task
+from celery import shared_task, current_task
 from celery.result import AsyncResult
 from .base import DataWizardBackend, ERROR_RAISE
 
@@ -31,7 +31,7 @@ class Backend(DataWizardBackend):
         return response
 
 
-@task
+@shared_task
 def run_async(task_name, run_id, user_id, post):
     from .. import backend
     return backend.try_run_sync(task_name, run_id, user_id, post)

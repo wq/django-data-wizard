@@ -6,7 +6,7 @@ from django.core.management import call_command
 import data_wizard
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', "tests.settings")
-if os.environ.get('CELERY'):
+if os.environ.get('TEST_BACKEND') == "celery":
     from .celery import app as celery_app  # noqa
 
 setup_test_environment()
