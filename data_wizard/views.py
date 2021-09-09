@@ -38,7 +38,7 @@ class RunViewSet(ModelViewSet):
 
     @property
     def template_name(self):
-        if self.action == 'retrieve':
+        if self.action in ('create', 'retrieve'):
             template = 'detail'
         else:
             template = self.action
