@@ -2,8 +2,8 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
+from django.urls import reverse
 from . import registry
-from .compat import reverse
 from .settings import import_setting
 
 
@@ -50,11 +50,7 @@ class Run(models.Model):
         if not hasattr(self, '_iter_data'):
             Loader = registry.get_loader(self.loader)
             loader = Loader(self)
-            if hasattr(loader, 'load_io'):
-                # TODO: Remove in 2.0
-                self._iter_data = loader.load_io()
-            else:
-                self._iter_data = loader.load_iter()
+            self._iter_data = loader.load_iter()
         return self._iter_data
 
     def run_task(self, name, use_async=False, post=None,

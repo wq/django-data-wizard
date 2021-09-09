@@ -1,4 +1,3 @@
-from __future__ import absolute_import  # FIXME: Drop this in 2.0
 from celery import shared_task, current_task
 from celery.result import AsyncResult
 from .base import DataWizardBackend, ERROR_RAISE

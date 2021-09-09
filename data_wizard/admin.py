@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from .models import Run, RunLog, Identifier, Range, Record
-from .compat import reverse
+from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 

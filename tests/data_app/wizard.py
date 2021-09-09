@@ -29,6 +29,15 @@ class FKMapExistingSerializer(serializers.ModelSerializer):
         }
 
 
+class FKMapNeverSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FKModel
+        fields = "__all__"
+        data_wizard = {
+             'idmap': data_wizard.idmap.never
+        }
+
+
 class FKMapAlwaysSerializer(serializers.ModelSerializer):
     class Meta:
         model = FKModel
@@ -47,6 +56,9 @@ class SlugSerializer(serializers.ModelSerializer):
     class Meta:
         model = FKModel
         fields = "__all__"
+        data_wizard = {
+             'idmap': data_wizard.idmap.never
+        }
 
 
 class SlugMapExistingSerializer(SlugSerializer):
@@ -96,6 +108,7 @@ data_wizard.register(SimpleModel)
 data_wizard.register('Simple Model - Incomplete', IncompleteSerializer)
 data_wizard.register(FKModel)
 data_wizard.register('FK Model - Use existing FKs', FKMapExistingSerializer)
+data_wizard.register('FK Model - Never use FKs', FKMapNeverSerializer)
 data_wizard.register('FK Model - Use FKs always', FKMapAlwaysSerializer)
 data_wizard.register('FK Model By Name', SlugSerializer)
 data_wizard.register(

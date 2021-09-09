@@ -55,6 +55,7 @@ class ForeignKeyTestCase(BaseFKTestCase):
 
     def test_auto_idmap_never(self):
         # Should abort due to previously unmapped type ids
+        self.serializer_name = 'tests.data_app.wizard.FKMapNeverSerializer'
         run = self.upload_file('fkid.csv')
         self.auto_import(run, expect_input_required=True)
         self.assert_log(run, [
@@ -71,9 +72,15 @@ class ForeignKeyTestCase(BaseFKTestCase):
             "Cell value 'Unresolved: 100' at Row 4, Column 0",
         ])
 
+    def test_auto_idmap_default(self):
+        self.idmap_existing()
+
     def test_auto_idmap_existing(self):
-        # Should auto-map existing ids 1 & 2, but abort due to unknown id 100
         self.serializer_name = 'tests.data_app.wizard.FKMapExistingSerializer'
+        self.idmap_existing()
+
+    def idmap_existing(self):
+        # Should auto-map existing ids 1 & 2, but abort due to unknown id 100
         run = self.upload_file('fkid.csv')
         self.auto_import(run, expect_input_required=True)
         self.assert_log(run, [

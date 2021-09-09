@@ -1,5 +1,3 @@
-from __future__ import print_function  # FIXME: Drop this in 2.0
-
 from rest_framework.test import APITransactionTestCase
 from rest_framework import status
 import os
@@ -244,13 +242,6 @@ class WizardTestCase(APITransactionTestCase):
         for key in ('status', 'total', 'current', 'skipped'):
             self.assertIn(key, res)
         self.assertEqual('SUCCESS', res['status'])
-
-        # FIXME: Drop this in 2.0
-        for skipped in res['skipped']:
-            skipped['reason'] = skipped['reason'].replace(
-                'YYYY[-MM[-DD]]', 'YYYY-MM-DD'
-            )
-
         self.assertEqual(expect_skipped, res['skipped'])
 
     def auto_import(self, run, expect_input_required=False):
@@ -296,12 +287,7 @@ class WizardTestCase(APITransactionTestCase):
             text = str(record)
             if text.startswith('Failed'):
                 text += ": " + record.fail_reason
-            # FIXME: Drop PY2/DRF<3.9 support in 2.0
-            text = (
-                text.replace('[u"', '["')  # Python 2.7
-                    .replace("YYYY[-MM[-DD]]", "YYYY-MM-DD")  # DRF < 3.9
-                    .replace(',)', ')')  # Python < 3.7
-            )
+            text = text.replace(',)', ')')  # Python < 3.7
             if 'ValidationError(["\'' in text:
                 # Django < 3.0
                 text = (

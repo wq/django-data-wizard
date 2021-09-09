@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.contenttypes.models import ContentType
-from .compat import reverse, NoReverseMatch
+from django.urls import reverse, NoReverseMatch
 from .models import Run, Record
 from . import registry
 

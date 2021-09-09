@@ -73,7 +73,7 @@ INSTALLED_APPS = (
 DATA_WIZARD = {
     'BACKEND': 'data_wizard.backends.threading',
     'LOADER': 'data_wizard.loaders.FileLoader',
-    'IDMAP': 'data_wizard.idmap.never',   # 'data_wizard.idmap.existing' in 2.0
+    'IDMAP': 'data_wizard.idmap.existing',
     'AUTHENTICATION': 'rest_framework.authentication.SessionAuthentication',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
 }
@@ -81,7 +81,7 @@ DATA_WIZARD = {
 
 If you would like to use the built-in data source tables (`FileSource` and `URLSource`), also include `data_wizard.sources` in your `INSTALLED_APPS`.  Otherwise, you will want to configure one or more [custom data sources (see below)](#custom-data-sources).
 
-> Note: In version 1.1.0 and later, Django Data Wizard uses a simple [threading backend](#data_wizardbackendsthreading) for executing asynchronous tasks.  The old [celery backend](#data_wizardbackendscelery) can also be used but this is no longer required.
+> Note: By default, Django Data Wizard uses a simple [threading backend](#data_wizardbackendsthreading) for executing asynchronous tasks.  [Celery and Redis](#data_wizardbackendscelery) can be used instead, but this is not required.
 
 
 Next, add `"data_wizard.urls"` to your URL configuration.
@@ -95,8 +95,6 @@ urlpatterns = [
     path('datawizard/', include('data_wizard.urls')),
 ]
 ```
-
-> Note: If you are upgrading from 1.0, you will need to update your URLs to add the `datawizard/` prefix as shown above.
 
 ### Target Model Registration
 
@@ -263,12 +261,12 @@ Note that the `auto` task will skip the `ids` task entirely if any of the follow
   * All foreign key values were already mapped during a previous import run
   * All foreign key values can be automatically mapped via the `DATA_WIZARD['IDMAP']` setting:
   
-`DATA_WIZARD['IDMAP']` | notes | detail
---|--|--
-`"data_wizard.idmap.never"` | Default&nbsp;in&nbsp;1.x | Require user to manually map all IDs the first time they are found in a file
-`"data_wizard.idmap.existing"` | New&nbsp;in&nbsp;1.3, Default&nbsp;in&nbsp;2.0 | Automatically map existing IDs, but require user to map unknown ids
-`"data_wizard.idmap.always"` | New&nbsp;in&nbsp;1.3 | Always map IDs (skip manual mapping).  Unknown IDs will be passed on as-is to the serializer, which will cause per-row errors unless using natural keys.
-(custom import path) | New&nbsp;in&nbsp;1.3 | The function should accept an identifier and a serializer field, and return the mapped value (or `None` if no automatic mapping is available).  See the [built-in functions][idmap.py] for examples.
+`DATA_WIZARD['IDMAP']` | detail
+--|--
+`"data_wizard.idmap.existing"` (default) | Automatically map existing IDs, but require user to map unknown ids
+`"data_wizard.idmap.never"` | Require user to manually map all IDs the first time they are found in a file
+`"data_wizard.idmap.always"` | Always map IDs (skip manual mapping).  Unknown IDs will be passed on as-is to the serializer, which will cause per-row errors unless using natural keys.
+(custom import path) | The function should accept an identifier and a serializer field, and return the mapped value (or `None` if no automatic mapping is available).  See the [built-in functions][idmap.py] for examples.
 
 Note that the configured `IDMAP` function will only be called the first time a new identifier is encountered.  Once the mapping is established (manually or automatically), it will be re-used in subsequent wizard runs.
 
@@ -335,7 +333,7 @@ Django Data Wizard provides a list view that summarises prior runs and the numbe
 ### Identifier Admin
 #### `GET /admin/data_wizard/identifer/`
 
-As of version 1.1.0, Django Data Wizard identifier mappings can be viewed and edited via the Django Admin.  Runs can also be viewed through the admin - though the Run List above will generally be more useful.
+Django Data Wizard identifier mappings can be viewed and edited via the Django Admin.  Runs can also be viewed through the admin - though the Run List above will generally be more useful.
 
 <br>
 
@@ -423,8 +421,8 @@ name | default | notes
 --|--|--
 `header_row` | 0 | Specifies the first row of the spreadsheet that contains column headers.  If this is greater than 0, the space above the column headers will be scanned for anything that looks like a one-off "global" value intended to be applied to every row in the imported data.
 `start_row` | 1 | The first row of data.  If this is greater than `header_row + 1`, the column headers will be assumed to span multiple rows.  A common case is when EAV parameter names are on the first row and units are on the second.
-`show_in_list` | `True` | **New in 1.2**.  If set to `False`, the serializer will be available through the API but not listed in the wizard views.  This is useful if you have a serializer that should only be used during fully automated workflows.
-`idmap` | [`IDMAP` setting](#ids) | **New in 1.3**.  Can be any of `data_wizard.idmap.*` or a custom function.  Unlike the `IDMAP` setting, this should always be an actual function and not an import path.
+`show_in_list` | `True` | If set to `False`, the serializer will be available through the API but not listed in the wizard views.  This is useful if you have a serializer that should only be used during fully automated workflows.
+`idmap` | [`IDMAP` setting](#ids) | Can be any of `data_wizard.idmap.*` or a custom function.  Unlike the `IDMAP` setting, this should always be an actual function and not an import path.
 
 ## Custom Data Sources
 
@@ -466,7 +464,7 @@ DATA_WIZARD = {
 }
 ```
 
-As of Django Data Wizard 1.2, you should register a custom `ModelAdmin` class to add the Import action in the admin panel for your model.
+You should register a custom `ModelAdmin` class to add the Import action in the admin panel for your model.
 
 ```python
 # myapp/admin.py
@@ -517,23 +515,21 @@ data_wizard.set_loader(CustomIterSource, "myapp.loaders.CustomIterLoader")
 
 ## Task Backends
 
-As of version 1.1.0, Django Data Wizard **no longer requires** the use of `celery` as a task runner.  Any of the following backends can be configured with via the `BACKEND` setting:
+Any of the following backends can be configured with via the `BACKEND` setting:
 
 ```python
 # myproject/settings.py
 
 DATA_WIZARD = {
-   "BACKEND": "data_wizard.backends.threading"  # Default in 1.1.x
+   "BACKEND": "data_wizard.backends.threading"  # Default
               "data_wizard.backends.immediate"
-              "data_wizard.backends.celery"     # Only choice in 1.0.x
+              "data_wizard.backends.celery"
 }
 ```
 
-For backwards compatibility with 1.0.x, the default backend reverts to `celery` if you have `CELERY_RESULT_BACKEND` defined in your project settings.  However, it is recommended to explicitly set `BACKEND`, as this behavior may change in a future major version of Data Wizard.
-
 ### `data_wizard.backends.threading`
 
-The `threading` backend creates a separate thread for long-running asynchronous tasks (i.e. `auto` and `data`).  The threading backend leverages the Django cache to pass results back to the status API.  As of Django Data Wizard 1.1.0, **this backend is the default** unless you have configured Celery.
+The `threading` backend creates a separate thread for long-running asynchronous tasks (i.e. `auto` and `data`).  The threading backend leverages the Django cache to pass results back to the status API.  This is the default backend, but it is still a good idea to set it explicitly.
 
 ### `data_wizard.backends.immediate`
 
@@ -542,7 +538,7 @@ The `immediate` backend completes all processing before returning a result to th
 ### `data_wizard.backends.celery`
 
 The `celery` backend leverages [Celery] to handle asynchronous tasks, and is usually used with [Redis] as the memory store.
-**Celery is no longer required to use Django Data Wizard,** unless you would like to use the `celery` backend.  If so, be sure to configure these libraries first or the REST API may not work as expected.  You can use these steps on Ubuntu:
+These additional dependencies are not installed with Django Data Wizard by default.  If you want to use this backend, be sure to configure these libraries first or the REST API may not work as expected.  You can use these steps on Ubuntu:
 
 ```bash
 # Install redis and celery

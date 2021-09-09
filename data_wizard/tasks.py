@@ -722,17 +722,6 @@ def _do_import(run, user):
     for col in matched:
         if 'meta_value' in col:
             save_value(col, col['meta_value'], run_globals)
-        elif 'attr_id' in col and not col.get('attr_field'):
-            # FIXME: Drop this in 2.0
-            Serializer = run.get_serializer()
-            basename = col['field_name'].split('[')[0]
-            field = Serializer().get_fields().get(basename)
-            if field:
-                attr_name, attr_field = get_attribute_field(field)
-                if attr_field:
-                    col['attr_field'] = '%s[][%s]' % (
-                        basename, attr_name
-                    )
 
     # Loop through table rows and add each record
     rows = len(table)

@@ -5,17 +5,13 @@ from django.conf import settings
 DEFAULTS = {
     'BACKEND': 'data_wizard.backends.threading',
     'LOADER': 'data_wizard.loaders.FileLoader',
-    'IDMAP': 'data_wizard.idmap.never',   # FIXME: Change to 'existing' in 2.0
+    'IDMAP': 'data_wizard.idmap.existing',
     'AUTHENTICATION': 'rest_framework.authentication.SessionAuthentication',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
 }
 
 
 def get_setting(name):
-    #  FIXME: Drop this in 2.0
-    if getattr(settings, 'CELERY_RESULT_BACKEND', None):
-        DEFAULTS['BACKEND'] = 'data_wizard.backends.celery'
-
     wizard_settings = getattr(settings, 'DATA_WIZARD', {})
     return wizard_settings.get(name, DEFAULTS[name])
 
