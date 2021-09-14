@@ -99,6 +99,8 @@ jobs:
         node-version: [14]
         package:
           - progress
+          - progress-element
+          - wizard
     steps:
     - uses: actions/checkout@v2
       with:

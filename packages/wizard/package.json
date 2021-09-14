@@ -1,0 +1,43 @@
+{
+    "name": "@wq/wizard",
+    "version": "1.2.0",
+    "description": "wq framework plugin & React UI for Django Data Wizard",
+    "main": "dist/index.js",
+    "unpkg": "dist/index.unpkg.js",
+    "files": [
+        "src/",
+        "dist/"
+    ],
+    "type": "module",
+    "scripts": {
+        "test": "cd ../../ && npm run jest packages/wizard",
+        "prettier": "cd ../../ && npm run prettier",
+        "lint": "cd ../../ && npm run lint",
+        "build": "cd ../../ && npm run rollup -- -c packages/wizard/rollup.config.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/wq/django-data-wizard.git",
+        "directory": "packages/wizard"
+    },
+    "keywords": [
+        "wq",
+        "progress",
+        "data-wizard"
+    ],
+    "author": "S. Andrew Sheppard",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/wq/django-data-wizard/issues"
+    },
+    "homepage": "https://github.com/wq/django-data-wizard",
+    "dependencies": {
+        "@wq/material": "^1.3.0-beta.2",
+        "@wq/progress": "^1.2.0"
+    },
+    "devDependencies": {
+        "react": "^17.0.2",
+        "react-dom": "^17.0.2",
+        "redux-first-router": "^2.1.5"
+    }
+}

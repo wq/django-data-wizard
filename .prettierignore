@@ -1,0 +1,7 @@
+*.yml
+*.md
+*.css
+*.html
+build/
+dist/
+data_wizard/static/

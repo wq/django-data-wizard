@@ -1,13 +1,11 @@
-// FIXME: jest ignores if this is moved to package.json
 module.exports = {
-    presets: [
-        [
-            '@babel/preset-env',
-            {
-                targets: {
-                    node: 'current'
-                }
-            }
-        ]
-    ]
+    plugins: [['@babel/plugin-transform-react-jsx', { useSpread: true }]],
+    env: {
+        test: {
+            presets: [
+                ['@babel/preset-env', { targets: { node: 'current' } }],
+                '@babel/preset-react',
+            ],
+        },
+    },
 };

@@ -1,28 +1,34 @@
-import progress from '../progress';
-import $ from 'jquery';
+import { Progress } from '../progress';
 import mockFetch from 'jest-fetch-mock';
 
 beforeAll(() => {
     global.fetch = mockFetch;
 });
 
-test('progress bar', async () => {
-    const el = document.createElement('progress');
-    el.dataset.wqUrl = 'test.json';
-    document.body.appendChild(el);
-
+test('progress api', async () => {
     mockFetch.mockResponse(
         JSON.stringify({
             status: 'PROGRESS',
             current: 50,
-            total: 100
+            total: 100,
         })
     );
 
-    progress.run($('body'));
+    let state = {};
 
-    await new Promise(res => setTimeout(res, 1000));
+    const progress = new Progress({
+        url: 'test.json',
+        onProgress(s) {
+            Object.assign(state, s);
+        },
+    });
 
-    expect(el.value).toEqual(50);
-    expect(el.max).toEqual(100);
+    progress.start();
+
+    await new Promise((res) => setTimeout(res, 1000));
+
+    expect(state.current).toEqual(50);
+    expect(state.total).toEqual(100);
+
+    progress.stop();
 });

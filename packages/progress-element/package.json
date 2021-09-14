@@ -1,0 +1,33 @@
+{
+    "name": "@wq/progress-element",
+    "version": "1.2.0",
+    "description": "fetch()-powered auto-updating HTML5 <progress> element",
+    "main": "src/progress.js",
+    "type": "module",
+    "scripts": {
+        "test": "cd ../../ && npm run jest packages/progress-element",
+        "build": "cd ../../ && npm run rollup -- -c packages/progress-element/rollup.config.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/wq/django-data-wizard.git",
+        "directory": "packages/progress-element"
+    },
+    "keywords": [
+        "wq",
+        "progress",
+        "data-wizard"
+    ],
+    "author": "S. Andrew Sheppard",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/wq/django-data-wizard/issues"
+    },
+    "homepage": "https://github.com/wq/django-data-wizard",
+    "devDependencies": {
+        "jquery": "^3.4.1"
+    },
+    "dependencies": {
+        "@wq/progress": "^1.2.0"
+    }
+}

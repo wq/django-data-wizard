@@ -1,17 +1,16 @@
 {
     "name": "@wq/progress",
     "version": "1.2.0",
-    "description": "AJAX-powered auto-updating HTML5 <progress> element",
-    "main": "dist/index.js",
-    "module": "dist/index.es.js",
+    "description": "Progress tracking client for monitoring server tasks",
+    "main": "src/progress.js",
     "type": "module",
     "scripts": {
-        "test": "cd ../../ && npm run jest packages/progress",
-        "build": "cd ../../ && npm run rollup -- -c packages/progress/rollup.config.js"
+        "test": "cd ../../ && npm run jest packages/progress/"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/wq/django-data-wizard.git"
+        "url": "git+https://github.com/wq/django-data-wizard.git",
+        "directory": "packages/progress"
     },
     "keywords": [
         "wq",
@@ -23,8 +22,5 @@
     "bugs": {
         "url": "https://github.com/wq/django-data-wizard/issues"
     },
-    "homepage": "https://github.com/wq/django-data-wizard",
-    "devDependencies": {
-        "jquery": "^3.4.1"
-    }
+    "homepage": "https://github.com/wq/django-data-wizard"
 }

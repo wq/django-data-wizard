@@ -10,8 +10,8 @@ Interactive web-based wizard for importing structured data into Django models.
 """
 
 JS_FILES = [
-    'packages/progress/dist/progress.js',
-    'packages/progress/dist/progress.js.map',
+    'packages/progress-element/dist/progress-element.js',
+    'packages/progress-element/dist/progress-element.js.map',
 ]
 
 
@@ -60,8 +60,9 @@ setup(
         'data_wizard': [
             'mustache/*.html',
             'templates/data_wizard/*.html',
-            'static/data_wizard/js/*.js',
+            'static/data_wizard/js/*.*',
             'static/data_wizard/css/*.css',
+            'static/app/js/*.*',
         ]
     },
     install_requires=[

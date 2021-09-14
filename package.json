@@ -7,46 +7,30 @@
         "build": "lerna run build",
         "jest": "jest --verbose",
         "rollup": "rollup",
-        "prettier": "prettier --write *.js{,on} packages/*/{,src/,src/*/}*.js{,on}",
-        "lint": "eslint packages/*/{,src/,src/*/}*.js"
+        "prettier": "prettier --write .",
+        "lint": "eslint ."
     },
     "devDependencies": {
         "@babel/core": "^7.8.4",
+        "@babel/eslint-parser": "^7.15.4",
+        "@babel/plugin-transform-react-jsx": "^7.14.9",
         "@babel/preset-env": "^7.8.4",
+        "@babel/preset-react": "^7.14.5",
+        "@rollup/plugin-babel": "^5.3.0",
+        "@rollup/plugin-commonjs": "^20.0.0",
+        "@rollup/plugin-node-resolve": "^13.0.4",
+        "@rollup/plugin-replace": "^3.0.0",
+        "@wq/rollup-plugin": "^1.3.0-beta.3",
         "babel-eslint": "^10.0.3",
         "eslint": "^6.8.0",
         "eslint-plugin-jest": "^23.7.0",
-        "jest": "^25.1.0",
+        "eslint-plugin-react": "^7.25.1",
+        "jest": "^27.2.0",
         "jest-fetch-mock": "^3.0.1",
         "lerna": "^3.20.2",
-        "prettier": "^1.19.1",
-        "rollup": "^1.31.1",
-        "rollup-plugin-babel": "^4.3.3"
-    },
-    "eslintConfig": {
-        "env": {
-            "browser": true,
-            "es6": true
-        },
-        "extends": [
-            "eslint:recommended",
-            "plugin:jest/recommended"
-        ],
-        "globals": {
-            "global": "readonly",
-            "module": "readonly"
-        },
-        "parser": "babel-eslint",
-        "parserOptions": {
-            "ecmaVersion": 2018,
-            "sourceType": "module"
-        },
-        "plugins": [
-            "jest"
-        ],
-        "ignorePatterns": [
-            "packages/*/node_modules"
-        ]
+        "prettier": "^2.4.0",
+        "rollup": "^2.56.3",
+        "rollup-plugin-terser": "^7.0.2"
     },
     "lerna": {
         "packages": [

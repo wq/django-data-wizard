@@ -2,6 +2,7 @@ from rest_framework import serializers
 from wq.db import rest
 from wq.db.rest.views import ModelViewSet
 from wq.db.rest.serializers import ModelSerializer
+from wq.db.rest.renderers import HTMLRenderer, JSONRenderer
 from .models import Run
 from . import views as wizard
 from rest_framework.settings import api_settings
@@ -40,6 +41,7 @@ class RecordSerializer(wizard.RecordSerializer):
 
 class RunViewSet(ModelViewSet, wizard.RunViewSet):
     record_serializer_class = RecordSerializer
+    renderer_classes = [HTMLRenderer, JSONRenderer]
     pagination_class = api_settings.DEFAULT_PAGINATION_CLASS
     _namespace = 'wq'
 
@@ -57,9 +59,8 @@ rest.router.register_model(
     serializer=RunSerializer,
     viewset=RunViewSet,
     url='datawizard',
-    modes=[],
-    server_modes=[
-        'list', 'detail',
+    modes=[
+        'list', 'detail', 'edit',
         'serializers', 'columns', 'ids', 'data', 'auto', 'records',
     ],
     postsave='datawizard/{{id}}{{#task_id}}/auto?task={{task_id}}{{/task_id}}',
