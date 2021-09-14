@@ -71,7 +71,7 @@ jobs:
       run: python -m pip install celery redis
     - name: Install wq.db
       if: ${{ matrix.variant == 'wq.db' }}
-      run: python -m pip install wq.db
+      run: python -m pip install wq.db --pre
     - name: Install reversion
       if: ${{ matrix.variant == 'reversion' }}
       run: python -m pip install django-reversion
