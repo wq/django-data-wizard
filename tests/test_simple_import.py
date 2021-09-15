@@ -152,7 +152,7 @@ class SimpleTestCase(BaseImportTestCase):
             ' {"date": ["Date has wrong format.'
             ' Use one of these formats instead: YYYY-MM-DD."]}'
         ])
-        self.assert_urls(run, 'simplemodels/%s')
+        self.assert_urls(run, '/simplemodels/%s')
 
     def test_auto_ignore_extra(self):
         # Should abort due to unknown column
@@ -190,7 +190,7 @@ class SimpleTestCase(BaseImportTestCase):
             ' {"date": ["Date has wrong format.'
             ' Use one of these formats instead: YYYY-MM-DD."]}'
         ])
-        self.assert_urls(run, 'simplemodels/%s')
+        self.assert_urls(run, '/simplemodels/%s')
         self.assert_log(run, [
             'created',
             'auto_import',
@@ -241,7 +241,7 @@ class IncompleteTestCase(BaseImportTestCase):
             "Failed at row 5: ValidationError(['\"2017-06-50\" value has the"
             " correct format (YYYY-MM-DD) but it is an invalid date.'])"
         ])
-        self.assert_urls(run, 'simplemodels/%s')
+        self.assert_urls(run, '/simplemodels/%s')
 
 
 class SerializerTestCase(BaseImportTestCase):

@@ -109,4 +109,4 @@ class EAVTestCase(BaseImportTestCase):
             'Precipitation for Chicago: 2 in',
             'Notes for Chicago: Test Note 2',
         ])
-        self.assert_urls(run, 'entities/%s')
+        self.assert_urls(run, '/entities/%s')

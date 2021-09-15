@@ -25,7 +25,7 @@ class BaseFKTestCase(BaseImportTestCase):
             "Imported 'Type #2 (Test Note 3)' at row 3",
             expect_last_record
         ])
-        self.assert_urls(run, 'fkmodels/%s')
+        self.assert_urls(run, '/fkmodels/%s')
 
 
 class ForeignKeyTestCase(BaseFKTestCase):
@@ -418,7 +418,7 @@ class SplitTestCase(BaseFKTestCase):
             "Imported 'Type #2 (Test Note 3)' at row 3",
             expect_last_record,
         ])
-        self.assert_urls(run, 'fkmodels/%s')
+        self.assert_urls(run, '/fkmodels/%s')
 
 
 class NestedTestCase(BaseImportTestCase):
