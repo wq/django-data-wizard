@@ -48,8 +48,11 @@ export default [
         external: [
             'react',
             '@wq/react',
+            '@wq/material',
             '@wq/progress',
             '@material-ui/core/LinearProgress',
+            '@material-ui/icons/Settings',
+            '@material-ui/icons/PlayArrow',
         ],
         plugins: [
             babel({
@@ -65,6 +68,9 @@ export default [
         output: {
             ...config.output,
             file: 'data_wizard/static/app/js/wizard.js',
+            sourcemapPathTransform(path) {
+                return path.replace('../../../../', 'django-data-wizard/');
+            },
         },
     },
     // wq.app staticfiles plugin (unpkg)

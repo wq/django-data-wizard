@@ -105,6 +105,8 @@ class Run(models.Model):
 
     class Meta:
         ordering = ('-pk',)
+        verbose_name = 'data wizard'
+        verbose_name_plural = 'data wizard'
 
 
 class RunLog(models.Model):

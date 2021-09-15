@@ -58,7 +58,6 @@ setup(
     ],
     package_data={
         'data_wizard': [
-            'mustache/*.html',
             'templates/data_wizard/*.html',
             'static/data_wizard/js/*.*',
             'static/data_wizard/css/*.css',

@@ -1,15 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Progress } from '@wq/progress';
+import { useRenderContext, useModel, useNav } from '@wq/react';
 
-export function useProgress() {
-    const [progress, setProgress] = useState(null);
+export function useRunInfo() {
+    const context = useRenderContext(),
+        instance = useModel('run', context.id || -1);
+    return {
+        ...context,
+        ...instance,
+    };
+}
+
+export function useProgress(url) {
+    const [progress, setProgress] = useState(null),
+        [value, setValue] = useState(null),
+        [status, setStatus] = useState(null),
+        [error, setError] = useState(false),
+        [data, setData] = useState(null),
+        nav = useNav();
 
     useEffect(() => {
-        const progress = new Progress({ url: '/FIXME' });
+        const updateStatus = (data) => {
+            setData(data);
+            if (data.error || data.message) {
+                setStatus(data.error || data.message);
+            }
+        };
+        const progress = new Progress({
+            url,
+            onIndeterminate: updateStatus,
+            onProgress(data) {
+                setValue((data.current / data.total) * 100);
+                updateStatus(data);
+            },
+            onComplete(data) {
+                setValue(100);
+                setError(false);
+                updateStatus(data);
+            },
+            onFail(data) {
+                setValue(0);
+                setError(true);
+                updateStatus(data);
+            },
+            onError(err) {
+                setError(true);
+                setStatus('' + err);
+            },
+            onNavigate(data) {
+                nav(data.location.slice(1));
+            },
+        });
         progress.start();
         setProgress(progress);
         return () => progress.stop();
-    }, []);
+    }, [url]);
 
-    return progress;
+    return useMemo(() => {
+        return { progress, value, status, error, data };
+    }, [progress, value, status, error, data]);
 }

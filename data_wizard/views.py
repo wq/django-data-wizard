@@ -108,7 +108,9 @@ class RunViewSet(ModelViewSet):
             run.serializer = name
             run.save()
             run.add_event('update_serializer')
-        return self.serializers(request)
+        response = self.serializers(request)
+        response.data['current_mode'] = 'serializers'
+        return response
 
     @action(detail=True)
     def columns(self, request, *args, **kwargs):
@@ -118,8 +120,20 @@ class RunViewSet(ModelViewSet):
     def updatecolumns(self, request, *args, **kwargs):
         response = self.retrieve_and_run('read_columns')
         self.action = 'columns'
-        result = self.run_task('update_columns', post=request.POST)
+
+        if request.content_type == 'application/json':
+            post = {}
+            for col in request.data.get('columns') or []:
+                rel_id = col.get('id')
+                mapping = col.get('mapping')
+                if rel_id and mapping:
+                    post[f'rel_{rel_id}'] = mapping
+        else:
+            post = request.POST
+
+        result = self.run_task('update_columns', post=post)
         response.data.update(result)
+        response.data['current_mode'] = 'columns'
         return response
 
     @action(detail=True)
@@ -130,13 +144,30 @@ class RunViewSet(ModelViewSet):
     def updateids(self, request, *args, **kwargs):
         response = self.retrieve_and_run('read_row_identifiers')
         self.action = 'ids'
-        result = self.run_task('update_row_identifiers', post=request.POST)
+
+        if request.content_type == 'application/json':
+            post = {}
+            for value in request.data.values():
+                if isinstance(value, list):
+                    for ident in value:
+                        if isinstance(ident, dict):
+                            ident_id = ident.get('id')
+                            mapping = ident.get('mapping')
+                            if ident_id and mapping:
+                                post[f'ident_{ident_id}_id'] = mapping
+        else:
+            post = request.POST
+
+        result = self.run_task('update_row_identifiers', post=post)
         response.data.update(result)
+        response.data['current_mode'] = 'ids'
         return response
 
     @action(detail=True, methods=['post'])
     def data(self, request, *args, **kwargs):
-        return self.retrieve_and_run('import_data', use_async=True)
+        response = self.retrieve_and_run('import_data', use_async=True)
+        response.data['current_mode'] = 'data'
+        return response
 
     @action(detail=True, methods=['post', 'get'])
     def auto(self, request, *args, **kwargs):
@@ -148,7 +179,9 @@ class RunViewSet(ModelViewSet):
             else:
                 self.action = 'retrieve'
             return response
-        return self.retrieve_and_run('auto_import', use_async=True)
+        response = self.retrieve_and_run('auto_import', use_async=True)
+        response.data['current_mode'] = 'auto'
+        return response
 
     @action(detail=True)
     def records(self, request, *args, **kwargs):

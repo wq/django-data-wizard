@@ -15,10 +15,15 @@ __all__ = (
 
 
 backend = None
+discovered = False
 
 
 def autodiscover():
+    global discovered
+    if discovered:
+        return
     autodiscover_modules('wizard', register_to=None)
+    discovered = True
 
 
 def init_backend():

@@ -1,13 +1,15 @@
 import React from 'react';
-import { DefaultDetail, useComponents } from '@wq/react';
-import { View } from '@wq/material';
+import { useComponents } from '@wq/react';
+import { useRunInfo } from '../hooks';
 
 export default function RunAuto() {
-    const { Progress } = useComponents();
+    const { id, label, task_id, svc } = useRunInfo(),
+        { Typography, Progress, Center } = useComponents(),
+        url = `${svc}/datawizard/${id}/status.json?task=${task_id}`;
     return (
-        <View>
-            <DefaultDetail />
-            <Progress />
-        </View>
+        <Center>
+            <Typography variant="h5">{label}</Typography>
+            <Progress url={url} />
+        </Center>
     );
 }
