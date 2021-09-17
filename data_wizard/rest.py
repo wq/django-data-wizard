@@ -69,6 +69,7 @@ rest.router.register_model(
         'list', 'detail', 'edit',
         'serializers', 'columns', 'ids', 'data', 'auto', 'records',
     ],
+    background_sync=False,
     postsave=(
         'datawizard/{{id}}'
         '{{#current_mode}}/{{current_mode}}{{/current_mode}}'

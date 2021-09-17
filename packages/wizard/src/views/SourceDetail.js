@@ -39,7 +39,7 @@ export default function SourceDetail() {
                         <View />
 
                         <SubmitButton icon="wizard">
-                            Start Data Import Wizard
+                            Start Data Wizard
                         </SubmitButton>
                     </HorizontalView>
                 </Form>

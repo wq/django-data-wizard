@@ -22,7 +22,7 @@ class Run(models.Model):
     content_object = GenericForeignKey()
 
     def __str__(self):
-        return "Run for %s" % self.content_object
+        return str(self.content_object)
 
     def get_absolute_url(self):
         return reverse('data_wizard:run-detail', kwargs={'pk': self.pk})

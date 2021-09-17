@@ -10,6 +10,7 @@ export default function Progress({ url }) {
     return (
         <>
             <LinearProgress
+                style={{marginTop: 16, marginBottom: 16}}
                 variant={value === null ? 'indeterminate' : 'determinate'}
                 value={value}
             />

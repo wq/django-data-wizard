@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Progress } from '@wq/progress';
-import { useRenderContext, useModel, useNav } from '@wq/react';
+import { useRenderContext, useModel, useNav, useConfig } from '@wq/react';
 
 export function useRunInfo() {
     const context = useRenderContext(),
@@ -17,7 +17,8 @@ export function useProgress(url) {
         [status, setStatus] = useState(null),
         [error, setError] = useState(false),
         [data, setData] = useState(null),
-        nav = useNav();
+        nav = useNav(),
+        config = useConfig();
 
     useEffect(() => {
         const updateStatus = (data) => {
@@ -48,7 +49,11 @@ export function useProgress(url) {
                 setStatus('' + err);
             },
             onNavigate(data) {
-                nav(data.location.slice(1));
+                const path = data.location.replace(
+                    config.router.base_url + '/',
+                    ''
+                );
+                nav(path);
             },
         });
         progress.start();

@@ -227,6 +227,8 @@ class Progress {
   }
 
   onNavigate(data) {
+    this.stop();
+
     if (this.config.onNavigate) {
       this.config.onNavigate(data);
     }

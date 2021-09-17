@@ -138,7 +138,7 @@ def auto_import(run, user):
 
 
 def get_attribute_field(field):
-    for cname, cfield in field.child.get_fields().items():
+    for cname, cfield in field.child.fields.items():
         if isinstance(cfield, serializers.RelatedField):
             return cname, cfield
     return None, None
@@ -163,7 +163,7 @@ def get_choices(run):
     def load_fields(serializer, group_name,
                     label_prefix="", name_prefix="",
                     attribute_name=None, attribute_choices=None):
-        fields = serializer.get_fields().items()
+        fields = serializer.fields.items()
         if len(fields) == 1 and isinstance(serializer, NaturalKeySerializer):
             is_natkey_lookup = True
         else:
@@ -241,7 +241,15 @@ def get_choices(run):
         root_label = Serializer.Meta.model._meta.verbose_name.title()
     else:
         root_label = run.serializer_label
-    load_fields(Serializer(), root_label)
+
+    serializer = Serializer(
+        context={
+            'data_wizard': {
+                'run': run,
+            }
+        }
+    )
+    load_fields(serializer, root_label)
 
     field_choices.add(
         ('Other', '__ignore__', 'Ignore this Column', False, None)
