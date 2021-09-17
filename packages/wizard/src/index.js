@@ -20,6 +20,9 @@ const wizard = {
                     headers: { Accept: 'application/json' },
                 }),
                 data = await response.json();
+            if (mode !== 'records') {
+                await this.app.models.run.update([data]);
+            }
             return data;
         }
     },
