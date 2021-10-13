@@ -24,16 +24,17 @@ def wizard_task(label=None, url_path=None, use_async=False):
         task_name = f"{fn.__module__}.{fn.__qualname__}"
         parameters = inspect.signature(fn).parameters
         assert len(parameters) < 3
-        if len(parameters) == 2 or use_async:
-            method = "POST"
+
+        if len(parameters) == 2:
+            user_input = True
         else:
-            method = "GET"
+            user_input = False
 
         TASK_META[task_name] = {
             "label": label,
             "url_path": url_path,
-            "method": method,
             "use_async": use_async,
+            "user_input": user_input,
         }
 
         @wraps(fn)

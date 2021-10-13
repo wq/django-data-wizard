@@ -7,6 +7,7 @@ from wq.db.rest.context_processors import get_base_url
 from .models import Run
 from . import views as wizard
 from . import autodiscover
+from .backends.base import TASK_META
 from rest_framework.settings import api_settings
 
 
@@ -65,16 +66,12 @@ rest.router.register_model(
     serializer=RunSerializer,
     viewset=RunViewSet,
     url="datawizard",
-    modes=[
-        "list",
-        "detail",
-        "edit",
-        "serializers",
-        "columns",
-        "ids",
-        "data",
-        "auto",
-        "records",
+    modes=["list", "detail", "edit"]
+    + [
+        action.url_path
+        for action in RunViewSet.get_extra_actions()
+        if "get" in action.mapping
+        and action.url_path not in ("edit", "status")
     ],
     background_sync=False,
     postsave=(

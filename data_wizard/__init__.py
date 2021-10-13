@@ -26,6 +26,8 @@ def autodiscover():
     if discovered:
         return
     autodiscover_modules("wizard", register_to=None)
+    from . import tasks  # noqa
+
     discovered = True
 
 

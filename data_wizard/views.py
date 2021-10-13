@@ -89,12 +89,14 @@ class RunViewSet(ModelViewSet):
             result = run.run_task(
                 task_name,
                 use_async=meta["use_async"],
-                post=request.data if meta["method"] == "POST" else None,
+                post=request.data if meta["user_input"] else None,
             )
             if meta["use_async"]:
                 current_mode = meta["url_path"]
             else:
-                current_mode = result.pop("current_mode", None)
+                current_mode = result.get("result", {}).pop(
+                    "current_mode", None
+                )
 
         response = self.retrieve(self.request, **self.kwargs)
         if result:
@@ -133,8 +135,10 @@ class RunViewSet(ModelViewSet):
 
         if meta["use_async"]:
             methods = ["POST", "GET"]
+        elif meta["user_input"]:
+            methods = ["POST"]
         else:
-            methods = [meta["method"]]
+            methods = ["GET"]
         task_action.__name__ = task_name.split(".")[-1]
         task_action = action(
             detail=True,

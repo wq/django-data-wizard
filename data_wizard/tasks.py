@@ -88,9 +88,12 @@ def updateserializer(run, post={}):
         run.serializer = name
         run.save()
         run.add_event("update_serializer")
-    return {
-        "current_mode": "serializers",
-    }
+
+    result = list_serializers(run)
+    result.update(
+        current_mode="serializers",
+    )
+    return result
 
 
 @wizard_task(label="Loading Data...", url_path=False)
@@ -494,10 +497,10 @@ def update_columns(run, post={}):
         )
 
     result = read_columns(run)
-    return {
-        "current_mode": "columns",
-        "unknown_count": result["unknown_count"],
-    }
+    result.update(
+        current_mode="columns",
+    )
+    return result
 
 
 @wizard_task(label="Parsing Identifiers...", url_path=False)
@@ -715,10 +718,10 @@ def update_row_identifiers(run, post={}):
         )
 
     result = read_row_identifiers(run)
-    return {
-        "current_mode": "ids",
-        "unknown_count": result["unknown_count"],
-    }
+    result.update(
+        current_mode="ids",
+    )
+    return result
 
 
 @wizard_task(label="Importing Data...", url_path="data", use_async=True)
@@ -840,6 +843,7 @@ def import_row(run, i, row, instance_globals, matched):
             context={
                 "data_wizard": {
                     "run": run,
+                    "row": i,
                 }
             },
         )

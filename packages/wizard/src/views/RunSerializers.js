@@ -3,8 +3,14 @@ import { useComponents } from '@wq/react';
 import { useRunInfo } from '../hooks';
 
 export default function RunSerializers() {
-    const { id, label, serializer, serializer_label, serializer_choices } =
-            useRunInfo(),
+    const {
+            id,
+            label,
+            serializer,
+            serializer_label,
+            result = {},
+        } = useRunInfo(),
+        { serializer_choices = [] } = result,
         form = useMemo(
             () => [
                 {
@@ -31,7 +37,7 @@ export default function RunSerializers() {
                 </ContinueForm>
             </ScrollView>
         );
-    } else if (!serializer_choices) {
+    } else if (!(serializer_choices.length > 0)) {
         return (
             <Center>
                 <Typography variant="h6" color="error">
