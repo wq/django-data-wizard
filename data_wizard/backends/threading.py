@@ -19,12 +19,12 @@ class Backend(DataWizardBackend):
     current_state = None
     current_result = None
 
-    def run_async(self, task_name, run_id, user_id, post):
+    def run_async(self, task_name, run_id, post):
         task_id = uuid.uuid4()
         thread = threading.Thread(
             name=task_id,
             target=self.try_run_sync,
-            args=(task_name, run_id, user_id, post)
+            args=(task_name, run_id, post)
         )
         thread.start()
         return task_id

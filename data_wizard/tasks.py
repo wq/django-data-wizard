@@ -1,12 +1,13 @@
 from xlrd import colname
 from collections import OrderedDict
-from .models import Run, Identifier
-from .signals import progress, import_complete, new_metadata
-from functools import wraps
+from .models import Identifier
+from .signals import import_complete, new_metadata
+from .backends.base import wizard_task, InputNeeded
+from .settings import get_setting
+from . import registry
 
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth import get_user_model
 
 from rest_framework import serializers
 from natural_keys import NaturalKeySerializer
@@ -18,8 +19,6 @@ try:
     import reversion
 except ImportError:
     reversion = None
-
-User = get_user_model()
 
 
 PRIORITY = {
@@ -51,90 +50,54 @@ def get_id(obj, field):
         return field.to_representation(obj)
 
 
-def send_progress(sender, run):
-    def send(state, meta):
-        progress.send(
-            sender=sender,
-            run=run,
-            state=state,
-            meta=meta
-        )
-    return send
-
-
-def lookuprun(fn):
-    @wraps(fn)
-    def wrapped(run, user=None, **kwargs):
-        if not isinstance(run, Run):
-            run = Run.objects.get(pk=run)
-        if user and not isinstance(user, User):
-            user = User.objects.get(pk=user)
-        return fn(run, user, **kwargs)
-    return wrapped
-
-
-@lookuprun
-def auto_import(run, user):
+@wizard_task(label="Processing Data", url_path="auto", use_async=True)
+def auto_import(run):
     """
     Walk through all the steps necessary to interpret and import data from an
     Iter.  Meant to be called asynchronously.  Automatically suspends import if
     any additional input is needed from the user.
     """
-    send = send_progress(auto_import, run)
+    tasks = get_setting("AUTO_IMPORT_TASKS")
+    run.add_event("auto_import")
+    return run.run_all(tasks)
 
-    run.add_event('auto_import')
+
+@wizard_task(label="Checking configuration...", url_path=False)
+def check_serializer(run):
     if not run.serializer:
-        result = {
-            'action': 'serializers',
-            'message': 'Input Needed'
+        raise InputNeeded("serializers")
+
+
+@wizard_task(label="Serializers", url_path="serializers")
+def list_serializers(run):
+    result = {}
+    result["serializer_choices"] = [
+        {
+            "name": s["class_name"],
+            "label": s["name"],
         }
-        send('SUCCESS', result)
-        return result
+        for s in registry.get_serializers()
+        if s["options"].get("show_in_list", True)
+    ]
+    return result
 
-    # Preload Iter to catch any load errors early
-    status = {
-        'message': "Loading Data...",
-        'stage': 'meta',
-        'current': 1,
-        'total': 5,
+
+@wizard_task(label="Update Serializer")
+def updateserializer(run, post={}):
+    name = post.get("serializer", None)
+    if name and registry.get_serializer(name):
+        run.serializer = name
+        run.save()
+        run.add_event('update_serializer')
+    return {
+        "current_mode": "serializers",
     }
-    send('PROGRESS', status)
+
+
+@wizard_task(label="Loading Data...", url_path=False)
+def check_iter(run):
+    # Preload Iter to catch any load errors early
     run.load_iter()
-
-    # Parse columns
-    status.update(
-        message="Parsing Columns...",
-        current=2,
-    )
-    send('PROGRESS', status)
-    result = read_columns(run, user)
-    if result['unknown_count']:
-        result['action'] = "columns"
-        result['message'] = "Input Needed"
-        send('SUCCESS', result)
-        return result
-
-    # Parse row identifiers
-    status.update(
-        message="Parsing Identifiers...",
-        current=3,
-    )
-    send('PROGRESS', status)
-    result = read_row_identifiers(run, user)
-    if result['unknown_count']:
-        result['action'] = "ids"
-        result['message'] = "Input Needed"
-        send('SUCCESS', result)
-        return result
-
-    status.update(
-        message="Importing Data...",
-        current=4,
-    )
-    send('PROGRESS', status)
-
-    # The rest is the same as import_data
-    return do_import(run, user)
 
 
 def get_attribute_field(field):
@@ -290,8 +253,16 @@ def get_choice_ids(run):
     return [choice['id'] for choice in get_choices(run)]
 
 
-@lookuprun
-def read_columns(run, user=None):
+@wizard_task(label="Parsing Columns...", url_path=False)
+def check_columns(run):
+    result = read_columns(run)
+    if result["unknown_count"]:
+        raise InputNeeded("columns", result["unknown_count"])
+    return result
+
+
+@wizard_task("Columns", url_path="columns")
+def read_columns(run):
     matched = get_columns(run)
     unknown_count = 0
     for info in matched:
@@ -302,6 +273,7 @@ def read_columns(run, user=None):
             info['types'] = get_choice_groups(run)
         assert(info['type'] != 'unresolved')
 
+    # Parse row identifiers
     return {
         'columns': matched,
         'unknown_count': unknown_count,
@@ -464,9 +436,17 @@ def parse_column(run, name, **kwargs):
     )
 
 
-@lookuprun
-def update_columns(run, user, post={}):
+@wizard_task(label='Update Columns', url_path='updatecolumns')
+def update_columns(run, post={}):
     run.add_event('update_columns')
+
+    if isinstance(post.get('columns'), list):
+        for col in post['columns']:
+            rel_id = col.get('id')
+            mapping = col.get('mapping')
+            if rel_id and mapping:
+                post[f'rel_{rel_id}'] = mapping
+
     matched = get_columns(run)
     for col in matched:
         if col['type'] != 'unknown':
@@ -502,11 +482,23 @@ def update_columns(run, user, post={}):
             identifier=ident,
         )
 
-    return read_columns(run)
+    result = read_columns(run)
+    return {
+        'current_mode': 'columns',
+        'unknown_count': result['unknown_count'],
+    }
 
 
-@lookuprun
-def read_row_identifiers(run, user=None):
+@wizard_task(label="Parsing Identifiers...", url_path=False)
+def check_row_identifiers(run):
+    result = read_row_identifiers(run)
+    if result['unknown_count']:
+        raise InputNeeded("ids", result['unknown_count'])
+    return result
+
+
+@wizard_task(label="Identifiers", url_path="ids")
+def read_row_identifiers(run):
     if run.range_set.filter(type='data').exists():
         return load_row_identifiers(run)
     else:
@@ -659,9 +651,22 @@ def load_row_identifiers(run):
     }
 
 
-@lookuprun
-def update_row_identifiers(run, user, post={}):
+@wizard_task(label="Update Identifiers", url_path="updateids")
+def update_row_identifiers(run, post={}):
     run.add_event('update_row_identifiers')
+
+    for value in list(post.values()):
+        if not isinstance(value, list):
+            continue
+        for ident in value:
+            if not isinstance(ident, dict):
+                continue
+
+            ident_id = ident.get('id')
+            mapping = ident.get('mapping')
+            if ident_id and mapping:
+                post[f'ident_{ident_id}_id'] = mapping
+
     unknown = run.range_set.filter(
         type='data',
         identifier__resolved=False,
@@ -686,47 +691,38 @@ def update_row_identifiers(run, user, post={}):
             identifier=ident,
         )
 
-    return read_row_identifiers(run, user)
+    result = read_row_identifiers(run)
+    return {
+        "current_mode": "ids",
+        "unknown_count": result["unknown_count"],
+    }
 
 
-@lookuprun
-def import_data(run, user):
+@wizard_task(label="Importing Data...", url_path="data", use_async=True)
+def import_data(run):
     """
     Import all parseable data from the dataset instance's Iter class.
     """
-    result = do_import(run, user)
-    return result
-
-
-def do_import(run, user):
     if reversion:
         with reversion.create_revision():
-            reversion.set_user(user)
+            reversion.set_user(run.user)
             reversion.set_comment('Imported via %s' % run)
-            result = _do_import(run, user)
+            result = _do_import(run)
     else:
-        result = _do_import(run, user)
+        result = _do_import(run)
     return result
 
 
-def _do_import(run, user):
-    send = send_progress(import_data, run)
+def _do_import(run):
     run.add_event('do_import')
 
     # (Re-)Load data and column information
     table = run.load_iter()
     matched = get_columns(run)
 
-    # Set global defaults for metadata values
-    if user and not user.is_authenticated:
-        user = None
-
-    run_globals = {
-        # Metadata fields
-    }
-
     # Set any global defaults defined within data themselves (usually as extra
     # cells above the headers in a spreadsheet)
+    run_globals = {}
     for col in matched:
         if 'meta_value' in col:
             save_value(col, col['meta_value'], run_globals)
@@ -744,7 +740,7 @@ def _do_import(run, user):
 
     for i, row in enumerate(table):
         # Update state (for status() on view)
-        send('PROGRESS', {
+        run.send_progress({
             'message': "Importing Data...",
             'stage': 'data',
             'current': i,
@@ -780,7 +776,7 @@ def _do_import(run, user):
     run.add_event('import_complete')
     run.record_count = run.record_set.filter(success=True).count()
     run.save()
-    send('SUCCESS', status)
+    run.send_progress(status, state='SUCCESS')
     import_complete.send(sender=import_data, run=run, status=status)
 
     return status

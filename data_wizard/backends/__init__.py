@@ -1,5 +1,5 @@
-from data_wizard.signals import progress
-from data_wizard.settings import get_setting, import_from_string
+from ..signals import progress
+from ..settings import get_setting, import_from_string
 
 
 def create_backend():

@@ -8,6 +8,13 @@ DEFAULTS = {
     'IDMAP': 'data_wizard.idmap.existing',
     'AUTHENTICATION': 'rest_framework.authentication.SessionAuthentication',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
+    'AUTO_IMPORT_TASKS': (
+        'data_wizard.tasks.check_serializer',
+        'data_wizard.tasks.check_iter',
+        'data_wizard.tasks.check_columns',
+        'data_wizard.tasks.check_row_identifiers',
+        'data_wizard.tasks.import_data',
+    )
 }
 
 
@@ -20,7 +27,13 @@ def import_from_string(path, setting_name):
     try:
         obj = drf_import(path, setting_name)
     except ImportError as e:
-        msg = e.args[0].replace("API", "Data Wizard")
+        if setting_name == "__task__":
+            msg = e.args[0].replace(
+                "API setting '__task__'",
+                "Data Wizard task specifier",
+            )
+        else:
+            msg = e.args[0].replace("API", "Data Wizard")
         raise ImportError(msg)
     else:
         return obj

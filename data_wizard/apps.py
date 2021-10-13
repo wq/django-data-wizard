@@ -8,3 +8,4 @@ class WizardConfig(AppConfig):
     def ready(self):
         self.module.autodiscover()
         self.module.init_backend()
+        from . import tasks

@@ -44,8 +44,9 @@ class WizardTestCase(APITransactionTestCase):
     def get_url(self, run, action, params={}):
         return self.client.get(self.mkurl(run, action), params)
 
-    def post_url(self, run, action, post):
-        return self.client.post(self.mkurl(run, action), post)
+    def post_url(self, run, action, post, use_json=False):
+        format = "json" if use_json else "multipart"
+        return self.client.post(self.mkurl(run, action), post, format=format)
 
     def wait(self, run, action):
         print()
@@ -135,7 +136,7 @@ class WizardTestCase(APITransactionTestCase):
         """
         response = self.get_url(run, 'serializers')
         found = False
-        for choice in response.data.get('serializer_choices'):
+        for choice in response.data['result'].get('serializer_choices'):
             if choice['name'] == self.serializer_name:
                 found = True
         self.assertTrue(found)
@@ -158,12 +159,14 @@ class WizardTestCase(APITransactionTestCase):
             response.data['result'].get('unknown_count', 0), expect_unknown
         )
 
-    def update_columns(self, run, mappings):
+    def update_columns(self, run, mappings, use_json=False):
         """
         3. Inspect unmatched columns and select choices
         """
         response = self.get_url(run, 'columns')
         post = {}
+        if use_json:
+            post['columns'] = []
         for col in response.data['result']['columns']:
             if not col.get('unknown', False):
                 continue
@@ -188,9 +191,15 @@ class WizardTestCase(APITransactionTestCase):
                     col_id + " not found in choices: %s" %
                     type_choices[type_name]
                 )
-                post["rel_%s" % col['rel_id']] = col_id
+                if use_json:
+                    post['columns'].append({
+                        'id': col['rel_id'],
+                        'mapping': col_id
+                    })
+                else:
+                    post["rel_%s" % col['rel_id']] = col_id
 
-        response = self.post_url(run, 'updatecolumns', post)
+        response = self.post_url(run, 'updatecolumns', post, use_json)
         unknown = response.data['result']['unknown_count']
         self.assertFalse(unknown, "%s unknown columns remain" % unknown)
 
@@ -210,7 +219,7 @@ class WizardTestCase(APITransactionTestCase):
             expect_unknown, response.data['result'].get('unknown_count', 0)
         )
 
-    def update_row_identifiers(self, run, mappings):
+    def update_row_identifiers(self, run, mappings, use_json=False):
         """
         5. Inspect unmatched identifiers and select choices
         """
@@ -225,12 +234,20 @@ class WizardTestCase(APITransactionTestCase):
             self.assertIn(typeid, type_ids)
             for idinfo in type_ids[typeid]:
                 if idinfo['value'] in mapping:
-                    post[
-                        'ident_%s_id' % idinfo['ident_id']
-                    ] = mapping[idinfo['value']]
+                    if use_json:
+                        group_name = typeid.replace('.', '_')
+                        post.setdefault(group_name, [])
+                        post[group_name].append({
+                            'id': idinfo['ident_id'],
+                            'mapping': mapping[idinfo['value']],
+                        })
+                    else:
+                        post[
+                            'ident_%s_id' % idinfo['ident_id']
+                        ] = mapping[idinfo['value']]
 
         # 7. Post selected options, verify that all identifiers are now known
-        response = self.post_url(run, 'updateids', post)
+        response = self.post_url(run, 'updateids', post, use_json)
         unknown = response.data['result']['unknown_count']
         self.assertFalse(unknown, "%s unknown identifiers remain" % unknown)
 

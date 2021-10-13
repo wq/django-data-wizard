@@ -1,5 +1,6 @@
 from django.utils.module_loading import autodiscover_modules
 from .registry import registry
+from .backends.base import wizard_task, InputNeeded
 from . import idmap
 
 
@@ -11,6 +12,8 @@ __all__ = (
     "set_loader",
     "default_app_config",
     "idmap",
+    "wizard_task",
+    "InputNeeded",
 )
 
 

@@ -53,16 +53,25 @@ class Run(models.Model):
             self._iter_data = loader.load_iter()
         return self._iter_data
 
-    def run_task(self, name, use_async=False, post=None,
-                 backend=None, user=None):
-        from . import backend as data_wizard_backend
-        if not backend:
-            backend = data_wizard_backend
-        if not user:
-            user = self.user
-        return backend.run(
-            name, self.pk, user.pk, use_async, post,
+    def run_task(self, name, use_async=False, post=None):
+        return self.backend.run(
+            name,
+            self.pk,
+            use_async,
+            post,
         )
+
+    def run_all(self, tasks):
+        return self.backend.run_all(self, tasks)
+
+    def send_progress(self, meta, state="PROGRESS"):
+        self.backend.send_progress(self, meta, state)
+
+    @property
+    def backend(self):
+        from . import backend as data_wizard_backend
+
+        return data_wizard_backend
 
     @property
     def serializer_label(self):

@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import pagination
 from rest_framework import renderers
-from . import registry
+from .backends.base import TASK_META
 from .serializers import RunSerializer, RecordSerializer
 from .models import Run
 from .settings import import_setting
@@ -71,117 +71,78 @@ class RunViewSet(ModelViewSet):
         name = self._namespace + ':run-' + action
         return reverse(name, kwargs={'pk': self.get_object().pk})
 
-    def run_task(self, name, use_async=False, post=None):
+    def run_and_retrieve(self, request, task_name):
         run = self.get_object()
-        return run.run_task(
-            name,
-            use_async=use_async,
-            post=post,
-            backend=self.backend,
-            user=self.request.user
-        )
+        meta = TASK_META[task_name]
 
-    def retrieve_and_run(self, task_name, use_async=False, post=None):
-        response = self.retrieve(self.request, **self.kwargs)
-        result = self.run_task(task_name, use_async, post)
-        response.data.update(result)
-        return response
-
-    @action(detail=True)
-    def serializers(self, request, *args, **kwargs):
-        response = self.retrieve(request, **self.kwargs)
-        response.data['serializer_choices'] = [
-            {
-                'name': s['class_name'],
-                'label': s['name'],
-            } for s in registry.get_serializers()
-            if s['options'].get('show_in_list', True)
-        ]
-        return response
-
-    @action(detail=True, methods=['post'])
-    def updateserializer(self, request, *args, **kwargs):
-        run = self.get_object()
-        self.action = 'serializers'
-        name = request.POST.get('serializer', None)
-        if name and registry.get_serializer(name):
-            run.serializer = name
-            run.save()
-            run.add_event('update_serializer')
-        response = self.serializers(request)
-        response.data['current_mode'] = 'serializers'
-        return response
-
-    @action(detail=True)
-    def columns(self, request, *args, **kwargs):
-        return self.retrieve_and_run('read_columns')
-
-    @action(detail=True, methods=['post'])
-    def updatecolumns(self, request, *args, **kwargs):
-        response = self.retrieve_and_run('read_columns')
-        self.action = 'columns'
-
-        if request.content_type == 'application/json':
-            post = {}
-            for col in request.data.get('columns') or []:
-                rel_id = col.get('id')
-                mapping = col.get('mapping')
-                if rel_id and mapping:
-                    post[f'rel_{rel_id}'] = mapping
-        else:
-            post = request.POST
-
-        result = self.run_task('update_columns', post=post)
-        response.data.update(result)
-        response.data['current_mode'] = 'columns'
-        return response
-
-    @action(detail=True)
-    def ids(self, request, *args, **kwargs):
-        return self.retrieve_and_run('read_row_identifiers')
-
-    @action(detail=True, methods=['post'])
-    def updateids(self, request, *args, **kwargs):
-        response = self.retrieve_and_run('read_row_identifiers')
-        self.action = 'ids'
-
-        if request.content_type == 'application/json':
-            post = {}
-            for value in request.data.values():
-                if isinstance(value, list):
-                    for ident in value:
-                        if isinstance(ident, dict):
-                            ident_id = ident.get('id')
-                            mapping = ident.get('mapping')
-                            if ident_id and mapping:
-                                post[f'ident_{ident_id}_id'] = mapping
-        else:
-            post = request.POST
-
-        result = self.run_task('update_row_identifiers', post=post)
-        response.data.update(result)
-        response.data['current_mode'] = 'ids'
-        return response
-
-    @action(detail=True, methods=['post'])
-    def data(self, request, *args, **kwargs):
-        response = self.retrieve_and_run('import_data', use_async=True)
-        response.data['current_mode'] = 'data'
-        return response
-
-    @action(detail=True, methods=['post', 'get'])
-    def auto(self, request, *args, **kwargs):
-        if request.method == 'GET':
-            response = self.retrieve(request, **kwargs)
-            task_id = request.GET.get('task', None)
+        if meta["use_async"] and request.method == "GET":
+            task_id = request.GET.get("task", None)
+            result = None
             if task_id:
-                response.data['task_id'] = task_id
+                current_mode = meta["url_path"]
             else:
-                self.action = 'retrieve'
-            return response
-        response = self.retrieve_and_run('auto_import', use_async=True)
-        response.data['current_mode'] = 'auto'
+                self.action = "retrieve"
+                current_mode = None
+        else:
+            task_id = None
+            result = run.run_task(
+                task_name,
+                use_async=meta["use_async"],
+                post=request.data if meta["method"] == "POST" else None,
+            )
+            if meta["use_async"]:
+                current_mode = meta["url_path"]
+            else:
+                current_mode = result.pop("current_mode", None)
+
+        response = self.retrieve(self.request, **self.kwargs)
+        if result:
+            response.data.update(result)
+
+        if current_mode:
+            self.action = current_mode
+            response.data["current_mode"] = current_mode
+
+        if task_id:
+            response.data["task_id"] = task_id
+
         return response
+
+    task_actions_ready = False
+
+    @classmethod
+    def get_extra_actions(cls):
+        if not cls.task_actions_ready:
+            cls.init_task_actions()
+            cls.task_actions_ready = True
+        return super().get_extra_actions()
+
+    @classmethod
+    def init_task_actions(cls):
+        for task_name, meta in TASK_META.items():
+            cls.init_task_action(task_name, meta)
+
+    @classmethod
+    def init_task_action(cls, task_name, meta):
+        if meta["url_path"] is False:
+            return
+
+        def task_action(self, request, *args, **kwargs):
+            return self.run_and_retrieve(request, task_name)
+
+        if meta["use_async"]:
+            methods = ["POST", "GET"]
+        else:
+            methods = [meta["method"]]
+        task_action.__name__ = task_name.split(".")[-1]
+        task_action = action(
+            detail=True,
+            methods=methods,
+            url_path=meta["url_path"],
+            url_name=meta["url_path"],
+        )(task_action)
+
+        setattr(cls, task_action.__name__, task_action)
 
     @action(detail=True)
     def records(self, request, *args, **kwargs):

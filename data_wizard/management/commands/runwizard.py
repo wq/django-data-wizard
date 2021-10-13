@@ -2,7 +2,6 @@ from django.core.management.base import BaseCommand, CommandError
 from ...models import Run
 from django.contrib.contenttypes.models import ContentType
 from ...serializers import ContentTypeIdField
-from ...backends import immediate
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 import getpass
@@ -59,9 +58,8 @@ class Command(BaseCommand):
 
         try:
             result = run.run_task(
-                'auto_import',
+                'data_wizard.tasks.auto_import',
                 use_async=False,
-                backend=immediate.Backend(),
             )
         except Exception as e:
             raise CommandError(e)

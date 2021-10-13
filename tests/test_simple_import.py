@@ -13,7 +13,7 @@ class SimpleTestCase(BaseImportTestCase):
             'Simple Model': {
                 'field notes': 'notes'
             }
-        })
+        }, use_json=True)
 
         # Start data import process, wait for completion
         self.start_import(run, [{
@@ -250,7 +250,7 @@ class SerializerTestCase(BaseImportTestCase):
         result = self.get_url(run, 'serializers')
         choices = {
             row['name']: row['label']
-            for row in result.data['serializer_choices']
+            for row in result.data['result']['serializer_choices']
         }
         self.assertIn(
             'tests.data_app.wizard.SlugSerializer',

@@ -6,8 +6,8 @@ from .base import DataWizardBackend, ERROR_RAISE
 class Backend(DataWizardBackend):
     on_async_error = ERROR_RAISE
 
-    def run_async(self, task_name, run_id, user_id, post):
-        task = run_async.delay(task_name, run_id, user_id, post)
+    def run_async(self, task_name, run_id, post):
+        task = run_async.delay(task_name, run_id, post)
         return task.task_id
 
     def update_async_status(self, state, meta):
@@ -31,6 +31,6 @@ class Backend(DataWizardBackend):
 
 
 @shared_task
-def run_async(task_name, run_id, user_id, post):
+def run_async(task_name, run_id, post):
     from .. import backend
-    return backend.try_run_sync(task_name, run_id, user_id, post)
+    return backend.try_run_sync(task_name, run_id, post)

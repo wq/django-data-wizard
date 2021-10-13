@@ -168,7 +168,7 @@ class SlugTestCase(BaseFKTestCase):
                 'Type #2': 'Type #2',
                 'Type #2 - Alternate Name': 'Type #2',
             }
-        })
+        }, use_json=True)
         self.auto_import(run, expect_input_required=False)
         self.check_data(
             run,
