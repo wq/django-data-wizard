@@ -7,13 +7,13 @@ class IncompleteSerializer(serializers.ModelSerializer):
     # Serializer will report is_valid(), but save will fail
 
     date = serializers.CharField()  # Should be date field
-    color = serializers.CharField()   # Should limit length (and choices)
+    color = serializers.CharField()  # Should limit length (and choices)
 
     class Meta:
         model = SimpleModel
         fields = "__all__"
         data_wizard = {
-            'show_in_list': False,
+            "show_in_list": False,
         }
 
 
@@ -24,63 +24,53 @@ class FKMapExistingSerializer(serializers.ModelSerializer):
     class Meta:
         model = FKModel
         fields = "__all__"
-        data_wizard = {
-             'idmap': data_wizard.idmap.existing
-        }
+        data_wizard = {"idmap": data_wizard.idmap.existing}
 
 
 class FKMapNeverSerializer(serializers.ModelSerializer):
     class Meta:
         model = FKModel
         fields = "__all__"
-        data_wizard = {
-             'idmap': data_wizard.idmap.never
-        }
+        data_wizard = {"idmap": data_wizard.idmap.never}
 
 
 class FKMapAlwaysSerializer(serializers.ModelSerializer):
     class Meta:
         model = FKModel
         fields = "__all__"
-        data_wizard = {
-             'idmap': data_wizard.idmap.always
-        }
+        data_wizard = {"idmap": data_wizard.idmap.always}
 
 
 class SlugSerializer(serializers.ModelSerializer):
     type = serializers.SlugRelatedField(
         queryset=Type.objects.all(),
-        slug_field='name',
+        slug_field="name",
     )
 
     class Meta:
         model = FKModel
         fields = "__all__"
-        data_wizard = {
-             'idmap': data_wizard.idmap.never
-        }
+        data_wizard = {"idmap": data_wizard.idmap.never}
 
 
 class SlugMapExistingSerializer(SlugSerializer):
     class Meta(SlugSerializer.Meta):
-        data_wizard = {
-             'idmap': data_wizard.idmap.existing
-        }
+        data_wizard = {"idmap": data_wizard.idmap.existing}
 
 
 class NestedFKSerializer(serializers.ModelSerializer):
     class Meta:
         model = FKModel
-        fields = ['notes']
+        fields = ["notes"]
 
 
 class NestedSerializer(serializers.ModelSerializer):
     fkmodel = NestedFKSerializer()
 
     def create(self, validated_data):
-        fkdata = validated_data.pop('fkmodel')
+        fkdata = validated_data.pop("fkmodel")
         instance = super(NestedSerializer, self).create(validated_data)
-        fkdata['type'] = instance
+        fkdata["type"] = instance
         NestedFKSerializer().create(fkdata)
         return instance
 
@@ -105,15 +95,16 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 data_wizard.register(SimpleModel)
-data_wizard.register('Simple Model - Incomplete', IncompleteSerializer)
+data_wizard.register("Simple Model - Incomplete", IncompleteSerializer)
 data_wizard.register(FKModel)
-data_wizard.register('FK Model - Use existing FKs', FKMapExistingSerializer)
-data_wizard.register('FK Model - Never use FKs', FKMapNeverSerializer)
-data_wizard.register('FK Model - Use FKs always', FKMapAlwaysSerializer)
-data_wizard.register('FK Model By Name', SlugSerializer)
+data_wizard.register("FK Model - Use existing FKs", FKMapExistingSerializer)
+data_wizard.register("FK Model - Never use FKs", FKMapNeverSerializer)
+data_wizard.register("FK Model - Use FKs always", FKMapAlwaysSerializer)
+data_wizard.register("FK Model By Name", SlugSerializer)
 data_wizard.register(
-    'FK Model By Name - Use existing', SlugMapExistingSerializer,
+    "FK Model By Name - Use existing",
+    SlugMapExistingSerializer,
 )
-data_wizard.register('New Type + FK Model', NestedSerializer)
+data_wizard.register("New Type + FK Model", NestedSerializer)
 data_wizard.register(Address)
-data_wizard.register('Address with Zip Code', AddressSerializer)
+data_wizard.register("Address with Zip Code", AddressSerializer)

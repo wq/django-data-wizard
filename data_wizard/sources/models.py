@@ -6,10 +6,12 @@ import os
 class FileSource(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True, on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
     )
     name = models.CharField(max_length=255, null=True, blank=True)
-    file = models.FileField(upload_to='datawizard/')
+    file = models.FileField(upload_to="datawizard/")
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -19,7 +21,9 @@ class FileSource(models.Model):
 class URLSource(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True, on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
     )
     name = models.CharField(max_length=255, null=True, blank=True)
     url = models.URLField()

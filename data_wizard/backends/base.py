@@ -56,11 +56,9 @@ class DataWizardBackend(object):
     def run(self, task_name, run_id, use_async=False, post=None):
         if use_async:
             task_id = self.run_async(task_name, run_id, post)
-            return {'task_id': task_id}
+            return {"task_id": task_id}
         else:
-            return self.try_run_sync(
-                task_name, run_id, post, ERROR_RETURN
-            )
+            return self.try_run_sync(task_name, run_id, post, ERROR_RETURN)
 
     def get_task_fn(self, task_name):
         if task_name not in TASK_FN:
@@ -86,25 +84,23 @@ class DataWizardBackend(object):
             logging.exception(e)
             error = self.format_exception(e)
             if ERROR_UPDATE_ASYNC in on_error:
-                self.update_async_status('FAILURE', error)
+                self.update_async_status("FAILURE", error)
             if ERROR_RAISE in on_error:
                 raise
             if ERROR_RETURN in on_error:
                 return error
         else:
             if ERROR_RETURN in on_error:
-                return {'result': result}
+                return {"result": result}
             else:
                 return result
 
     def format_exception(self, exception):
-        error_string = '{name}: {message}'.format(
+        error_string = "{name}: {message}".format(
             name=type(exception).__name__,
             message=exception,
         )
-        return {
-            'error': error_string
-        }
+        return {"error": error_string}
 
     def run_async(self, task_name, run_id, post):
         raise NotImplementedError("This backend does not support async")
@@ -137,8 +133,8 @@ class DataWizardBackend(object):
         signals.progress.send(sender=self, run=run, state=state, meta=meta)
 
     def progress(self, sender, **kwargs):
-        state = kwargs.get('state')
-        meta = kwargs.get('meta')
+        state = kwargs.get("state")
+        meta = kwargs.get("meta")
         self.update_async_status(
             state=state,
             meta=meta,

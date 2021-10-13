@@ -4,8 +4,8 @@ import datetime
 
 
 DATE_FIELDS = {
-    'DateTimeField': datetime.datetime,
-    'DateField': datetime.date,
+    "DateTimeField": datetime.datetime,
+    "DateField": datetime.date,
 }
 
 
@@ -20,31 +20,32 @@ def process_date_FIXME(meta_field, meta_datatype, meta_key, val, obj):
     # (date and time) that would be merged into a single "observed" field on a
     # custom Event class.  There would then be two MetaColumns values, with
     # names of "observed.date" and "observed.time" respectively.
-    if '.' in meta_field:
-        meta_field, part = meta_field.split('.')
+    if "." in meta_field:
+        meta_field, part = meta_field.split(".")
     else:
         part = None
 
     # Automatically parse date values as such
-    if (meta_datatype in DATE_FIELDS and isinstance(val, string_types) and
-            part != 'time'):
+    if (
+        meta_datatype in DATE_FIELDS
+        and isinstance(val, string_types)
+        and part != "time"
+    ):
         from dateutil.parser import parse
+
         val = parse(val)
-        if meta_datatype == 'DateField':
+        if meta_datatype == "DateField":
             val = val.date()
 
     # If field is already set by an earlier column, this value might be the
     # second half of a date/time pair.
     if obj[meta_key].get(meta_field, None) is not None:
         if not part:
+            raise Exception("Multiple columns found for %s" % meta_field)
+        if part not in ("date", "time"):
             raise Exception(
-                'Multiple columns found for %s' % meta_field
-            )
-        if part not in ('date', 'time'):
-            raise Exception(
-                'Unexpected multi-column field name: %s.%s!' % (
-                    meta_field, part
-                )
+                "Unexpected multi-column field name: %s.%s!"
+                % (meta_field, part)
             )
         other_val = obj[meta_key][meta_field]
         val = process_date_part(val, other_val, part)
@@ -55,7 +56,7 @@ def process_date_part(new_val, old_val, part):
     Combine separate date & time columns into a single value.
     """
 
-    if part == 'date':
+    if part == "date":
         date, time = new_val, old_val
     else:
         date, time = old_val, new_val
@@ -66,8 +67,7 @@ def process_date_part(new_val, old_val, part):
 
     # Try some extra hacks to convert time values
     if not isinstance(time, datetime.time):
-        if (isinstance(time, float) and
-                time >= 100 and time <= 2400):
+        if isinstance(time, float) and time >= 100 and time <= 2400:
             # "Numeric" time (hour * 100 + minutes)
             time = str(time)
         elif isinstance(time, string_types) and ":" in time:
@@ -78,16 +78,10 @@ def process_date_part(new_val, old_val, part):
         if time.isdigit() and len(time) in (3, 4):
             if len(time) == 3:
                 # 300 -> time(3, 0)
-                time = datetime.time(
-                    int(time[0]),
-                    int(time[1:])
-                )
+                time = datetime.time(int(time[0]), int(time[1:]))
             else:
                 # 1200 -> time(12, 0)
-                time = datetime.time(
-                    int(time[0:2]),
-                    int(time[2:])
-                )
+                time = datetime.time(int(time[0:2]), int(time[2:]))
         else:
             # Meh, it was worth a shot
             raise Exception("Expected time but got %s!" % time)

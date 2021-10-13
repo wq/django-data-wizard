@@ -16,7 +16,7 @@ autodiscover()
 # wq.db-compatible serializers
 class CurrentUserDefault(serializers.CurrentUserDefault):
     def __call__(self, serializer=None):
-        if getattr(self, 'requires_context', None):
+        if getattr(self, "requires_context", None):
             # DRF 3.11+
             user = super(CurrentUserDefault, self).__call__(serializer)
         else:
@@ -29,7 +29,7 @@ class RunSerializer(ModelSerializer, wizard.RunSerializer):
     user_id = serializers.HiddenField(default=CurrentUserDefault())
 
     class Meta:
-        exclude = ['content_type']
+        exclude = ["content_type"]
 
 
 class RecordSerializer(wizard.RecordSerializer):
@@ -40,8 +40,8 @@ class RecordSerializer(wizard.RecordSerializer):
             return None
 
         base = get_base_url()
-        url = conf['url']
-        objid = getattr(obj, conf.get('lookup', 'pk'))
+        url = conf["url"]
+        objid = getattr(obj, conf.get("lookup", "pk"))
         return f"{base}/{url}/{objid}"
 
 
@@ -49,7 +49,7 @@ class RunViewSet(ModelViewSet, wizard.RunViewSet):
     record_serializer_class = RecordSerializer
     renderer_classes = [HTMLRenderer, JSONRenderer]
     pagination_class = api_settings.DEFAULT_PAGINATION_CLASS
-    _namespace = 'wq'
+    _namespace = "wq"
 
 
 # wq.db router registration
@@ -64,18 +64,25 @@ rest.router.register_model(
     Run,
     serializer=RunSerializer,
     viewset=RunViewSet,
-    url='datawizard',
+    url="datawizard",
     modes=[
-        'list', 'detail', 'edit',
-        'serializers', 'columns', 'ids', 'data', 'auto', 'records',
+        "list",
+        "detail",
+        "edit",
+        "serializers",
+        "columns",
+        "ids",
+        "data",
+        "auto",
+        "records",
     ],
     background_sync=False,
     postsave=(
-        'datawizard/{{id}}'
-        '{{#current_mode}}/{{current_mode}}{{/current_mode}}'
-        '{{#task_id}}?task={{task_id}}{{/task_id}}'
+        "datawizard/{{id}}"
+        "{{#current_mode}}/{{current_mode}}{{/current_mode}}"
+        "{{#task_id}}?task={{task_id}}{{/task_id}}"
     ),
     fields="__all__",
     filter=user_filter,
-    cache='none',
+    cache="none",
 )

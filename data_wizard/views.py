@@ -23,10 +23,10 @@ class RunViewSet(ModelViewSet):
         renderers.BrowsableAPIRenderer,
     ]
     authentication_classes = [
-        import_setting('AUTHENTICATION'),
+        import_setting("AUTHENTICATION"),
     ]
     permission_classes = [
-        import_setting('PERMISSION'),
+        import_setting("PERMISSION"),
     ]
     record_serializer_class = RecordSerializer
     queryset = Run.objects.all()
@@ -34,42 +34,43 @@ class RunViewSet(ModelViewSet):
     @property
     def backend(self):
         from . import backend as data_wizard_backend
+
         return data_wizard_backend
 
     @property
     def template_name(self):
-        if self.action in ('create', 'retrieve'):
-            template = 'detail'
+        if self.action in ("create", "retrieve"):
+            template = "detail"
         else:
             template = self.action
-        return 'data_wizard/run_{}.html'.format(template)
+        return "data_wizard/run_{}.html".format(template)
 
     def get_renderers(self):
-        if self.action == 'status':
+        if self.action == "status":
             return [renderers.JSONRenderer()]
         else:
             return super(RunViewSet, self).get_renderers()
 
     @action(detail=True)
     def status(self, request, *args, **kwargs):
-        task_id = request.GET.get('task', None)
+        task_id = request.GET.get("task", None)
         result = self.backend.get_async_status(task_id)
-        status = result.get('status', 'UNKNOWN')
-        action = result.get('action', None)
-        if not action and status == 'SUCCESS':
-            action = 'records'
+        status = result.get("status", "UNKNOWN")
+        action = result.get("action", None)
+        if not action and status == "SUCCESS":
+            action = "records"
         if action:
-            result['location'] = self.get_action_url(action)
-        elif status == 'FAILURE' and not result.get('error'):
-            result['error'] = "Unknown Error"
-        result['status'] = status
+            result["location"] = self.get_action_url(action)
+        elif status == "FAILURE" and not result.get("error"):
+            result["error"] = "Unknown Error"
+        result["status"] = status
         return Response(result)
 
-    _namespace = 'data_wizard'
+    _namespace = "data_wizard"
 
     def get_action_url(self, action):
-        name = self._namespace + ':run-' + action
-        return reverse(name, kwargs={'pk': self.get_object().pk})
+        name = self._namespace + ":run-" + action
+        return reverse(name, kwargs={"pk": self.get_object().pk})
 
     def run_and_retrieve(self, request, task_name):
         run = self.get_object()
@@ -147,8 +148,7 @@ class RunViewSet(ModelViewSet):
     @action(detail=True)
     def records(self, request, *args, **kwargs):
         response = self.retrieve(self.request, **kwargs)
-        response.data['records'] = self.record_serializer_class(
-            self.get_object().record_set.all(),
-            many=True
+        response.data["records"] = self.record_serializer_class(
+            self.get_object().record_set.all(), many=True
         ).data
         return response

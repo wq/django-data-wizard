@@ -3,9 +3,9 @@ from django.db import models
 
 class SimpleModel(models.Model):
     COLOR_CHOICES = [
-        ('red', 'Red'),
-        ('green', 'Green'),
-        ('blue', 'Blue'),
+        ("red", "Red"),
+        ("green", "Green"),
+        ("blue", "Blue"),
     ]
 
     date = models.DateField()

@@ -7,14 +7,14 @@ class Backend(DataWizardBackend):
 
     def run_async(self, task_name, run_id, post):
         self.try_run_sync(task_name, run_id, post)
-        return 'current'
+        return "current"
 
     def update_async_status(self, state, meta):
         self.current_state = state
         self.current_result = meta
 
     def get_async_status(self, task_id):
-        assert(task_id == 'current')
-        status = {'status': self.current_state}
+        assert task_id == "current"
+        status = {"status": self.current_state}
         status.update(self.current_result)
         return status

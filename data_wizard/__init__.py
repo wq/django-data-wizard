@@ -25,13 +25,14 @@ def autodiscover():
     global discovered
     if discovered:
         return
-    autodiscover_modules('wizard', register_to=None)
+    autodiscover_modules("wizard", register_to=None)
     discovered = True
 
 
 def init_backend():
     global backend
     from .backends import create_backend
+
     backend = create_backend()
 
 
@@ -43,4 +44,4 @@ def set_loader(*args, **kwargs):
     registry.set_loader(*args, **kwargs)
 
 
-default_app_config = 'data_wizard.apps.WizardConfig'
+default_app_config = "data_wizard.apps.WizardConfig"

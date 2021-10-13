@@ -9,14 +9,16 @@ from django.contrib.auth.models import User
 
 class CLITestCase(TestCase):
     def setUp(self):
-        User.objects.create(username='testuser')
+        User.objects.create(username="testuser")
 
     def test_auto(self):
         data = '[{"date": "2019-03-14", "color": "blue", "notes": "Test"}]'
         source = CustomSource.objects.create(json_data=data)
         call_command(
-            'runwizard', 'source_app.customsource', str(source.pk),
-            username='testuser',
+            "runwizard",
+            "source_app.customsource",
+            str(source.pk),
+            username="testuser",
         )
         instance = SimpleModel.objects.filter(
             date="2019-03-14",
@@ -30,8 +32,10 @@ class CLITestCase(TestCase):
         source = CustomSource.objects.create(json_data=data)
         with self.assertRaises(CommandError) as e:
             call_command(
-                'runwizard', 'source_app.customsource', str(source.pk),
-                username='testuser',
+                "runwizard",
+                "source_app.customsource",
+                str(source.pk),
+                username="testuser",
             )
         self.assertEqual(str(e.exception), "Input Needed for 2 columns")
 
@@ -51,9 +55,11 @@ class CLITestCase(TestCase):
             resolved=True,
         )
         call_command(
-            'runwizard', 'source_app.customsource', str(source.pk),
+            "runwizard",
+            "source_app.customsource",
+            str(source.pk),
             serializer="tests.naturalkey_app.wizard.NoteSerializer",
-            username='testuser',
+            username="testuser",
         )
         instance = Note.objects.filter(
             event__date="2019-03-14",
@@ -71,8 +77,10 @@ class CLITestCase(TestCase):
         source = CustomSource.objects.create(json_data=data)
         with self.assertRaises(CommandError) as e:
             call_command(
-                'runwizard', 'source_app.customsource', str(source.pk),
+                "runwizard",
+                "source_app.customsource",
+                str(source.pk),
                 serializer="tests.naturalkey_app.wizard.NoteSerializer",
-                username='testuser',
+                username="testuser",
             )
         self.assertEqual(str(e.exception), "Input Needed for 1 ids")

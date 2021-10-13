@@ -2,10 +2,10 @@ from django.apps import AppConfig
 
 
 class WizardConfig(AppConfig):
-    name = 'data_wizard'
-    verbose_name = 'Data Wizard'
+    name = "data_wizard"
+    verbose_name = "Data Wizard"
 
     def ready(self):
         self.module.autodiscover()
         self.module.init_backend()
-        from . import tasks
+        from . import tasks  # noqa

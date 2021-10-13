@@ -8,43 +8,42 @@ from . import registry
 # c.f SlugRelatedField
 class ContentTypeIdField(serializers.RelatedField):
     default_error_messages = {
-        'does_not_exist': 'Content Type {app_label}.{model} does not exist.',
-        'invalid': 'Invalid value',
+        "does_not_exist": "Content Type {app_label}.{model} does not exist.",
+        "invalid": "Invalid value",
     }
 
     def to_internal_value(self, data):
         try:
-            app_label, model = data.split('.')
+            app_label, model = data.split(".")
         except ValueError:
-            self.fail('invalid')
+            self.fail("invalid")
         try:
             return self.get_queryset().get(
                 app_label=app_label,
                 model=model,
             )
         except ContentType.DoesNotExist:
-            self.fail('does_not_exist', app_label=app_label, model=model)
+            self.fail("does_not_exist", app_label=app_label, model=model)
 
     def to_representation(self, value):
-        return '%s.%s' % (value.app_label, value.model)
+        return "%s.%s" % (value.app_label, value.model)
 
 
 class RunSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     content_type_id = ContentTypeIdField(
-        source="content_type",
-        queryset=ContentType.objects.all()
+        source="content_type", queryset=ContentType.objects.all()
     )
-    label = serializers.ReadOnlyField(source='__str__')
+    label = serializers.ReadOnlyField(source="__str__")
     object_label = serializers.StringRelatedField(
-        source='content_object', read_only=True
+        source="content_object", read_only=True
     )
     serializer_label = serializers.ReadOnlyField()
     last_update = serializers.ReadOnlyField()
 
     def get_fields(self):
         fields = super(RunSerializer, self).get_fields()
-        fields['serializer'] = serializers.ChoiceField(
+        fields["serializer"] = serializers.ChoiceField(
             choices=registry.get_choices(),
             required=False,
         )
@@ -52,7 +51,7 @@ class RunSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Run
-        exclude = ['content_type']
+        exclude = ["content_type"]
 
 
 class RecordSerializer(serializers.ModelSerializer):
@@ -72,12 +71,12 @@ class RecordSerializer(serializers.ModelSerializer):
         if not instance.content_object:
             return None
         obj = instance.content_object
-        if hasattr(obj, 'get_absolute_url'):
+        if hasattr(obj, "get_absolute_url"):
             object_url = obj.get_absolute_url()
         else:
             try:
                 object_url = reverse(
-                    'admin:{app}_{model}_change'.format(
+                    "admin:{app}_{model}_change".format(
                         app=obj._meta.app_label,
                         model=obj._meta.model_name,
                     ),

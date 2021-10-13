@@ -8,9 +8,9 @@ if settings.WITH_WQDB:
     class ValueSerializer(patterns.TypedAttachmentSerializer):
         class Meta:
             model = Value
-            exclude = ['entity']
-            object_field = 'entity'
-            type_field = 'attribute'
+            exclude = ["entity"]
+            object_field = "entity"
+            type_field = "attribute"
             type_filter = {}
 
     class EntitySerializer(patterns.AttachedModelSerializer):

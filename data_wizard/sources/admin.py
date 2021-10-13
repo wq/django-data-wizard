@@ -5,7 +5,7 @@ from .models import FileSource, URLSource
 
 
 class SourceAdmin(ImportActionModelAdmin):
-    readonly_fields = ('user',)
+    readonly_fields = ("user",)
 
     def save_model(self, request, obj, form, change):
         if not change:

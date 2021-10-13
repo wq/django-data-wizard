@@ -28,7 +28,7 @@ class WizardTestCase(APITransactionTestCase):
 
     def setUp(self):
         self.user = User.objects.create(
-            username='testuser',
+            username="testuser",
             is_staff=True,
             is_superuser=True,
         )
@@ -52,13 +52,13 @@ class WizardTestCase(APITransactionTestCase):
         print()
         response = self.post_url(run, action, None)
         self.assertIn("task_id", response.data)
-        status_params = {'task': response.data['task_id']}
+        status_params = {"task": response.data["task_id"]}
         done = False
         while not done:
             sleep(1)
-            response = self.get_url(run, 'status', status_params)
+            response = self.get_url(run, "status", status_params)
             res = response.data
-            if res.get('status', None) in ("PENDING", "PROGRESS"):
+            if res.get("status", None) in ("PENDING", "PROGRESS"):
                 print(res)
             else:
                 done = True
@@ -87,28 +87,28 @@ class WizardTestCase(APITransactionTestCase):
         1. Upload spreadsheet file
         """
         path = os.path.join(settings.MEDIA_ROOT, filename)
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             if self.with_wqdb:
-                response = self.client.post(self.file_url, {'file': f})
+                response = self.client.post(self.file_url, {"file": f})
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                file_id = response.data['id']
+                file_id = response.data["id"]
             else:
                 file_id = self.file_model.objects.create(
                     file=File(f, name=os.path.basename(filename))
                 ).pk
 
         post = {
-            'content_type_id': self.file_content_type,
-            'object_id': file_id,
+            "content_type_id": self.file_content_type,
+            "object_id": file_id,
         }
         if not skip_serializer:
-            post['serializer'] = self.serializer_name
+            post["serializer"] = self.serializer_name
 
-        response = self.client.post('/datawizard/?format=json', post)
+        response = self.client.post("/datawizard/?format=json", post)
         self.assertEqual(
             response.status_code, status.HTTP_201_CREATED, response.data
         )
-        run = Run.objects.get(pk=response.data['id'])
+        run = Run.objects.get(pk=response.data["id"])
         return run
 
     def download_url(self, url, skip_serializer=False):
@@ -117,163 +117,164 @@ class WizardTestCase(APITransactionTestCase):
         """
         url_id = self.url_model.objects.create(url=url).pk
         post = {
-            'content_type_id': self.url_content_type,
-            'object_id': url_id,
+            "content_type_id": self.url_content_type,
+            "object_id": url_id,
         }
         if not skip_serializer:
-            post['serializer'] = self.serializer_name
+            post["serializer"] = self.serializer_name
 
-        response = self.client.post('/datawizard/?format=json', post)
+        response = self.client.post("/datawizard/?format=json", post)
         self.assertEqual(
             response.status_code, status.HTTP_201_CREATED, response.data
         )
-        run = Run.objects.get(pk=response.data['id'])
+        run = Run.objects.get(pk=response.data["id"])
         return run
 
     def set_serializer(self, run):
         """
         1b. Set serializer class
         """
-        response = self.get_url(run, 'serializers')
+        response = self.get_url(run, "serializers")
         found = False
-        for choice in response.data['result'].get('serializer_choices'):
-            if choice['name'] == self.serializer_name:
+        for choice in response.data["result"].get("serializer_choices"):
+            if choice["name"] == self.serializer_name:
                 found = True
         self.assertTrue(found)
-        response = self.post_url(run, 'updateserializer', {
-            'serializer': self.serializer_name,
-        })
-        self.assertEqual(response.data.get('serializer'), self.serializer_name)
+        response = self.post_url(
+            run,
+            "updateserializer",
+            {
+                "serializer": self.serializer_name,
+            },
+        )
+        self.assertEqual(response.data.get("serializer"), self.serializer_name)
 
     def check_columns(self, run, expect_columns, expect_unknown):
         """
         2. Start import process by verifying columns
         """
-        response = self.get_url(run, 'columns')
-        self.assertIn('result', response.data)
-        self.assertIn('columns', response.data['result'])
+        response = self.get_url(run, "columns")
+        self.assertIn("result", response.data)
+        self.assertIn("columns", response.data["result"])
         self.assertEqual(
-            len(response.data['result']['columns']), expect_columns
+            len(response.data["result"]["columns"]), expect_columns
         )
         self.assertEqual(
-            response.data['result'].get('unknown_count', 0), expect_unknown
+            response.data["result"].get("unknown_count", 0), expect_unknown
         )
 
     def update_columns(self, run, mappings, use_json=False):
         """
         3. Inspect unmatched columns and select choices
         """
-        response = self.get_url(run, 'columns')
+        response = self.get_url(run, "columns")
         post = {}
         if use_json:
-            post['columns'] = []
-        for col in response.data['result']['columns']:
-            if not col.get('unknown', False):
+            post["columns"] = []
+        for col in response.data["result"]["columns"]:
+            if not col.get("unknown", False):
                 continue
-            self.assertIn('types', col)
-            type_choices = {
-                tc['name']: tc['choices'] for tc in col['types']
-            }
+            self.assertIn("types", col)
+            type_choices = {tc["name"]: tc["choices"] for tc in col["types"]}
             for type_name, mapping in mappings.items():
                 self.assertIn(type_name, type_choices)
 
                 # "Choose" options from dropdown menu choices
-                col_id = mapping.get(col['name'])
+                col_id = mapping.get(col["name"])
                 if col_id is None:
                     continue
                 found = False
                 for choice in type_choices[type_name]:
-                    if choice['id'] == col_id:
+                    if choice["id"] == col_id:
                         found = True
 
                 self.assertTrue(
                     found,
-                    col_id + " not found in choices: %s" %
-                    type_choices[type_name]
+                    col_id
+                    + " not found in choices: %s" % type_choices[type_name],
                 )
                 if use_json:
-                    post['columns'].append({
-                        'id': col['rel_id'],
-                        'mapping': col_id
-                    })
+                    post["columns"].append(
+                        {"id": col["rel_id"], "mapping": col_id}
+                    )
                 else:
-                    post["rel_%s" % col['rel_id']] = col_id
+                    post["rel_%s" % col["rel_id"]] = col_id
 
-        response = self.post_url(run, 'updatecolumns', post, use_json)
-        unknown = response.data['result']['unknown_count']
+        response = self.post_url(run, "updatecolumns", post, use_json)
+        unknown = response.data["result"]["unknown_count"]
         self.assertFalse(unknown, "%s unknown columns remain" % unknown)
 
     def check_row_identifiers(self, run, expect_identifiers, expect_unknown):
         """
         4. Verify identifier (foreign key) values
         """
-        response = self.get_url(run, 'ids')
-        self.assertIn('result', response.data)
-        self.assertIn('types', response.data['result'])
-        all_ids = sum([
-            len(group['ids'])
-            for group in response.data['result']['types']
-        ])
+        response = self.get_url(run, "ids")
+        self.assertIn("result", response.data)
+        self.assertIn("types", response.data["result"])
+        all_ids = sum(
+            [len(group["ids"]) for group in response.data["result"]["types"]]
+        )
         self.assertEqual(expect_identifiers, all_ids)
         self.assertEqual(
-            expect_unknown, response.data['result'].get('unknown_count', 0)
+            expect_unknown, response.data["result"].get("unknown_count", 0)
         )
 
     def update_row_identifiers(self, run, mappings, use_json=False):
         """
         5. Inspect unmatched identifiers and select choices
         """
-        response = self.get_url(run, 'ids')
+        response = self.get_url(run, "ids")
         type_ids = {
-            t['type_id']: t['ids']
-            for t in response.data['result']['types']
+            t["type_id"]: t["ids"] for t in response.data["result"]["types"]
         }
 
         post = {}
         for typeid, mapping in mappings.items():
             self.assertIn(typeid, type_ids)
             for idinfo in type_ids[typeid]:
-                if idinfo['value'] in mapping:
+                if idinfo["value"] in mapping:
                     if use_json:
-                        group_name = typeid.replace('.', '_')
+                        group_name = typeid.replace(".", "_")
                         post.setdefault(group_name, [])
-                        post[group_name].append({
-                            'id': idinfo['ident_id'],
-                            'mapping': mapping[idinfo['value']],
-                        })
+                        post[group_name].append(
+                            {
+                                "id": idinfo["ident_id"],
+                                "mapping": mapping[idinfo["value"]],
+                            }
+                        )
                     else:
-                        post[
-                            'ident_%s_id' % idinfo['ident_id']
-                        ] = mapping[idinfo['value']]
+                        post["ident_%s_id" % idinfo["ident_id"]] = mapping[
+                            idinfo["value"]
+                        ]
 
         # 7. Post selected options, verify that all identifiers are now known
-        response = self.post_url(run, 'updateids', post, use_json)
-        unknown = response.data['result']['unknown_count']
+        response = self.post_url(run, "updateids", post, use_json)
+        unknown = response.data["result"]["unknown_count"]
         self.assertFalse(unknown, "%s unknown identifiers remain" % unknown)
 
     def start_import(self, run, expect_skipped):
         """
         6. Start data import process, wait for completion
         """
-        res = self.wait(run, 'data')
-        for key in ('status', 'total', 'current', 'skipped'):
+        res = self.wait(run, "data")
+        for key in ("status", "total", "current", "skipped"):
             self.assertIn(key, res)
-        self.assertEqual('SUCCESS', res['status'])
-        self.assertEqual(expect_skipped, res['skipped'])
+        self.assertEqual("SUCCESS", res["status"])
+        self.assertEqual(expect_skipped, res["skipped"])
 
     def auto_import(self, run, expect_input_required=False):
         """
         Test the auto import (steps 2-6)
         """
-        res = self.wait(run, 'auto')
-        self.assertEqual(res['status'], "SUCCESS")
+        res = self.wait(run, "auto")
+        self.assertEqual(res["status"], "SUCCESS")
 
         if expect_input_required:
-            self.assertIn('message', res)
+            self.assertIn("message", res)
             return res
 
-        self.assertNotIn('message', res, res.get('message'))
-        for key in ('status', 'total', 'current', 'skipped'):
+        self.assertNotIn("message", res, res.get("message"))
+        for key in ("status", "total", "current", "skipped"):
             self.assertIn(key, res)
         return res
 
@@ -290,40 +291,32 @@ class WizardTestCase(APITransactionTestCase):
         """
         8. Verify column and identifier ranges
         """
-        ranges = [
-            str(rng)
-            for rng in run.range_set.all()
-        ]
+        ranges = [str(rng) for rng in run.range_set.all()]
         self.assertEqual(expect_ranges, ranges)
 
     def assert_records(self, run, expect_records):
         """
         9. Verify column and identifier ranges
         """
+
         def make_str(record):
             text = str(record)
-            if text.startswith('Failed'):
+            if text.startswith("Failed"):
                 text += ": " + record.fail_reason
-            text = text.replace(',)', ')')  # Python < 3.7
-            if 'ValidationError(["\'' in text:
+            text = text.replace(",)", ")")  # Python < 3.7
+            if "ValidationError([\"'" in text:
                 # Django < 3.0
                 text = (
                     text.replace("'", "__QUOTE__")
-                        .replace('"', "'")
-                        .replace("__QUOTE__", '"')
+                    .replace('"', "'")
+                    .replace("__QUOTE__", '"')
                 )
-            elif 'ValidationError' in text:
+            elif "ValidationError" in text:
                 # Django 3.0+
-                text = (
-                     text.replace(u'\u201c', '"')
-                         .replace(u'\u201d', '"')
-                )
+                text = text.replace(u"\u201c", '"').replace(u"\u201d", '"')
             return text
 
-        records = [
-            make_str(record)
-            for record in run.record_set.all()
-        ]
+        records = [make_str(record) for record in run.record_set.all()]
         self.assertEqual(expect_records, records)
 
     def assert_log(self, run, expect_log):
@@ -336,10 +329,10 @@ class WizardTestCase(APITransactionTestCase):
     def assert_urls(self, run, urltemplate):
         if not self.with_wqdb:
             return
-        records = self.get_url(run, 'records').data['records']
+        records = self.get_url(run, "records").data["records"]
         for row, record in zip(records, run.record_set.all()):
             if record.success:
                 self.assertEqual(
                     urltemplate % record.object_id,
-                    row.get('object_url'),
+                    row.get("object_url"),
                 )

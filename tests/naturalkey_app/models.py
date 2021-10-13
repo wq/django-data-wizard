@@ -9,7 +9,7 @@ class Place(NaturalKeyModel):
         return self.name
 
     class Meta:
-        unique_together = (('name',),)
+        unique_together = (("name",),)
 
 
 class Event(NaturalKeyModel):
@@ -20,7 +20,7 @@ class Event(NaturalKeyModel):
         return "%s on %s" % (self.place, self.date)
 
     class Meta:
-        unique_together = (('place', 'date'),)
+        unique_together = (("place", "date"),)
 
 
 class Note(models.Model):

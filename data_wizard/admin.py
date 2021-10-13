@@ -18,15 +18,15 @@ class FixedTabularInline(admin.TabularInline):
 class RangeInline(admin.TabularInline):
     model = Range
     fields = [
-        'identifier',
-        'type',
-        'header_col',
-        'start_col',
-        'end_col',
-        'header_row',
-        'start_row',
-        'end_row',
-        'count'
+        "identifier",
+        "type",
+        "header_col",
+        "start_col",
+        "end_col",
+        "header_row",
+        "start_row",
+        "end_row",
+        "count",
     ]
     extra = 0
 
@@ -34,23 +34,26 @@ class RangeInline(admin.TabularInline):
 class RecordInline(FixedTabularInline):
     model = Record
     fields = readonly_fields = [
-        'row',
-        'success',
-        'content_type',
-        'content_object',
-        'fail_reason'
+        "row",
+        "success",
+        "content_type",
+        "content_object",
+        "fail_reason",
     ]
 
 
 class RunLogInline(FixedTabularInline):
     model = RunLog
-    readonly_fields = ['event', 'date']
+    readonly_fields = ["event", "date"]
 
 
 @admin.register(Run)
 class RunAdmin(admin.ModelAdmin):
     list_display = [
-        '__str__', 'serializer_label', 'record_count', 'last_update'
+        "__str__",
+        "serializer_label",
+        "record_count",
+        "last_update",
     ]
     inlines = [RangeInline, RecordInline, RunLogInline]
 
@@ -58,21 +61,21 @@ class RunAdmin(admin.ModelAdmin):
 @admin.register(Identifier)
 class IdentifierAdmin(admin.ModelAdmin):
     list_display = [
-        'serializer_label',
-        'type_label',
-        'name',
-        'mapping_label',
-        'resolved',
+        "serializer_label",
+        "type_label",
+        "name",
+        "mapping_label",
+        "resolved",
     ]
-    list_display_links = ['name', 'mapping_label']
-    list_filter = ['serializer']
+    list_display_links = ["name", "mapping_label"]
+    list_filter = ["serializer"]
 
 
 def start_data_wizard(modeladmin, request, queryset):
     if queryset.count() != 1:
         modeladmin.message_user(
             request,
-            'Select a single row to start data wizard.',
+            "Select a single row to start data wizard.",
             level=messages.ERROR,
         )
         return
@@ -87,7 +90,7 @@ def start_data_wizard(modeladmin, request, queryset):
             object_id=instance.pk,
         )
     return HttpResponseRedirect(
-        reverse('data_wizard:run-serializers', kwargs={'pk': run.pk})
+        reverse("data_wizard:run-serializers", kwargs={"pk": run.pk})
     )
 
 
@@ -98,6 +101,7 @@ class ImportActionMixin(object):
     """
     Mixin with import functionality implemented as an admin action.
     """
+
     actions = [start_data_wizard]
 
 

@@ -13,10 +13,10 @@ class EAVSerializer(serializers.ModelSerializer):
     values = ValueSerializer(many=True)
 
     def create(self, validated_data):
-        values_data = validated_data.pop('values', [])
+        values_data = validated_data.pop("values", [])
         obj = super(EAVSerializer, self).create(validated_data)
         for value in values_data:
-            value['entity'] = obj
+            value["entity"] = obj
             ValueSerializer().create(value)
         return obj
 
@@ -25,4 +25,4 @@ class EAVSerializer(serializers.ModelSerializer):
         fields = ("name", "values")
 
 
-registry.register('EAV Model', EAVSerializer)
+registry.register("EAV Model", EAVSerializer)

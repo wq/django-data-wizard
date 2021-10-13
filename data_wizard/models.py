@@ -9,14 +9,18 @@ from .settings import import_setting
 
 class Run(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
     )
     record_count = models.IntegerField(null=True, blank=True)
     loader = models.CharField(max_length=255, null=True, blank=True)
     serializer = models.CharField(max_length=255, null=True, blank=True)
 
     content_type = models.ForeignKey(
-        ContentType, null=True, blank=True, on_delete=models.PROTECT,
+        ContentType,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
     )
     object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey()
@@ -25,13 +29,11 @@ class Run(models.Model):
         return str(self.content_object)
 
     def get_absolute_url(self):
-        return reverse('data_wizard:run-detail', kwargs={'pk': self.pk})
+        return reverse("data_wizard:run-detail", kwargs={"pk": self.pk})
 
     def save(self, *args, **kwargs):
         if not self.loader:
-            self.loader = registry.get_loader_name(
-                type(self.content_object)
-            )
+            self.loader = registry.get_loader_name(type(self.content_object))
 
         if self.loader and not self.serializer:
             try:
@@ -44,10 +46,10 @@ class Run(models.Model):
         is_new = not self.id
         super(Run, self).save(*args, **kwargs)
         if is_new:
-            self.add_event('created')
+            self.add_event("created")
 
     def load_iter(self):
-        if not hasattr(self, '_iter_data'):
+        if not hasattr(self, "_iter_data"):
             Loader = registry.get_loader(self.loader)
             loader = Loader(self)
             self._iter_data = loader.load_iter()
@@ -78,7 +80,7 @@ class Run(models.Model):
         if self.serializer:
             return registry.get_serializer_name(self.serializer)
 
-    serializer_label.fget.short_description = 'serializer'
+    serializer_label.fget.short_description = "serializer"
 
     def get_serializer(self):
         if self.serializer:
@@ -93,18 +95,16 @@ class Run(models.Model):
             raise Exception("No serializer specified!")
 
     def get_idmap(self):
-        idmap = self.get_serializer_options().get('idmap')
+        idmap = self.get_serializer_options().get("idmap")
         if not idmap:
-            idmap = import_setting('IDMAP')
+            idmap = import_setting("IDMAP")
         return idmap
 
     def already_parsed(self):
         return self.range_set.count()
 
     def add_event(self, name):
-        self.log.create(
-            event=name
-        )
+        self.log.create(event=name)
 
     @property
     def last_update(self):
@@ -113,13 +113,13 @@ class Run(models.Model):
             return last.date
 
     class Meta:
-        ordering = ('-pk',)
-        verbose_name = 'data wizard'
-        verbose_name_plural = 'data wizard'
+        ordering = ("-pk",)
+        verbose_name = "data wizard"
+        verbose_name_plural = "data wizard"
 
 
 class RunLog(models.Model):
-    run = models.ForeignKey(Run, related_name='log', on_delete=models.CASCADE)
+    run = models.ForeignKey(Run, related_name="log", on_delete=models.CASCADE)
     event = models.CharField(max_length=100)
     date = models.DateTimeField(auto_now_add=True)
 
@@ -127,120 +127,125 @@ class RunLog(models.Model):
         return self.event
 
     class Meta:
-        ordering = ('date',)
+        ordering = ("date",)
 
 
 class Identifier(models.Model):
     serializer = models.CharField(max_length=255)
     name = models.CharField(
         max_length=255,
-        verbose_name='spreadsheet value',
+        verbose_name="spreadsheet value",
     )
     value = models.CharField(
-        max_length=255, null=True, blank=True,
-        verbose_name='mapped value',
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name="mapped value",
     )
     field = models.CharField(
-        max_length=255, null=True, blank=True,
-        verbose_name='serializer field',
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name="serializer field",
     )
     attr_field = models.CharField(
-        max_length=255, null=True, blank=True,
-        verbose_name='EAV attribute field',
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name="EAV attribute field",
     )
     attr_id = models.PositiveIntegerField(
-        null=True, blank=True,
-        verbose_name='EAV attribute id',
+        null=True,
+        blank=True,
+        verbose_name="EAV attribute id",
     )
     resolved = models.BooleanField(default=False)
 
     def __str__(self):
         if self.mapping_label:
-            return '{name} -> {mapping}'.format(
-                name=self.name,
-                mapping=self.mapping_label
+            return "{name} -> {mapping}".format(
+                name=self.name, mapping=self.mapping_label
             )
         else:
             return "{type}: {name}".format(
-                type=self.type_label,
-                name=self.name
+                type=self.type_label, name=self.name
             )
 
     @property
     def type(self):
         if self.resolved:
             if self.attr_id is not None:
-                return 'attribute'
+                return "attribute"
             elif self.value is not None:
-                return 'instance'
+                return "instance"
             elif self.field:
-                return 'meta'
+                return "meta"
         else:
             if self.field:
-                return 'unresolved'
+                return "unresolved"
             else:
-                return 'unknown'
+                return "unknown"
 
     @property
     def type_label(self):
-        if self.type == 'attribute':
-            return 'EAV Column'
-        elif self.type == 'meta':
-            return 'Column/Header'
-        elif self.type == 'instance':
-            return 'FK Value'
+        if self.type == "attribute":
+            return "EAV Column"
+        elif self.type == "meta":
+            return "Column/Header"
+        elif self.type == "instance":
+            return "FK Value"
         else:
             return self.type.title()
 
-    type_label.fget.short_description = 'Type'
+    type_label.fget.short_description = "Type"
 
     @property
     def mapping_label(self):
-        if self.type == 'meta':
-            if self.field == '__ignore__':
-                return '(ignored)'
+        if self.type == "meta":
+            if self.field == "__ignore__":
+                return "(ignored)"
             else:
                 return self.field
-        elif self.type == 'attribute':
-            if '[]' in self.field:
-                prefix, field_name = self.field.split('[]')
-                field_name = field_name.strip('[]')
+        elif self.type == "attribute":
+            if "[]" in self.field:
+                prefix, field_name = self.field.split("[]")
+                field_name = field_name.strip("[]")
             else:
                 prefix = ""
                 field_name = self.field
-            if self.attr_field and '[]' in self.attr_field:
-                attr_prefix, attr_field_name = self.attr_field.split('[]')
+            if self.attr_field and "[]" in self.attr_field:
+                attr_prefix, attr_field_name = self.attr_field.split("[]")
                 # assert attr_prefix == prefix
-                attr_field_name = attr_field_name.strip('[]')
+                attr_field_name = attr_field_name.strip("[]")
             else:
-                attr_field_name = 'attr'
+                attr_field_name = "attr"
             return "{prefix}.{field} ({attr_field}={attr_id})".format(
                 prefix=prefix,
                 field=field_name,
                 attr_field=attr_field_name,
                 attr_id=self.attr_id,
             )
-        elif self.type == 'instance':
+        elif self.type == "instance":
             return "{field}={value}".format(
                 field=self.field,
                 value=self.value,
             )
 
-    mapping_label.fget.short_description = 'Mapped To'
+    mapping_label.fget.short_description = "Mapped To"
 
     @property
     def serializer_label(self):
         if self.serializer:
             return registry.get_serializer_name(self.serializer)
 
-    serializer_label.fget.short_description = 'Serializer'
+    serializer_label.fget.short_description = "Serializer"
 
 
 class Range(models.Model):
     RANGE_TYPES = (
-        ('list', 'Data Column'),
-        ('value', 'Header metadata'),
-        ('data', 'Cell value'),
+        ("list", "Data Column"),
+        ("value", "Header metadata"),
+        ("data", "Cell value"),
     )
     run = models.ForeignKey(Run, on_delete=models.CASCADE)
     identifier = models.ForeignKey(Identifier, on_delete=models.PROTECT)
@@ -288,11 +293,11 @@ class Range(models.Model):
             ident=self.identifier,
             row=row,
             col=col,
-            head=header
+            head=header,
         )
 
     class Meta:
-        ordering = ('run_id', '-type', 'start_row', 'start_col', 'pk')
+        ordering = ("run_id", "-type", "start_row", "start_col", "pk")
 
 
 class Record(models.Model):
@@ -319,4 +324,4 @@ class Record(models.Model):
             )
 
     class Meta:
-        ordering = ('run_id', 'row')
+        ordering = ("run_id", "row")

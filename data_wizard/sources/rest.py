@@ -10,7 +10,7 @@ class FileSourceSerializer(ModelSerializer):
 
     class Meta:
         model = FileSource
-        fields = '__all__'
+        fields = "__all__"
 
 
 class URLSourceSerializer(ModelSerializer):
@@ -18,7 +18,7 @@ class URLSourceSerializer(ModelSerializer):
 
     class Meta:
         model = FileSource
-        fields = '__all__'
+        fields = "__all__"
 
 
 rest.router.register_model(

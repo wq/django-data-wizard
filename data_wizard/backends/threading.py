@@ -4,7 +4,7 @@ import threading
 import uuid
 
 
-CACHE_PREFIX = 'data-wizard-'
+CACHE_PREFIX = "data-wizard-"
 
 
 def is_uuid(task_id):
@@ -24,7 +24,7 @@ class Backend(DataWizardBackend):
         thread = threading.Thread(
             name=task_id,
             target=self.try_run_sync,
-            args=(task_name, run_id, post)
+            args=(task_name, run_id, post),
         )
         thread.start()
         return task_id
@@ -33,15 +33,18 @@ class Backend(DataWizardBackend):
         task_id = threading.current_thread().name
         if not is_uuid(task_id):
             return
-        cache.set(CACHE_PREFIX + task_id, {
-            'state': state,
-            'meta': meta,
-        })
+        cache.set(
+            CACHE_PREFIX + task_id,
+            {
+                "state": state,
+                "meta": meta,
+            },
+        )
 
     def get_async_status(self, task_id):
         data = cache.get(CACHE_PREFIX + task_id)
         if not data:
             return {}
-        status = {'status': data.get('state')}
-        status.update(data.get('meta') or {})
+        status = {"status": data.get("state")}
+        status.update(data.get("meta") or {})
         return status

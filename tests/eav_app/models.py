@@ -20,7 +20,7 @@ class Attribute(models.Model):
 
 class Value(models.Model):
     entity = models.ForeignKey(
-        Entity, related_name='values', on_delete=models.PROTECT
+        Entity, related_name="values", on_delete=models.PROTECT
     )
     attribute = models.ForeignKey(Attribute, on_delete=models.PROTECT)
     value = models.CharField(max_length=50)

@@ -36,8 +36,7 @@ class Registry(object):
         if class_name in self._serializer_names:
             other_name = self._serializer_names[class_name]
             raise ImproperlyConfigured(
-                "%s was already registered as %s"
-                % (class_name, other_name)
+                "%s was already registered as %s" % (class_name, other_name)
             )
 
         self._serializers[name] = serializer
@@ -45,25 +44,28 @@ class Registry(object):
 
     def create_serializer(self, model):
         from natural_keys import NaturalKeyModelSerializer
+
         serializer = NaturalKeyModelSerializer.for_model(
             model,
             include_fields="__all__",
         )
-        serializer.__qualname__ = serializer.__name__ = '{}Serializer'.format(
+        serializer.__qualname__ = serializer.__name__ = "{}Serializer".format(
             model.__name__
         )
-        serializer.__module__ = 'data_wizard.registry'
+        serializer.__module__ = "data_wizard.registry"
         return serializer
 
     def get_serializers(self):
         serializers = []
         for name, serializer in self._serializers.items():
-            serializers.append({
-                'name': name,
-                'serializer': serializer,
-                'class_name': self.get_class_name(serializer),
-                'options': self.get_serializer_options(name),
-            })
+            serializers.append(
+                {
+                    "name": name,
+                    "serializer": serializer,
+                    "class_name": self.get_class_name(serializer),
+                    "options": self.get_serializer_options(name),
+                }
+            )
         return serializers
 
     def get_serializer_name(self, name):
@@ -79,30 +81,27 @@ class Registry(object):
 
     def get_serializer_options(self, name):
         serializer = self.get_serializer(name)
-        meta = getattr(serializer, 'Meta', None)
+        meta = getattr(serializer, "Meta", None)
         if not meta:
             return {}
-        options = getattr(meta, 'data_wizard', {})
+        options = getattr(meta, "data_wizard", {})
         return options
 
     def get_choices(self):
-        return [
-            (s['class_name'], s['name'])
-            for s in self.get_serializers()
-        ]
+        return [(s["class_name"], s["name"]) for s in self.get_serializers()]
 
     def set_loader(self, model, loader_name):
         self._loaders[model] = loader_name
 
     def get_loader_name(self, model):
-        return self._loaders.get(model, get_setting('LOADER'))
+        return self._loaders.get(model, get_setting("LOADER"))
 
     def get_loader(self, loader_name):
         reg = self._loader_classes
         if loader_name in reg:
             Loader = reg[loader_name]
         else:
-            Loader = import_from_string(loader_name, 'LOADER')
+            Loader = import_from_string(loader_name, "LOADER")
             reg[loader_name] = Loader
         return Loader
 
