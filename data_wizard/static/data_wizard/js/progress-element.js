@@ -133,6 +133,10 @@ class Progress {
     var _this = this;
 
     return _asyncToGenerator(function* () {
+      if (_this._pending) {
+        return;
+      }
+
       if (_this._throttleCount < _this._throttle) {
         _this._throttleCount += 1;
         return;
@@ -143,10 +147,23 @@ class Progress {
       var data;
 
       try {
-        var response = yield fetch(_this.config.url);
+        _this._pending = true;
+        var controller = new AbortController(),
+            timeout = setTimeout(() => controller.abort(), 10000),
+            response = yield fetch(_this.config.url, {
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
         data = yield response.json();
+        _this._pending = false;
       } catch (e) {
-        _this.onError(e);
+        _this._pending = false;
+
+        if (e.name === 'AbortError') {
+          _this.onError(new Error('Timeout while requesting status'));
+        } else {
+          _this.onError(e);
+        }
 
         return;
       }

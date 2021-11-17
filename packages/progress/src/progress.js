@@ -27,6 +27,9 @@ export class Progress {
         delete this._timer;
     }
     async update() {
+        if (this._pending) {
+            return;
+        }
         if (this._throttleCount < this._throttle) {
             this._throttleCount += 1;
             return;
@@ -35,10 +38,23 @@ export class Progress {
         }
         let data;
         try {
-            const response = await fetch(this.config.url);
+            this._pending = true;
+            const controller = new AbortController(),
+                timeout = setTimeout(() => controller.abort(), 10000),
+                response = await fetch(this.config.url, {
+                    signal: controller.signal,
+                });
+
+            clearTimeout(timeout);
             data = await response.json();
+            this._pending = false;
         } catch (e) {
-            this.onError(e);
+            this._pending = false;
+            if (e.name === 'AbortError') {
+                this.onError(new Error('Timeout while requesting status'));
+            } else {
+                this.onError(e);
+            }
             return;
         }
 
