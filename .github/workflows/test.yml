@@ -98,7 +98,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.9]
-        node-version: [14]
+        node-version: [16]
         package:
           - progress
           - progress-element
@@ -123,8 +123,6 @@ jobs:
         npm run build
     - name: Lint with ESLint
       run: npm run lint
-    - name: Start test server
-      run: python -m tests.server &
     - name: Test with Jest
       run: |
          cd packages/$PACKAGE
