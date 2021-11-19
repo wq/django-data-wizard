@@ -64,8 +64,8 @@ jobs:
         python -m pip install flake8 wheel
         python -m pip install django==${{ matrix.django-version }}
         python -m pip install djangorestframework==${{ matrix.drf-version }}
-        python -m pip install itertable natural-keys html-json-forms
-        python -m pip install python-dateutil xlrd==1.2.0
+        python -m pip install natural-keys html-json-forms
+        python -m pip install git+https://github.com/wq/itertable.git
     - name: Install celery & redis
       if: ${{ matrix.backend == 'celery' }}
       run: python -m pip install celery redis

@@ -1,4 +1,3 @@
-from xlrd import colname
 from collections import OrderedDict
 from .models import Identifier
 from .signals import import_complete, new_metadata
@@ -47,6 +46,14 @@ def get_id(obj, field):
         return data[0]
     else:
         return field.to_representation(obj)
+
+
+def colname(i):
+    if i >= 26:
+        q, r = divmod(i, 26)
+        return colname(q - 1) + colname(r)
+    else:
+        return chr(ord('A') + i)
 
 
 @wizard_task(label="Processing Data", url_path="auto", use_async=True)

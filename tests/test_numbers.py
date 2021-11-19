@@ -19,12 +19,12 @@ class SimpleTestCase(BaseImportTestCase):
             ],
         )
 
-        # Records imported, but with '.0' due to XLSX number parsing
+        # xlrd would include '.0' in number, but openpyxl does not
         self.assert_records(
             run,
             [
-                "Imported 'Minneapolis 55455.0' at row 1",
-                "Imported 'Chicago 60611.0' at row 2",
+                "Imported 'Minneapolis 55455' at row 1",
+                "Imported 'Chicago 60611' at row 2",
             ],
         )
 
