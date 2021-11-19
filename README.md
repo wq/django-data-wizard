@@ -407,13 +407,53 @@ data_wizard.register("Time Series - Custom Serializer", TimeSeriesSerializer)
 
 At least one serializer or model should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering a serializer.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
 
-### Serializer Options
+In general, custom serializers have all the capabilities of regular [Django REST Framework serializers][serializers], including custom validation rules and the ability to populate multiple target models.
 
-In general, custom serializers have all the capabilities of regular [Django REST Framework serializers][serializers], including custom validation rules and the ability to populate multiple target models.  While the `request` context is not available, information about the run (including the user) can be retrieved through the `data_wizard` context instead.
+### Context Defaults
 
-When overriding a serializer for a [natural key model][natural keys], be sure to extend [NaturalKeyModelSerializer], as in [this example][naturalkey_wizard].  In other cases, extend [ModelSerializer] (as in the example above) or the base [Serializer](serializers) class.
+While the `request` context is not available, information about the run (including the user) can be retrieved through the `data_wizard` context instead.
+
+For example, you might extend DRF's [CurrentUserDefault][CurrentUserDefault] to work like this:
+
+```python
+class CurrentUserWizardDefault(serializers.CurrentUserDefault):
+    def __call__(self, serializer_field):
+        context = serializer_field.context
+        if 'request' in context:
+            return super().__call__(serializer_field)
+        elif 'data_wizard' in context:
+            return context['data_wizard']['run'].user
+        else:
+            raise Exception("Could not determine user!")
+```
+
+### Multiple Models
+
+When overriding a serializer for a [natural key model][natural keys], be sure to extend [NaturalKeyModelSerializer], as in [this example][naturalkey_wizard].  In other cases, extend [ModelSerializer] (as in the example above) or the base [Serializer][serializers] class.
 
 Custom serializers can be used to support [Entity-Attribute-Value] spreadsheets where the attribute names are specified as additional columns.  To support this scenario, the `Entity` serializer should include a nested `Value` serializer with `many=True`, and the `Value` serializer should have a foreign key to the `Attribute` table, as in [this example][eav_wizard].
+
+For advanced use cases involving multiple models or non-trivial database operations, it is possible to directly override the [create()] method.  In this case the serializers fields don't necessarily even have to correspond to the fields on the target model(s).  The custom method doesn't have to actually create any new records, though it should still return a model instance for logging purposes.
+
+```python
+class VeryCustomSerializer(serializers.Serializer):
+    parent_name = serializers.CharField()
+    child_name = serializers.CharField()
+    
+    def create(self, validated_data):
+        # This is just an example, normally you could use NaturalKeyModel instead
+        parent, is_new = Parent.objects.get_or_create(
+           name=validated_data['parent_name']
+        )
+        return Child.objects.create(
+            name=validated_data['child_name'],
+            parent=parent,
+        )
+```
+
+> Note that this specific example would not require a custom serializer as long as `Parent` was defined as a `NaturalKeyModel`.
+
+### Data Wizard Options
 
 Data Wizard also supports additional configuration by setting a `data_wizard` attribute on the `Meta` class of the serializer.  The following options are supported.
 
@@ -615,6 +655,8 @@ Once everything is set up, add the following `<form>` to the detail template tha
 [wq.db.rest]: https://wq.io/docs/about-rest
 [ModelSerializer]: http://www.django-rest-framework.org/api-guide/serializers/#modelserializer
 [serializers]: http://www.django-rest-framework.org/api-guide/serializers/
+[CurrentUserDefault]: https://www.django-rest-framework.org/api-guide/validators/#currentuserdefault
+[create()]: https://www.django-rest-framework.org/api-guide/serializers/#saving-instances
 [NaturalKeyModelSerializer]: https://github.com/wq/django-natural-keys#naturalkeymodelserializer
 [FileLoader]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/loaders.py
 [URLLoader]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/loaders.py
