@@ -908,6 +908,9 @@ def save_attribute_value(col, val, obj):
 
 
 def set_value(obj, field_name, val):
-    if field_name in obj:
-        val = "%s %s" % (obj[field_name], val)
+    if field_name in obj and val is not None:
+        if obj[field_name] is None:
+            obj[field_name] = val
+        else:
+            val = "%s %s" % (obj[field_name], val)
     obj[field_name] = val
