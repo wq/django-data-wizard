@@ -33,13 +33,14 @@ class FileLoader(BaseLoader):
 
     @property
     def file(self):
-        return getattr(self.content_object, self.file_attr)
+        file = getattr(self.content_object, self.file_attr)
+        return file.file
 
     def load_iter(self):
         from itertable import load_file
 
         options = self.load_iter_options()
-        return load_file(self.file.path, options=options)
+        return load_file(self.file, options=options)
 
 
 class URLLoader(BaseLoader):
