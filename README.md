@@ -42,6 +42,7 @@ Data Wizard is designed to allow users to iteratively refine their data import f
  3. **Advanced Customization**
     * [Custom Serializers](#custom-serializers)
     * [Custom Data Sources](#custom-data-sources)
+    * [Custom Tasks](#custom-tasks)
     * [Task Backends](#task-backends)
     * [wq Framework Integration](#wq-framework-integration)
 
@@ -76,6 +77,13 @@ DATA_WIZARD = {
     'IDMAP': 'data_wizard.idmap.existing',
     'AUTHENTICATION': 'rest_framework.authentication.SessionAuthentication',
     'PERMISSION': 'rest_framework.permissions.IsAdminUser',
+    'AUTO_IMPORT_TASKS': (
+        'data_wizard.tasks.check_serializer',
+        'data_wizard.tasks.check_iter',
+        'data_wizard.tasks.check_columns',
+        'data_wizard.tasks.check_row_identifiers',
+        'data_wizard.tasks.import_data',
+    ),
 }
 ```
 
@@ -146,9 +154,26 @@ parameter         | description
 ### auto
 #### `POST /datawizard/[id]/auto`
 
+
 The `auto` task attempts to run the entire data wizard process from beginning to end.  If any input is needed, the import will halt and redirect to the necessary screen.  If no input is needed, the `auto` task is equivalent to starting the `data` task directly.  This is an asynchronous method, and returns a `task_id` to be used with the status API.
 
-The [run_detail.html] template provides an example form that initiates the `auto` task.  The `auto` task itself uses the [run_auto.html] template.  
+The [run_detail.html] template provides an example form that initiates the `auto` task.  The `auto` task itself uses the [run_auto.html] template.
+
+The default sequence of tasks is defined by the [`AUTO_IMPORT_TASKS` setting](#initial-configuration)  Note that the `check_*` tasks do not provide a direct UI or HTTP API.  Instead, these tasks redirect to a corresponding UI task by raising `data_wizard.InputNeeded` if necessary.  For example, `data_wizard.tasks.check_columns` raises `InputNeeded` and redirects to the [columns](#columns) task if the spreadsheet contains unexpected column headers.  Once the form is submitted, the [updatecolumns](#updatecolumns) task processes the user input and runs the check again.  Once the check succeeds (i.e. all columns have been mapped), the user is able to restart the auto task.
+
+Here are the corresponding Input and Form Processing tasks for each of the tasks in the default sequence:
+
+Auto Task | Input Task | Form Processing Task
+--|--|--
+`check_serializer` | [`list_serializers`](#serializers) | [`updateserializer`](#updateserializer)
+`check_iter` | *N/A* | *N/A*
+`check_columns` | [`read_columns`](#columns) | [`update_columns`](#updatecolumns)
+`check_row_identifiers` | [`read_row_identifiers`](#ids) | [`update_row_identifiers`](#updateids)
+[`import_data`](#data) | *N/A* | *N/A*
+
+See [Custom Tasks](#custom-tasks) for details on customizing the task sequence.
+
+> Source: [`data_wizard.tasks.auto_import`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L58)
 
 ---
 
@@ -191,6 +216,8 @@ The default [run_auto.html] and [run_data.html] templates include a `<progress>`
      
 The `serializers` task provides a list of all registered serializers (i.e. target models).  This screen is shown by the `auto` task if a serializer was not specified when the `Run` was created.  The default [run_serializers.html] template includes an interface for selecting a target.  If a serializer is already selected, the template will display the label and a button to (re)start the `auto` task.
 
+> Source: [`data_wizard.tasks.list_serializers`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L78)
+
 <br>
 
 ---
@@ -207,6 +234,8 @@ The `updateserializer` task updates the specified `Run` with the selected target
 parameter    | description
 -------------|----------------------------------------
 `serializer` | The class name (or label) of the target serializer to use for this run.
+
+> Source: [`data_wizard.tasks.updateserializer`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L90)
 
 ---
 
@@ -225,6 +254,8 @@ The `columns` task lists all of the columns found in the source dataset (i.e. sp
 
 The default [run_columns.html] template includes an interface for mapping data columns to serializer fields.  If all columns are already mapped, the template will display the mappings and a button to (re)start the `auto` task.
 
+> Source: [`data_wizard.tasks.read_columns`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L287)
+
 ---
 
 <img align="right" width=320 height=240
@@ -239,6 +270,8 @@ The `updatecolumns` task saves the specified mappings from source data columns t
 parameter     | description
 --------------|----------------------------------------
 `rel_[relid]` | The column to map to the specified serializer field.  The `relid` and the complete list of possible mappings will be provided by the `columns` task.
+
+> Source: [`data_wizard.tasks.update_columns`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L459)
 
 ---
 
@@ -270,6 +303,8 @@ Note that the `auto` task will skip the `ids` task entirely if any of the follow
 
 Note that the configured `IDMAP` function will only be called the first time a new identifier is encountered.  Once the mapping is established (manually or automatically), it will be re-used in subsequent wizard runs.
 
+> Source: [`data_wizard.tasks.read_row_identifiers`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L520)
+
 ---
 
 <img align="right" width=320 height=240
@@ -285,6 +320,8 @@ parameter            | description
 ---------------------|----------------------------------------
 `ident_[identid]_id` | The identifier to map to the specified foreign key value.  The `identid` and the complete list of possible mappings will be provided by the `ids` task.
 
+> Source: [`data_wizard.tasks.update_row_identifiers`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L686)
+
 ---
 
 <img align="right" width=320 height=240
@@ -297,6 +334,8 @@ parameter            | description
 The `data` task starts the actual import process (and is called by `auto` behind the scenes).  Unlike `auto`, calling `data` directly will not cause a redirect to one of the other tasks if any meta input is needed.  Instead, `data` will attempt to import each record as-is, and report any errors that occured due to e.g. missing fields or unmapped foreign keys.
 
 This is an asynchronous method, and returns a `task_id` to be used with the `status` API.  The default [run_data.html] template includes a `<progress>` element for use with status task.
+
+> Source: [`data_wizard.tasks.import_data`](https://github.com/wq/django-data-wizard/blob/main/data_wizard/tasks.py#L733)
 
 ---
 
@@ -396,6 +435,7 @@ class TimeSeriesSerializer(serializers.ModelSerializer):
             'start_row': 1,
             'show_in_list': True,
             'idmap': data_wizard.idmap.existing,
+            'auto_import_tasks': [ custom task list ],
         }
 
 # Use default name & serializer
@@ -407,53 +447,13 @@ data_wizard.register("Time Series - Custom Serializer", TimeSeriesSerializer)
 
 At least one serializer or model should be registered in order to use the wizard.  Note the use of a human-friendly serializer label when registering a serializer.  This name should be unique throughout the project, but can be changed later on without breaking existing data.  (The class path is used as the actual identifier behind the scenes.)
 
-In general, custom serializers have all the capabilities of regular [Django REST Framework serializers][serializers], including custom validation rules and the ability to populate multiple target models.
+### Serializer Options
 
-### Context Defaults
+In general, custom serializers have all the capabilities of regular [Django REST Framework serializers][serializers], including custom validation rules and the ability to populate multiple target models.  While the `request` context is not available, information about the run (including the user) can be retrieved through the `data_wizard` context instead.
 
-While the `request` context is not available, information about the run (including the user) can be retrieved through the `data_wizard` context instead.
-
-For example, you might extend DRF's [CurrentUserDefault][CurrentUserDefault] to work like this:
-
-```python
-class CurrentUserWizardDefault(serializers.CurrentUserDefault):
-    def __call__(self, serializer_field):
-        context = serializer_field.context
-        if 'request' in context:
-            return super().__call__(serializer_field)
-        elif 'data_wizard' in context:
-            return context['data_wizard']['run'].user
-        else:
-            raise Exception("Could not determine user!")
-```
-
-### Multiple Models
-
-When overriding a serializer for a [natural key model][natural keys], be sure to extend [NaturalKeyModelSerializer], as in [this example][naturalkey_wizard].  In other cases, extend [ModelSerializer] (as in the example above) or the base [Serializer][serializers] class.
+When overriding a serializer for a [natural key model][natural keys], be sure to extend [NaturalKeyModelSerializer], as in [this example][naturalkey_wizard].  In other cases, extend [ModelSerializer] (as in the example above) or the base [Serializer](serializers) class.
 
 Custom serializers can be used to support [Entity-Attribute-Value] spreadsheets where the attribute names are specified as additional columns.  To support this scenario, the `Entity` serializer should include a nested `Value` serializer with `many=True`, and the `Value` serializer should have a foreign key to the `Attribute` table, as in [this example][eav_wizard].
-
-For advanced use cases involving multiple models or non-trivial database operations, it is possible to directly override the [create()] method.  In this case the serializers fields don't necessarily even have to correspond to the fields on the target model(s).  The custom method doesn't have to actually create any new records, though it should still return a model instance for logging purposes.
-
-```python
-class VeryCustomSerializer(serializers.Serializer):
-    parent_name = serializers.CharField()
-    child_name = serializers.CharField()
-    
-    def create(self, validated_data):
-        # This is just an example, normally you could use NaturalKeyModel instead
-        parent, is_new = Parent.objects.get_or_create(
-           name=validated_data['parent_name']
-        )
-        return Child.objects.create(
-            name=validated_data['child_name'],
-            parent=parent,
-        )
-```
-
-> Note that this specific example would not require a custom serializer as long as `Parent` was defined as a `NaturalKeyModel`.
-
-### Data Wizard Options
 
 Data Wizard also supports additional configuration by setting a `data_wizard` attribute on the `Meta` class of the serializer.  The following options are supported.
 
@@ -463,6 +463,7 @@ name | default | notes
 `start_row` | 1 | The first row of data.  If this is greater than `header_row + 1`, the column headers will be assumed to span multiple rows.  A common case is when EAV parameter names are on the first row and units are on the second.
 `show_in_list` | `True` | If set to `False`, the serializer will be available through the API but not listed in the wizard views.  This is useful if you have a serializer that should only be used during fully automated workflows.
 `idmap` | [`IDMAP` setting](#ids) | Can be any of `data_wizard.idmap.*` or a custom function.  Unlike the `IDMAP` setting, this should always be an actual function and not an import path.
+`auto_import_tasks` | [`AUTO_IMPORT_TASKS` setting](#auto) | A list of import paths to functions registered with `@data_wizard.wizard_task` (see [Custom Tasks](#custom-tasks).
 
 ## Custom Data Sources
 
@@ -552,6 +553,62 @@ from .models import CustomIterSource
 data_wizard.set_loader(CustomIterSource, "myapp.loaders.CustomIterLoader")
 ```
 
+## Custom Tasks
+
+It is possible to override the sequence of tasks excecuted by the [auto](#auto) task, to remove steps or add new ones.  The list can be overridden globally (by setting `DATA_WIZARD['AUTO_IMPORT_TASKS']`), or on a per-serializer basis (by setting `Meta.data_wizard['auto_import_tasks']`).
+
+Each custom task function should be registered with the `@data_wizard.wizard_task` decorator to configure a label and optionally the API path relative to `/datawizard/[id]/`.  The arguments to the decorator and the function determine the task type.
+
+
+### Check Tasks
+
+```python
+@data_wizard.wizard_task(label="Custom Check", url_path=False)
+def custom_check(run):
+    if not some_condition_satisfied(run):
+        raise data_wizard.InputNeeded("custominput")
+```
+
+Check tasks validate whether some condition is satisfied, redirecting to an Input task if needed.  `url_path` is usually set to False to disable the HTTP endpoint.  The task label will be shown in the progress bar (if the task takes more than a couple seconds to run).
+
+### Input Tasks
+
+```python
+@data_wizard.wizard_task(label="Custom Input", url_path="custominput")
+def custom_input(run):
+   return {"some_template_context": []}
+```
+
+Input tasks enable the user to provide feedback to guide the wizard.  They should have a `url_path` (which will default to the function name) and a corresponding template (e.g. `data_wizard/run_custominput.html`).  The context returned by the task will be in the template under the `result` variable.  The template typically either renders a form with the needed inputs, or (if all inputs have been entered) a summary with the option to restart the auto task.
+
+### Form Processing Tasks
+
+```python
+@data_wizard.wizard_task(label="Custom Input", url_path="customsave")
+def custom_save(run, post={}):
+   some_save_method(run, post)
+   return {
+       **custom_input(run),
+       "current_mode": "custominput",
+   }
+```
+
+Form Processing Tasks process the form submitted from a prior input task.  Registration is similar to Input Tasks except the function itself should accept an optional `post` kwarg.  Form Processing tasks should be registered with `url_path`, and redirect back to the input task (by setting `current_mode` on the response).
+
+### Custom Auto Tasks
+
+In very advanced use cases, it might be necessary to generate the list of tasks dynamically depending on a number of factors.  In that case, it is possible to define a fully custom auto task:
+
+```python
+@data_wizard.wizard_task(label="Custom Workflow", url_path="customauto", use_async=True)
+def custom_auto(run):
+    task_list = somehow_determine_tasks(run)
+    return run.run_all(task_list)
+```
+
+Registration is similar as that for other tasks with the addition of the `use_async` keyword, which facilitates background processing via the configured task backend.
+
+In general, the tasks in an automated task list should be check tasks or other auto tasks.  Input and Form Processing tasks should be executed outside of the automated flow.
 
 ## Task Backends
 
@@ -655,8 +712,6 @@ Once everything is set up, add the following `<form>` to the detail template tha
 [wq.db.rest]: https://wq.io/docs/about-rest
 [ModelSerializer]: http://www.django-rest-framework.org/api-guide/serializers/#modelserializer
 [serializers]: http://www.django-rest-framework.org/api-guide/serializers/
-[CurrentUserDefault]: https://www.django-rest-framework.org/api-guide/validators/#currentuserdefault
-[create()]: https://www.django-rest-framework.org/api-guide/serializers/#saving-instances
 [NaturalKeyModelSerializer]: https://github.com/wq/django-natural-keys#naturalkeymodelserializer
 [FileLoader]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/loaders.py
 [URLLoader]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/loaders.py
