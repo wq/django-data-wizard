@@ -27,11 +27,14 @@ class WQTestCase(APITestCase):
                 "detail",
                 "edit",
                 "auto",
+                "confirm",  # Custom
+                "finalize",  # Custom
                 "data",
                 "serializers",
                 "columns",
                 "ids",
                 "records",
+                "validate",  # Custom
             ],
         }
 

@@ -4,7 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
 from django.urls import reverse
 from . import registry
-from .settings import import_setting
+from .settings import import_setting, get_setting
 
 
 class Run(models.Model):
@@ -65,6 +65,14 @@ class Run(models.Model):
 
     def run_all(self, tasks):
         return self.backend.run_all(self, tasks)
+
+    def get_auto_import_tasks(self):
+        if self.serializer:
+            tasks = self.get_serializer_options().get("auto_import_tasks")
+            if tasks:
+                return tasks
+
+        return get_setting("AUTO_IMPORT_TASKS")
 
     def send_progress(self, meta, state="PROGRESS"):
         self.backend.send_progress(self, meta, state)

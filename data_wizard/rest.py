@@ -7,7 +7,6 @@ from wq.db.rest.context_processors import get_base_url
 from .models import Run
 from . import views as wizard
 from . import autodiscover
-from .backends.base import TASK_META
 from rest_framework.settings import api_settings
 
 

@@ -5,6 +5,7 @@ from .base import DataWizardBackend, ERROR_RAISE
 
 class Backend(DataWizardBackend):
     on_async_error = ERROR_RAISE
+    test_reset_sequences = True
 
     def run_async(self, task_name, run_id, post):
         task = run_async.delay(task_name, run_id, post)

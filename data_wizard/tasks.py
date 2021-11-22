@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from .models import Identifier
 from .signals import import_complete, new_metadata
-from .settings import get_setting
 from . import registry, wizard_task, InputNeeded
 
 from django.db import transaction
@@ -63,7 +62,7 @@ def auto_import(run):
     Iter.  Meant to be called asynchronously.  Automatically suspends import if
     any additional input is needed from the user.
     """
-    tasks = get_setting("AUTO_IMPORT_TASKS")
+    tasks = run.get_auto_import_tasks()
     run.add_event("auto_import")
     return run.run_all(tasks)
 

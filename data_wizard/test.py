@@ -3,7 +3,6 @@ from rest_framework import status
 import os
 from time import sleep
 
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.core.files import File
 from .models import Run, Identifier
@@ -19,12 +18,12 @@ class WizardTestCase(APITransactionTestCase):
     file_model = None
     file_content_type = None
 
-    def _fixture_teardown(self):
-        # _fixture_teardown truncates related tables including contenttypes
-        # (even though that table is populated before the test runs)
-        content_types = list(ContentType.objects.all())
-        super(WizardTestCase, self)._fixture_teardown()
-        ContentType.objects.bulk_create(content_types)
+    @property
+    def reset_sequences(self):
+        from . import backend
+        if backend and getattr(backend, 'test_reset_sequences', False):
+            return True
+        return False
 
     def setUp(self):
         self.user = User.objects.create(
