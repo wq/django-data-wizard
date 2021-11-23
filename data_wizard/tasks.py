@@ -341,7 +341,10 @@ def load_columns(run):
     table = run.load_iter()
     cols = list(table.field_map.keys())
     matched = []
-    for rng in run.range_set.exclude(type="data"):
+    ranges = run.range_set.filter(
+        identifier__serializer=run.serializer
+    ).exclude(type="data")
+    for rng in ranges:
         ident = rng.identifier
         info = {
             "match": str(ident),
@@ -745,9 +748,7 @@ def import_data(run):
     return result
 
 
-def _do_import(run):
-    run.add_event("do_import")
-
+def get_rows(run):
     # (Re-)Load data and column information
     table = run.load_iter()
     matched = get_columns(run)
@@ -759,7 +760,15 @@ def _do_import(run):
         if "meta_value" in col:
             save_value(col, col["meta_value"], run_globals)
 
+    for row in table:
+        yield build_row(run, row, run_globals, matched)
+
+
+def _do_import(run):
+    run.add_event("do_import")
+
     # Loop through table rows and add each record
+    table = run.load_iter()
     rows = len(table)
     skipped = []
 
@@ -773,7 +782,7 @@ def _do_import(run):
         def rownum(i):
             return i
 
-    for i, row in enumerate(table):
+    for i, row in enumerate(get_rows(run)):
         # Update state (for status() on view)
         run.send_progress(
             {
@@ -786,7 +795,7 @@ def _do_import(run):
         )
 
         # Create report, capturing any errors
-        obj, error = import_row(run, i, row, run_globals, matched)
+        obj, error = import_row(run, i, row)
         if error:
             success = False
             fail_reason = error
@@ -815,9 +824,9 @@ def _do_import(run):
     return status
 
 
-def import_row(run, i, row, instance_globals, matched):
+def build_row(run, row, instance_globals, matched):
     """
-    Create actual report instance from parsed values.
+    Compile spreadsheet row into serializer data format
     """
 
     # Copy global values to record hash
@@ -842,10 +851,17 @@ def import_row(run, i, row, instance_globals, matched):
 
     record.pop("_attr_index", None)
 
+    return parse_json_form(record)
+
+
+def import_row(run, i, record):
+    """
+    Create actual report instance from parsed values.
+    """
     Serializer = run.get_serializer()
     try:
         serializer = Serializer(
-            data=parse_json_form(record),
+            data=record,
             context={
                 "data_wizard": {
                     "run": run,
