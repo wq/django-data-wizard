@@ -49,6 +49,7 @@ class RunViewSet(ModelViewSet, wizard.RunViewSet):
     record_serializer_class = RecordSerializer
     renderer_classes = [HTMLRenderer, JSONRenderer]
     pagination_class = api_settings.DEFAULT_PAGINATION_CLASS
+    authentication_classes = api_settings.DEFAULT_AUTHENTICATION_CLASSES
     _namespace = "wq"
 
 
