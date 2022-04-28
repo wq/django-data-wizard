@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from .models import Run, RunLog, Identifier, Range, Record
 from django.urls import reverse
 from django.http import HttpResponseRedirect
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 
 class FixedTabularInline(admin.TabularInline):

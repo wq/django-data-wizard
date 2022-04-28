@@ -11,40 +11,40 @@ jobs:
       TEST_BACKEND: ${{ matrix.backend }}
     strategy:
       matrix:
-        python-version: [3.9]
-        django-version: [3.2.7]
-        drf-version: [3.12.4]
+        python-version: ["3.10"]
+        django-version: [4.0.4]
+        drf-version: [3.13.1]
         variant: ['']
         backend: [threading, immediate, celery]
         include:
-        - python-version: 3.9
+        - python-version: "3.10"
           django-version: 3.2.7
           drf-version: 3.12.4
           variant: wq.db
           backend: threading
-        - python-version: 3.9
-          django-version: 3.2.7
-          drf-version: 3.12.4
+        - python-version: "3.10"
+          django-version: 4.0.4
+          drf-version: 3.13.1
           variant: reversion
           backend: threading
+        - python-version: "3.10"
+          django-version: 3.2.13
+          drf-version: 3.13.1
+          variant: ''
+          backend: threading
         - python-version: 3.9
-          django-version: 2.2.24
-          drf-version: 3.12.4
+          django-version: 4.0.4
+          drf-version: 3.13.1
           variant: ''
           backend: threading
         - python-version: 3.8
-          django-version: 3.2.7
-          drf-version: 3.12.4
+          django-version: 4.0.4
+          drf-version: 3.13.1
           variant: ''
           backend: threading
         - python-version: 3.7
-          django-version: 3.2.7
-          drf-version: 3.12.4
-          variant: ''
-          backend: threading
-        - python-version: 3.6
-          django-version: 3.2.7
-          drf-version: 3.12.4
+          django-version: 3.2.13
+          drf-version: 3.13.1
           variant: ''
           backend: threading
     services:
@@ -71,7 +71,7 @@ jobs:
       run: python -m pip install celery redis
     - name: Install wq.db
       if: ${{ matrix.variant == 'wq.db' }}
-      run: python -m pip install wq.db --pre
+      run: python -m pip install wq.db pystache
     - name: Install reversion
       if: ${{ matrix.variant == 'reversion' }}
       run: python -m pip install django-reversion
@@ -125,7 +125,7 @@ jobs:
       run: |
          cd packages/$PACKAGE
          npm run test
-    - uses: smartsquaregmbh/delete-old-packages@v0.3.1
+    - uses: smartsquaregmbh/delete-old-packages@v0.4.0
       if: github.event_name == 'push'
       with:
          keep: 5
