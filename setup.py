@@ -66,7 +66,7 @@ setup(
     },
     install_requires=[
         "djangorestframework",
-        "itertable",
+        "itertable>=2.1.0",
         "natural-keys",
         "html-json-forms",
         "python-dateutil",
