@@ -42,7 +42,7 @@ class RunViewSet(ModelViewSet):
         if self.action in ("create", "retrieve"):
             template = "detail"
         else:
-            template = self.action
+            template = self.task_action_paths.get(self.action, self.action)
         return "data_wizard/run_{}.html".format(template)
 
     def get_renderers(self):
@@ -112,6 +112,7 @@ class RunViewSet(ModelViewSet):
         return response
 
     task_actions_ready = False
+    task_action_paths = {}
 
     @classmethod
     def get_extra_actions(cls):
@@ -139,7 +140,8 @@ class RunViewSet(ModelViewSet):
             methods = ["POST"]
         else:
             methods = ["GET"]
-        task_action.__name__ = task_name.split(".")[-1]
+        task_action_name = task_name.split(".")[-1]
+        task_action.__name__ = task_action_name
         task_action = action(
             detail=True,
             methods=methods,
@@ -147,7 +149,10 @@ class RunViewSet(ModelViewSet):
             url_name=meta["url_path"],
         )(task_action)
 
-        setattr(cls, task_action.__name__, task_action)
+        setattr(cls, task_action_name, task_action)
+        cls.task_action_paths[task_action_name] = (
+            meta["url_path"] or task_action_name
+        )
 
     @action(detail=True)
     def records(self, request, *args, **kwargs):

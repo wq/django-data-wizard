@@ -9,7 +9,7 @@
   </li>
 </ul>
 {% include "data_wizard/continue.html" %}
-{% elif not serializer_choices %}
+{% elif not result.serializer_choices %}
 <ul class="messagelist">
   <li class="error">No serializers registered.</li>
 </ul>
@@ -23,7 +23,7 @@
     <fieldset data-role="controlgroup">
       <legend>Select Format</legend>
       <ul class="radiolist">
-      {% for choice in serializer_choices %}
+      {% for choice in result.serializer_choices %}
       <li>
       <label for="serializer-{{choice.name}}">
         <input type="radio" name="serializer" id="serializer-{{choice.name}}"
