@@ -52,7 +52,7 @@ def colname(i):
         q, r = divmod(i, 26)
         return colname(q - 1) + colname(r)
     else:
-        return chr(ord('A') + i)
+        return chr(ord("A") + i)
 
 
 @wizard_task(label="Processing Data", url_path="auto", use_async=True)

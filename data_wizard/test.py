@@ -21,7 +21,8 @@ class WizardTestCase(APITransactionTestCase):
     @property
     def reset_sequences(self):
         from . import backend
-        if backend and getattr(backend, 'test_reset_sequences', False):
+
+        if backend and getattr(backend, "test_reset_sequences", False):
             return True
         return False
 
@@ -312,7 +313,7 @@ class WizardTestCase(APITransactionTestCase):
                 )
             elif "ValidationError" in text:
                 # Django 3.0+
-                text = text.replace(u"\u201c", '"').replace(u"\u201d", '"')
+                text = text.replace("\u201c", '"').replace("\u201d", '"')
             return text
 
         records = [make_str(record) for record in run.record_set.all()]
