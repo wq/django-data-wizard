@@ -8,7 +8,7 @@
         "jest": "jest --verbose",
         "rollup": "rollup",
         "prettier": "prettier --write .",
-        "lint": "eslint ."
+        "lint": "eslint *.js packages"
     },
     "devDependencies": {
         "@babel/core": "^7.8.4",
