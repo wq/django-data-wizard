@@ -1,12 +1,12 @@
 ---
+tag: columns
+tag_color: secondary
 order: 6
 ---
 
-# columns
+# Column Choices
 
-<img align="right" width=320 height=240
-     alt="Column Choices"
-     src="https://django-data-wizard.wq.io/images/screenshots/02-columns.png">
+![Column Choices](../images/screenshots/02-columns.png)
 
 #### `GET /datawizard/[id]/columns`
 

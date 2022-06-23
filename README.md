@@ -1,14 +1,12 @@
+<p align="center">
+  <a href="https://django-data-wizard.wq.io">
+    <img src="https://django-data-wizard.wq.io/images/django-data-wizard.svg" alt="Django Data Wizard">
+  </a>
+</p>
+
 [**Django Data Wizard**][Django Data Wizard] is an interactive tool for mapping tabular data (e.g. Excel, CSV, XML, JSON) into a normalized database structure via [Django REST Framework] and [IterTable].  Django Data Wizard allows novice users to map spreadsheet columns to serializer fields (and cell values to foreign keys) on-the-fly during the import process.  This reduces the need for preset spreadsheet formats, which most data import solutions require.
 
-<img width="32%"
-     alt="Column Choices"
-     src="https://django-data-wizard.wq.io/images/02-columns.png">
-<img width="32%"
-     alt="Auto Import - Progress Bar"
-     src="https://django-data-wizard.wq.io/images/08-data75.png">
-<img width="32%"
-     alt="Imported Records"
-     src="https://django-data-wizard.wq.io/images/10-records.png">
+[![Django Data Wizard Workflow](https://django-data-wizard.wq.io/images/screenshots/workflow.png)][workflow]
 
 The Data Wizard supports straightforward one-to-one mappings from spreadsheet columns to database fields, as well as more complex scenarios like [natural keys] and [Entity-Attribute-Value] (or "wide") table mappings.
 
@@ -62,7 +60,7 @@ Data Wizard is designed to allow users to iteratively refine their data import f
 [installation]: https://django-data-wizard.wq.io/overview/setup#installation
 [initial-configuration]: https://django-data-wizard.wq.io/overview/setup#initial-configuration
 [target-model-registration]: https://django-data-wizard.wq.io/overview/setup#target-model-registration
-[wq-setup]: https://django-data-wizard.wq.io/overview/wq-setup
+[wq-setup]: https://django-data-wizard.wq.io/guides/integrate-with-wq-framework
 
 [sources]: https://django-data-wizard.wq.io/config/sources
 [serializers]: https://django-data-wizard.wq.io/config/serializers
@@ -70,3 +68,5 @@ Data Wizard is designed to allow users to iteratively refine their data import f
 [ids]: https://django-data-wizard.wq.io/api/ids
 [data]: https://django-data-wizard.wq.io/api/data
 [models]: https://django-data-wizard.wq.io/config/models
+[tasks]: https://django-data-wizard.wq.io/config/tasks
+[backends]: https://django-data-wizard.wq.io/config/backends

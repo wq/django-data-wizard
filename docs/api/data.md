@@ -1,12 +1,12 @@
 ---
+tag: data
+tag_color: secondary
 order: 10
 ---
 
-# data
+# Import Data
 
-<img align="right" width=320 height=240
-     alt="Auto Import - Progress Bar"
-     src="https://django-data-wizard.wq.io/images/screenshots/08-data75.png">
+![Auto Import - Progress Bar](../images/screenshots/08-data75.png)
 
 #### `POST /datawizard/[id]/data`
 

@@ -1,12 +1,12 @@
 ---
+tag: serializers
+tag_color: secondary
 order: 4
 ---
 
-# serializers
+# Serializer Choices
 
-<img align="right" width=320 height=240
-     alt="Serializer Choices"
-     src="https://django-data-wizard.wq.io/images/screenshots/00-serializers.png">
+![Serializer Choices](../images/screenshots/00-serializers.png)
 
 
 #### `GET /datawizard/[id]/serializers`

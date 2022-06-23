@@ -1,12 +1,12 @@
 ---
+tag: updatecolumns
+tag_color: secondary
 order: 7
 ---
 
-# updatecolumns
+# Columns Selected
 
-<img align="right" width=320 height=240
-     alt="Columns Selected"
-     src="https://django-data-wizard.wq.io/images/screenshots/03-updatecolumns.png">
+![Columns Selected](../images/screenshots/03-updatecolumns.png)
      
 #### `POST /datawizard/[id]/updatecolumns`
 

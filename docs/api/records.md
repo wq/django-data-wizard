@@ -1,12 +1,12 @@
 ---
+tag: records
+tag_color: secondary
 order: 11
 ---
 
-# records
+# Imported Records
 
-<img align="right" width=320 height=240
-     alt="Imported Records"
-     src="https://django-data-wizard.wq.io/images/screenshots/10-records.png">
+![Imported Records](../images/screenshots/10-records.png)
 
 #### `GET /datawizard/[id]/records`
 

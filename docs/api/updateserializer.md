@@ -1,12 +1,12 @@
 ---
+tag: updateserializer
+tag_color: secondary
 order: 5
 ---
 
-# updateserializer
+# Serializer Selected
 
-<img align="right" width=320 height=240
-     alt="Serializer Selected"
-     src="https://django-data-wizard.wq.io/images/screenshots/01-updateserializer.png">
+![Serializer Selected](../images/screenshots/01-updateserializer.png)
      
 #### `POST /datawizard/[id]/updateserializer`
 

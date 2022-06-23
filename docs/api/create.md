@@ -1,12 +1,12 @@
 ---
+tag: "/ (POST)"
+tag_color: primary
 order: 1
 ---
 
 # Create New Run
 
-<img align="right" width=320 height=240
-     alt="Select Source & Start Import"
-     src="https://django-data-wizard.wq.io/images/screenshots/A2-source-list.png">
+![Select Source & Start Import](../images/screenshots/A2-source-list.png)
 
 #### `POST /datawizard/`
 

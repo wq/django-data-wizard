@@ -1,8 +1,10 @@
 ---
+tag: status.json
+tag_color: secondary
 order: 3
 ---
 
-# status
+# Status
 
 #### `GET /datawizard/[id]/status.json?task=[task]`
 

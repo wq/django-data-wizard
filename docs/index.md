@@ -12,15 +12,7 @@ wq_config:
 
 [**Django Data Wizard on GitHub**](https://github.com/wq/django-data-wizard)
 
-<img width="33%"
-     alt="Column Choices"
-     src="https://django-data-wizard.wq.io/images/screenshots/02-columns.png">
-<img width="33%"
-     alt="Auto Import - Progress Bar"
-     src="https://django-data-wizard.wq.io/images/screenshots/08-data75.png">
-<img width="33%"
-     alt="Imported Records"
-     src="https://django-data-wizard.wq.io/images/screenshots/10-records.png">
+[![Using Django Data Wizard](./images/screenshots/workflow.png)](./guides/using-django-data-wizard.md)
 
 ## News
 

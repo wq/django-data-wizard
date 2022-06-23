@@ -9,20 +9,14 @@ Django Data wizard is designed to integrate seamlessly with the Django Admin UI,
 
 ### FileSource & URLSource Admin
 
-<img align="right" width=320 height=240
-     alt="File Source Admin"
-     src="https://django-data-wizard.wq.io/images/screenshots/A1-add-source.png">
-<img align="right" width=320 height=240
-     alt="File Source Admin"
-     src="https://django-data-wizard.wq.io/images/screenshots/A1-list-sources.png">
-     
+![File Source Admin - Add](../images/screenshots/A1-add-source.png)
+![File Source Admin - List](../images/screenshots/A1-list-sources.png)
+
 If you use a custom source model instead of `data_wizard.sources`, be sure to register it with the admin as described in [sources documentation][sources].
 
 ### Identifier Admin
 
-<img align="right" width=320 height=240
-     alt="Identifier Admin"
-     src="https://django-data-wizard.wq.io/images/screenshots/A3-identifiers.png">
+![Identifier Admin](../images/screenshots/A3-identifiers.png)
 
 Django Data Wizard identifier mappings can be viewed and edited via the Django Admin.
 

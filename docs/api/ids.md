@@ -1,12 +1,12 @@
 ---
+tag: ids
+tag_color: secondary
 order: 8
 ---
 
-# ids
+# Identifier Choices
 
-<img align="right" width=320 height=240
-     alt="Identifier Choices"
-     src="https://django-data-wizard.wq.io/images/screenshots/04-ids.png">
+![Identifier Choices](../images/screenshots/04-ids.png)
 
 #### `GET /datawizard/[id]/ids`
 

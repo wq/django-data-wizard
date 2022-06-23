@@ -1,12 +1,12 @@
 ---
+tag: updateids
+tag_color: secondary
 order: 9
 ---
 
-# updateids
+# Identifiers Selected
 
-<img align="right" width=320 height=240
-     alt="Identifiers Selected"
-     src="https://django-data-wizard.wq.io/images/screenshots/05-updateids.png">
+![Identifiers Selected](../images/screenshots/05-updateids.png)
      
 #### `POST /datawizard/[id]/updateids`
 
