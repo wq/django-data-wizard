@@ -1,8 +1,6 @@
 ---
 repo: django-data-wizard
 date: 2020-02-21
-tag: latest
-tag_color: primary
 ---
 
 # Django Data Wizard 1.3.0

@@ -1,8 +1,6 @@
 ---
 repo: itertable
 date: 2019-12-06
-tag: latest
-tag_color: primary
 ---
 
 # IterTable 2.0
