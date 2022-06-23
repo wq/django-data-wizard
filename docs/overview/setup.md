@@ -27,6 +27,7 @@ INSTALLED_APPS = (
    'data_wizard',
    'data_wizard.sources',
 )
+```
 
 > If you want to use a [custom data source][sources] instead of the built-in data source tables (`FileSource` and `URLSource`), do not include `data_wizard.sources` in your `INSTALLED_APPS`.
 
@@ -43,6 +44,8 @@ urlpatterns = [
 ```
 
 > If you are using Django Data Wizard's [wq framework integration][wq-setup], you do not need to update urls.py.
+
+Finally, if you would like to override any of the default settings, add a [`DATA_WIZARD` configuration][settings] to your Django settings.
 
 ### Target Model Registration
 
@@ -66,6 +69,7 @@ Once everything is configured, upload a source file in the provided [Django admi
 
 [sources]: ../sources.md
 [wq-setup]: ../guides/integrate-with-wq-framework.md
+[settings]: ../config/settings.md
 [serializers]: ../config/serializers.md
 [admin]: ../api/admin.md
 [workflow]: ../guides/using-django-data-wizard.md

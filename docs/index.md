@@ -12,7 +12,7 @@ wq_config:
 
 [**Django Data Wizard on GitHub**](https://github.com/wq/django-data-wizard)
 
-[![Using Django Data Wizard](./images/screenshots/workflow.png)](./guides/using-django-data-wizard.md)
+[![Using Django Data Wizard](./images/screenshots/workflow.png)](https://django-data-wizard.wq.io/guides/using-django-data-wizard.md)
 
 ## News
 

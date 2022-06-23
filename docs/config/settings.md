@@ -79,11 +79,10 @@ Note that `DATA_WIZARD['PERMISSION']` is intentionally configured separately fro
 
 ### `DATA_WIZARD['AUTO_IMPORT_TASKS']`
 
-This lsit defines the sequence of tasks to execute when running the [auto] API.  The default list is recommended for most projects.
+This list defines the sequence of tasks to execute when running the [auto] API.  The default list is recommended for most projects.
 
 Task | Description
----|---
-
+-----|-------------
 `data_wizard.tasks.check_serializer` | Ensure that a registered serializer (target model) is selected
 `data_wizard.tasks.check_iter` | Ensure that the file data can be loaded from the source model
 `data_wizard.tasks.check_columns` | Ensure that columns from the source file can be mapped to fields in the target model serializer

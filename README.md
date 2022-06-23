@@ -31,12 +31,14 @@ Data Wizard is designed to allow users to iteratively refine their data import f
     * [Installation][installation]
     * [Initial Configuration][initial-configuration]
     * [**Target Model Registration (required)**][target-model-registration]
+    * [Usage][workflow]
     * [wq Framework Integration (optional)][wq-setup]
  2. **API Documentation**
     * [Run API][api]
     * [Admin Screens][admin]
     * [Command-Line Interface][cli]
  3. **Advanced Customization**
+    * [Django Settings][settings]
     * [Data Model][models]
     * [Custom Serializers][serializers]
     * [Custom Data Sources][sources]
@@ -67,6 +69,7 @@ Data Wizard is designed to allow users to iteratively refine their data import f
 [columns]: https://django-data-wizard.wq.io/api/columns
 [ids]: https://django-data-wizard.wq.io/api/ids
 [data]: https://django-data-wizard.wq.io/api/data
+[settings]: https://django-data-wizard.wq.io/config/settings
 [models]: https://django-data-wizard.wq.io/config/models
 [tasks]: https://django-data-wizard.wq.io/config/tasks
 [backends]: https://django-data-wizard.wq.io/config/backends
