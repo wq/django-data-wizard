@@ -1,6 +1,6 @@
 {
     "name": "@wq/progress",
-    "version": "1.2.0",
+    "version": "2.0.0",
     "description": "Progress tracking client for monitoring server tasks",
     "main": "src/progress.js",
     "type": "module",
@@ -22,5 +22,5 @@
     "bugs": {
         "url": "https://github.com/wq/django-data-wizard/issues"
     },
-    "homepage": "https://github.com/wq/django-data-wizard"
+    "homepage": "https://django-data-wizard.wq.io/@wq/progress"
 }

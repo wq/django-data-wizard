@@ -45,8 +45,8 @@ export default function RunSerializers() {
                 </Typography>
                 <Typography>
                     See{' '}
-                    <a href="https://github.com/wq/django-data-wizard#target-model-registration">
-                        https://github.com/wq/django-data-wizard#target-model-registration
+                    <a href="https://django-data-wizard.wq.io/overview/setup#target-model-registration">
+                        https://django-data-wizard.wq.io/overview/setup#target-model-registration
                     </a>{' '}
                     for more information.
                 </Typography>

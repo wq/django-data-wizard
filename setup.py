@@ -42,7 +42,7 @@ setup(
     use_scm_version=True,
     author="S. Andrew Sheppard",
     author_email="andrew@wq.io",
-    url="https://github.com/wq/django-data-wizard",
+    url="https://django-data-wizard.wq.io/",
     license="MIT",
     description=LONG_DESCRIPTION.strip(),
     long_description=readme(),
@@ -97,4 +97,11 @@ setup(
         "setuptools_scm",
     ],
     cmdclass={"build_py": BuildJS},
+    project_urls={
+        'Homepage': 'https://django-data-wizard.wq.io/',
+        'Documentation': 'https://django-data-wizard.wq.io/',
+        'Source': 'https://github.com/wq/django-data-wizard',
+        'Release Notes': 'https://django-data-wizard.wq.io/releases/',
+        'Issues': 'https://github.com/wq/django-data-wizard/issues',
+    },
 )

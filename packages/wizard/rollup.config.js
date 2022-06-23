@@ -47,12 +47,15 @@ export default [
         ...config,
         external: [
             'react',
+            'formik',
+            'prop-types',
             '@wq/react',
             '@wq/material',
             '@wq/progress',
             '@material-ui/core/LinearProgress',
             '@material-ui/icons/Settings',
             '@material-ui/icons/PlayArrow',
+            '@material-ui/icons/Replay',
         ],
         plugins: [
             babel({

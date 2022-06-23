@@ -1,5 +1,5 @@
 /*
- * @wq/progress-element 1.2.0
+ * @wq/progress-element 2.0.0
  * fetch()-powered auto-updating HTML5 <progress> element
  * (c) 2014-2021, S. Andrew Sheppard
  * https://wq.io/license
