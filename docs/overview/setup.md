@@ -16,6 +16,12 @@ Getting Started
 python3 -m pip install data-wizard
 ```
 
+Alternatively you may use poetry to install `data-wizard` in a poetry-managed .venv:
+
+```
+poetry install
+```
+
 ## Initial Configuration
 
 Within a new or existing Django project, add `data_wizard` to your `INSTALLED_APPS`:
