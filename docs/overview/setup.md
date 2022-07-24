@@ -18,7 +18,7 @@ python3 -m pip install data-wizard
 
 Alternatively you may use poetry to install `data-wizard` in a poetry-managed .venv:
 
-```
+```bash
 poetry install
 ```
 
