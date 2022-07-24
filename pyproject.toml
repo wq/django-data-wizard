@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "data-wizard"
+version = "2.1.0"
+description = "Interactive web-based wizard for importing structured data into Django models."
+authors = ["S. Andrew Sheppard <andrew@wq.io>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+djangorestframework = "^3.13.1"
+django = "^4.0.6"
+itertable = "^2.1.0"
+natural-keys = "^2.0.0"
+html-json-forms = "1.1.1"
+python-dateutil = "^2.8.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
