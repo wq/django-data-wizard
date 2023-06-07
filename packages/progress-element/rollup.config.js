@@ -40,10 +40,13 @@ export default [
                 exports: 'named',
                 globals: { jquery: '$' },
                 banner,
-                file: `${dir}/dist/${name}.js`,
+                file: `data_wizard/static/data_wizard/js/${name}.js`,
                 format: 'umd',
                 sourcemap: true,
                 indent: false,
+                sourcemapPathTransform(path) {
+                    return path.replace('../../../../', 'django-data-wizard/');
+                },
             },
         ],
     },
