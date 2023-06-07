@@ -3,7 +3,6 @@ from wq.db import rest
 from wq.db.rest.views import ModelViewSet
 from wq.db.rest.serializers import ModelSerializer
 from wq.db.rest.renderers import HTMLRenderer, JSONRenderer
-from wq.db.rest.context_processors import get_base_url
 from .models import Run
 from . import views as wizard
 from . import autodiscover
@@ -39,7 +38,7 @@ class RecordSerializer(wizard.RecordSerializer):
         if not conf:
             return None
 
-        base = get_base_url()
+        base = rest.router.get_base_url()
         url = conf["url"]
         objid = getattr(obj, conf.get("lookup", "pk"))
         return f"{base}/{url}/{objid}"

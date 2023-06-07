@@ -82,7 +82,35 @@ if TEST_BACKEND == "celery":
     CELERY_RESULT_BACKEND = BROKER_URL = "redis://localhost/0"
 
 if TEST_VARIANT == "wq.db":
-    from wq.db.default_settings import *  # noqa
+    REST_FRAMEWORK = {
+        "DEFAULT_RENDERER_CLASSES": (
+            "wq.db.rest.renderers.HTMLRenderer",
+            "wq.db.rest.renderers.JSONRenderer",
+            "wq.db.rest.renderers.GeoJSONRenderer",
+        ),
+        "DEFAULT_PAGINATION_CLASS": "wq.db.rest.pagination.Pagination",
+        "PAGE_SIZE": 50,
+        "DEFAULT_PERMISSION_CLASSES": (
+            "wq.db.rest.permissions.ModelPermissions",
+        ),
+        "DEFAULT_FILTER_BACKENDS": ("wq.db.rest.filters.FilterBackend",),
+        "DEFAULT_CONTENT_NEGOTIATION_CLASS": "wq.db.rest.negotiation.ContentNegotiation",
+    }
+    TEMPLATES = [
+        {
+            "BACKEND": "django.template.backends.django.DjangoTemplates",
+            "DIRS": [],
+            "APP_DIRS": True,
+            "OPTIONS": {
+                "context_processors": [
+                    "django.template.context_processors.debug",
+                    "django.template.context_processors.request",
+                    "django.contrib.auth.context_processors.auth",
+                    "django.contrib.messages.context_processors.messages",
+                ],
+            },
+        },
+    ]
 
 DATA_WIZARD = {
     "BACKEND": f"data_wizard.backends.{TEST_BACKEND}",

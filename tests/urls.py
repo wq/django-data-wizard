@@ -6,7 +6,7 @@ from django import VERSION as DJANGO_VERSION
 if settings.WITH_WQDB:
     from wq.db import rest
 
-    wizard_urls = [path("", include(rest.router.urls))]
+    wizard_urls = [path("", rest.router.urls)]
 else:
     wizard_urls = [path("datawizard/", include("data_wizard.urls"))]
 
