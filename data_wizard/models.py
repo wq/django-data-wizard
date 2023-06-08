@@ -322,14 +322,12 @@ class Record(models.Model):
 
     def __str__(self):
         if self.success:
-            return "Imported '{obj}' at row {row}".format(
-                obj=self.content_object,
-                row=self.row,
-            )
+            if self.content_object:
+                return f"Imported '{self.content_object}' at row {self.row}"
+            else:
+                return f"Success at row {self.row}"
         else:
-            return "Failed at row {row}".format(
-                row=self.row,
-            )
+            return f"Failed at row {self.row}"
 
     class Meta:
         ordering = ("run_id", "row")

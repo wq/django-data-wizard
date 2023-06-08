@@ -15,6 +15,7 @@ DEFAULTS = {
         "data_wizard.tasks.check_row_identifiers",
         "data_wizard.tasks.import_data",
     ),
+    "ROW_LOGGER": "data_wizard.tasks.create_record",
 }
 
 

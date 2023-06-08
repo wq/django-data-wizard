@@ -17,7 +17,7 @@ class URLSourceSerializer(ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
-        model = FileSource
+        model = URLSource
         fields = "__all__"
 
 

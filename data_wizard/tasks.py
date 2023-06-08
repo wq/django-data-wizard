@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from .models import Identifier
 from .signals import import_complete, new_metadata
+from .settings import import_setting
 from . import registry, wizard_task, InputNeeded
 
 from django.db import transaction
@@ -257,7 +258,6 @@ def get_choice_groups(run):
     groups = OrderedDict()
 
     for choice in choices:
-
         groups.setdefault(choice["group"], [])
         groups[choice["group"]].append(
             {
@@ -768,6 +768,7 @@ def _do_import(run):
     run.add_event("do_import")
 
     # Loop through table rows and add each record
+    log_row = import_setting("ROW_LOGGER")
     table = run.load_iter()
     rows = len(table)
     skipped = []
@@ -806,7 +807,8 @@ def _do_import(run):
 
         # Record relationship between data source and resulting report (or
         # skipped record), including specific cell range.
-        run.record_set.create(
+        log_row(
+            run,
             row=rownum(i),
             content_object=obj,
             success=success,
@@ -822,6 +824,15 @@ def _do_import(run):
     import_complete.send(sender=import_data, run=run, status=status)
 
     return status
+
+
+def create_record(run, row, content_object, success, fail_reason):
+    return run.record_set.create(
+        row=row,
+        content_object=content_object,
+        success=success,
+        fail_reason=fail_reason,
+    )
 
 
 def build_row(run, row, instance_globals, matched):

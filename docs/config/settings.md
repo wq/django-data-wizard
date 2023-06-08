@@ -20,6 +20,7 @@ DATA_WIZARD = {
         'data_wizard.tasks.check_row_identifiers',
         'data_wizard.tasks.import_data',
     ),
+    'ROW_LOGGER': 'data_wizard.tasks.create_record',
 }
 ```
 
@@ -91,6 +92,10 @@ Task | Description
 
 See [tasks] for more details on how to define custom processing tasks.
 
+### `DATA_WIZARD['ROW_LOGGER']`
+
+This function is used to log the result of each row imported in import_data.  The default function (`data_wizard.tasks.create_record`) creates a [Record][models] entry for each row.  The Record's [GenericForeignKey] will be pointed to the imported row in the target model.  This functionality assumes that the target model has an integer primary key.  If this is not the case, override `ROW_LOGGER` to log the results to a different location, or disable it entirely.  The function should accept `run`, `row`, `content_object`, `success`, and `fail_reason` as arguments.
+
 [Django Data Wizard]: ./index.md
 [models]: ./models.md
 [backends]: ./backends.md
@@ -99,5 +104,6 @@ See [tasks] for more details on how to define custom processing tasks.
 [tasks]: ./tasks.md
 [authentication]: https://www.django-rest-framework.org/api-guide/authentication/
 [permissions]: https://www.django-rest-framework.org/api-guide/permissions/
+[GenericForeignKey]: https://docs.djangoproject.com/en/4.2/ref/contrib/contenttypes/#django.contrib.contenttypes.fields.GenericForeignKey
 
 [idmap.py]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/idmap.py

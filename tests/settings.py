@@ -116,6 +116,9 @@ DATA_WIZARD = {
     "BACKEND": f"data_wizard.backends.{TEST_BACKEND}",
 }
 
+if TEST_VARIANT == "customlog":
+    DATA_WIZARD["ROW_LOGGER"] = "tests.source_app.wizard.custom_logger"
+
 STATIC_URL = "/static/"
 
 DEBUG = True

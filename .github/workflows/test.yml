@@ -29,6 +29,11 @@ jobs:
           drf-version: 3.14.0
           variant: reversion
           backend: threading
+        - python-version: "3.11"
+          django-version: 4.2.2
+          drf-version: 3.14.0
+          variant: customlog
+          backend: threading
 
         # Older Django versions
         - python-version: "3.11"

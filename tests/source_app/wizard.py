@@ -10,11 +10,11 @@ class CustomWorkflowSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomWorkflow
         data_wizard = {
-            'auto_import_tasks': [
-                 'tests.source_app.wizard.validate',
-                 'tests.source_app.wizard.check_confirm',
-                 'tests.source_app.wizard.finalize',
-             ],
+            "auto_import_tasks": [
+                "tests.source_app.wizard.validate",
+                "tests.source_app.wizard.check_confirm",
+                "tests.source_app.wizard.finalize",
+            ],
         }
 
 
@@ -25,7 +25,7 @@ data_wizard.register("Custom Workflow", CustomWorkflowSerializer)
 def validate(run):
     workflow = run.content_object
     if not workflow.validated:
-        run.add_event('validated')
+        run.add_event("validated")
         workflow.validated = True
         workflow.save()
     return {}
@@ -33,10 +33,10 @@ def validate(run):
 
 @data_wizard.wizard_task(label="Check Confirmation", url_path=False)
 def check_confirm(run):
-    run.add_event('check_confirm')
+    run.add_event("check_confirm")
     workflow = run.content_object
     if not workflow.confirmed:
-        raise data_wizard.InputNeeded('confirm')
+        raise data_wizard.InputNeeded("confirm")
 
 
 @data_wizard.wizard_task(label="Confirm", url_path="confirm")
@@ -50,25 +50,42 @@ def confirm(run):
 @data_wizard.wizard_task(label="Save Confirmation", url_path="saveconfirm")
 def process_confirm(run, post={}):
     workflow = run.content_object
-    if post.get('confirm'):
-        run.add_event('process_confirm')
+    if post.get("confirm"):
+        run.add_event("process_confirm")
         workflow.confirmed = True
         workflow.save()
 
     return {
         **confirm(run),
-        'current_mode': 'confirm',
+        "current_mode": "confirm",
     }
 
 
 @data_wizard.wizard_task(label="Finalize", url_path="finalize")
 def finalize(run):
-    run.add_event('finalized')
+    run.add_event("finalized")
     workflow = run.content_object
     workflow.finalized = True
     workflow.save()
-    run.send_progress({
-        "current": 3,
-        "total": 3,
-        "skipped": [],
-    }, "SUCCESS")
+    run.send_progress(
+        {
+            "current": 3,
+            "total": 3,
+            "skipped": [],
+        },
+        "SUCCESS",
+    )
+
+
+def custom_logger(run, row, content_object, success, fail_reason):
+    print(
+        f"Logging Row {row} for {run}:",
+        content_object if success else fail_reason,
+    )
+
+    return run.record_set.create(
+        row=row,
+        content_object=content_object,
+        success=success,
+        fail_reason=fail_reason,
+    )
