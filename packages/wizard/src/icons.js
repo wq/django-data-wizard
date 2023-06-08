@@ -1,5 +1,7 @@
-import Back from '@material-ui/icons/Replay';
-import Continue from '@material-ui/icons/PlayArrow';
-import Wizard from '@material-ui/icons/Settings';
+import {
+    Replay as Back,
+    PlayArrow as Continue,
+    Settings as Wizard,
+} from '@mui/icons-material';
 
 export { Back, Continue, Wizard };

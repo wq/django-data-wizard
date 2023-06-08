@@ -1,5 +1,5 @@
 import React from 'react';
-import LinearProgress from '@material-ui/core/LinearProgress';
+import { LinearProgress } from '@mui/material';
 import { useComponents } from '@wq/react';
 import { useProgress } from '../hooks';
 import PropTypes from 'prop-types';

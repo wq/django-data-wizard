@@ -108,13 +108,13 @@ jobs:
       run: python -m build
   npm:
     name: "@wq/${{ matrix.package }}"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       PACKAGE: ${{ matrix.package }}
     strategy:
       matrix:
-        python-version: [3.9]
-        node-version: [16]
+        python-version: [3.11]
+        node-version: [18]
         package:
           - progress
           - progress-element
@@ -132,11 +132,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: |
-        npm ci
-        npm run lerna exec npm ci
-        npm run bootstrap
-        npm run build
+      run: npm ci
     - name: Lint with ESLint
       run: npm run lint
     - name: Test with Jest
@@ -153,7 +149,7 @@ jobs:
       run: |
          python -m pip install setuptools-scm
          ./set_dev_version.sh
-         cd packages/$PACKAGE
          echo "registry=https://npm.pkg.github.com/wq" > .npmrc
          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+         cd packages/$PACKAGE
          npm publish

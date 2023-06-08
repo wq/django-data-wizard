@@ -2,6 +2,8 @@
 *.md
 *.css
 *.html
+docs/**/*.json
+docs/**/*.js
 build/
 dist/
 data_wizard/static/
