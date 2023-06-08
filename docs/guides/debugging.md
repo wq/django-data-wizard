@@ -1,4 +1,8 @@
-# Debugging
+---
+order: 1
+---
+
+# How To: Debug file parsing and import errors
 
 ### General Tips
 
