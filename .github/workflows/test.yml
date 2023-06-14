@@ -34,6 +34,11 @@ jobs:
           drf-version: 3.14.0
           variant: customlog
           backend: threading
+        - python-version: "3.11"
+          django-version: 4.2.2
+          drf-version: 3.14.0
+          variant: broken
+          backend: threading
 
         # Older Django versions
         - python-version: "3.11"
@@ -108,7 +113,14 @@ jobs:
         python -c "import tests"
         celery -A tests worker &
     - name: Test with unittest
+      if: ${{ matrix.variant != 'broken' }}
       run: python -m unittest discover -s tests -t . -v
+    - name: Test broken URL message
+      if: ${{ matrix.variant == 'broken' }}
+      run: |
+        set +e
+        python -m unittest discover -s tests -t . -v
+        test $? -eq 1
     - name: Test build
       run: python -m build
   npm:

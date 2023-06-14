@@ -47,6 +47,25 @@ else:
     REVERSION_APPS = tuple()
 
 
+if TEST_VARIANT == "broken":
+    APP_ORDER = (
+        "tests.data_app",
+        "tests.naturalkey_app",
+        "tests.eav_app",
+        "tests.source_app",
+        "data_wizard",
+        "data_wizard.sources",
+    )
+else:
+    APP_ORDER = (
+        "tests.data_app",
+        "tests.naturalkey_app",
+        "tests.eav_app",
+        "data_wizard",
+        "data_wizard.sources",
+        "tests.source_app",
+    )
+
 INSTALLED_APPS = (
     (
         "django.contrib.contenttypes",
@@ -57,14 +76,7 @@ INSTALLED_APPS = (
     )
     + WQ_APPS
     + REVERSION_APPS
-    + (
-        "data_wizard",
-        "data_wizard.sources",
-        "tests.data_app",
-        "tests.naturalkey_app",
-        "tests.eav_app",
-        "tests.source_app",
-    )
+    + APP_ORDER
 )
 
 
