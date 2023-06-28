@@ -10,12 +10,16 @@ class FileSource(models.Model):
         blank=True,
         on_delete=models.PROTECT,
     )
-    name = models.CharField(max_length=255, null=True, blank=True)
     file = models.FileField(upload_to="datawizard/")
+    name = models.CharField(max_length=255, null=True, blank=True, verbose_name="Name (Optional)")
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name or os.path.basename(self.file.name)
+
+    class Meta:
+        verbose_name = "File for Import"
+        verbose_name_plural = "Import via File"
 
 
 class URLSource(models.Model):
@@ -25,9 +29,13 @@ class URLSource(models.Model):
         blank=True,
         on_delete=models.PROTECT,
     )
-    name = models.CharField(max_length=255, null=True, blank=True)
     url = models.URLField()
+    name = models.CharField(max_length=255, null=True, blank=True, verbose_name="Name (Optional)")
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name or self.url
+
+    class Meta:
+        verbose_name = "URL for Import"
+        verbose_name_plural = "Import via URL"

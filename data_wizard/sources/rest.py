@@ -5,6 +5,16 @@ from .models import FileSource, URLSource
 from ..rest import user_filter
 
 
+@rest.register(
+    FileSource,
+    url="filesources",
+    background_sync=False,
+    filter=user_filter,
+    show_in_index="can_change",
+    section="Data Wizard",
+    order=200,
+    icon="wizard",
+)
 class FileSourceSerializer(ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
@@ -13,24 +23,20 @@ class FileSourceSerializer(ModelSerializer):
         fields = "__all__"
 
 
+
+@rest.register(
+    URLSource,
+    url="urlsources",
+    background_sync=False,
+    filter=user_filter,
+    show_in_index="can_change",
+    section="Data Wizard",
+    order=201,
+    icon="wizard",
+)
 class URLSourceSerializer(ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = URLSource
         fields = "__all__"
-
-
-rest.router.register_model(
-    FileSource,
-    serializer=FileSourceSerializer,
-    background_sync=False,
-    filter=user_filter,
-)
-
-rest.router.register_model(
-    URLSource,
-    serializer=URLSourceSerializer,
-    background_sync=False,
-    filter=user_filter,
-)

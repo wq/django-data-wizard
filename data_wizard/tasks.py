@@ -76,6 +76,7 @@ def check_serializer(run):
 
 @wizard_task(label="Serializers", url_path="serializers")
 def list_serializers(run):
+    show_in_list = import_setting("SHOW_IN_LIST")
     result = {}
     result["serializer_choices"] = [
         {
@@ -83,9 +84,12 @@ def list_serializers(run):
             "label": s["name"],
         }
         for s in registry.get_serializers()
-        if s["options"].get("show_in_list", True)
+        if show_in_list(s['serializer'], run, s['options'])
     ]
     return result
+
+def show_in_list(serializer, run, options):
+    return options.get("show_in_list", True)
 
 
 @wizard_task(label="Update Serializer")

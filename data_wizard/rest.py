@@ -81,4 +81,8 @@ rest.router.register_model(
     fields="__all__",
     filter=user_filter,
     cache="none",
+    show_in_index="can_change",
+    section="Data Wizard",
+    order=210,
+    icon="list",
 )
