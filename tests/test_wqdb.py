@@ -16,8 +16,8 @@ class WQTestCase(APITestCase):
 
         expected_conf = {
             "name": "run",
-            "verbose_name": "data wizard",
-            "verbose_name_plural": "data wizard",
+            "verbose_name": "data wizard run",
+            "verbose_name_plural": "data wizard runs",
             "url": "datawizard",
             "list": True,
             "background_sync": False,
@@ -36,6 +36,10 @@ class WQTestCase(APITestCase):
                 "records",
                 "validate",  # Custom
             ],
+            "show_in_index": "can_change",
+            "section": "Data Wizard",
+            "icon": "list",
+            "order": 210,
         }
 
         self.assertEqual(expected_conf, run_conf)
