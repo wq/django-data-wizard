@@ -442,6 +442,7 @@ def parse_column(run, name, **kwargs):
     matches = list(
         Identifier.objects.filter(
             serializer=run.serializer,
+            value__isnull=True,
             name__iexact=name,
         )
     )
@@ -859,6 +860,7 @@ def build_row(run, row, instance_globals, matched):
             seen.add(field_name)
             ident = Identifier.objects.filter(
                 serializer=run.serializer,
+                field=field_name,
                 name__iexact=str(record[field_name]),
             ).first()
             if ident and ident.value:
