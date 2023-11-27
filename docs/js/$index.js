@@ -12,6 +12,7 @@ wq.use(markdown);
 
 const config = {
     site_title: 'Django Data Wizard',
+    logo: '/images/icons/django-data-wizard.svg',
     store: {
         service: '',
         defaults: {
