@@ -47,23 +47,22 @@ See [loaders] for more details on how to configure the default loaders, or creat
 
 ### `DATA_WIZARD['IDMAP']`
 
+The `IDMAP` setting controls how foreign keys are handled while importing data.  The configured `IDMAP` function will only be called the first time a new identifier is encountered.  Once the mapping is established (manually or automatically), it will be re-used in subsequent wizard runs.
+
 Setting | Description
 ---|---
-`"data_wizard.idmap.existing"` (default) | Automatically map existing IDs, but require user to map unknown ids
-`"data_wizard.idmap.never"` | Require user to manually map all IDs the first time they are found in a file
-`"data_wizard.idmap.always"` | Always map IDs (skip manual mapping).  Unknown IDs will be passed on as-is to the serializer, which will cause per-row errors unless using natural keys.
-(Path to function) | Custom mapping function (see below)
+`"data_wizard.idmap.existing"` (default) | Automatically map values that exactly match *existing* IDs in the foreign table, but ask user to manually map identifiers that don't match.
+`"data_wizard.idmap.never"` | *Never* automatically map values to foreign IDs.  Instead, require user to manually map all values to foreign IDs the first time they are found in a file.
+`"data_wizard.idmap.always"` | *Always* map values to IDs as-is and let the serializer handle the mapping.  Unless you are using natural keys or a custom serializer, rows containing invalid identifiers will be skipped during import.
+(Path to custom function) | The function should accept an identifier and a serializer field, and return the mapped value (or `None` if no automatic mapping is available).  See the [built-in functions][idmap.py] for examples.
 
-If a custom function is defined, it should accept an identifier and a serializer field, and return the mapped value (or `None` if no automatic mapping is available).  See the [built-in functions][idmap.py] for examples.
-
-Note that the configured `IDMAP` function will only be called the first time a new identifier is encountered.  Once the mapping is established (manually or automatically), it will be re-used in subsequent wizard runs.
 
 ### `DATA_WIZARD['AUTHENTICATION']`
 
 Setting | Description
 ---|---
 `"rest_framework.authentication.SessionAuthentication"` (default) | Leverage existing `django.contrib.auth` session cookie.
-(Path to class) | Any Django REST Framework [authentication class][authentication][
+(Path to class) | Any Django REST Framework [authentication class][authentication]
 
 Note that `DATA_WIZARD['AUTHENTICATION']` is intentionally configured separately from `REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']`.  This is to avoid potential conflicts in projects that provide Django REST Framework APIs for a completely different set of users than those that will be using the Data Wizard.
 
@@ -106,4 +105,4 @@ This function is used to log the result of each row imported in import_data.  Th
 [permissions]: https://www.django-rest-framework.org/api-guide/permissions/
 [GenericForeignKey]: https://docs.djangoproject.com/en/4.2/ref/contrib/contenttypes/#django.contrib.contenttypes.fields.GenericForeignKey
 
-[idmap.py]: https://github.com/wq/django-data-wizard/blob/master/data_wizard/idmap.py
+[idmap.py]: https://github.com/wq/django-data-wizard/blob/main/data_wizard/idmap.py
