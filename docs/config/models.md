@@ -9,7 +9,7 @@ Django Data Wizard provides a number of Django models that help track the import
 Specifically, when [using Django Data Wizard][workflow], the following models are leveraged:
 
 step | api | description | model
------|-------------|--------
+-----|-----|-------------|--------
 0 | [admin] or [wq framework] | Upload **source** file | Create `FileSource` (or custom source model)
 1 | [create] | Start data wizard run | Create `Run`
 2 | [serializers][api-serializers] | Select serializer (& target model) | Update `Run`
