@@ -3,7 +3,7 @@ layout: null
 ---
 
 import wq, { modules } from 'https://unpkg.com/wq';
-import markdown, { renderers } from 'https://unpkg.com/@wq/markdown@next';
+import markdown from 'https://unpkg.com/@wq/markdown';
 
 const React = modules['react'];
 const { Typography, Link } = modules['@wq/material'];
@@ -52,6 +52,7 @@ function pageConf(page) {
             icon: page.wq_config.icon_data ? page.wq_config.name : null,
             markdown: page.content,
             list: true,
+            form: [],
             cache: 'all',
             can_change: false,
             can_add: false,
@@ -118,6 +119,13 @@ wq.use({
             }
         },
     },
+});
+
+wq.use({
+    name: 'auth',
+    reducer(state) {
+        return state || {};
+    }
 });
 
 function Icon({ data }) {

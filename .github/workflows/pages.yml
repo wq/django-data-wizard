@@ -34,7 +34,8 @@ jobs:
           curl -L -s https://unpkg.com/wq > docs/js/wq.js
           curl -L -s https://unpkg.com/@wq/markdown@latest > docs/js/markdown.js
           sed -i "s/^import\(.*\)https:\/\/unpkg.com\/wq/import\1.\/wq.js/" docs/js/*.js
-          sed -i "s/^import\(.*\)https:\/\/unpkg.com\/@wq\/markdown@next/import\1.\/markdown.js/" docs/js/*.js
+          sed -i "s/^import\(.*\)https:\/\/unpkg.com\/@wq\/markdown/import\1.\/markdown.js/" docs/js/*.js
+          sed -i "s/^import\(.*\)https:\/\/unpkg.com\/maplibre-gl/import\1.\/maplibre-gl.js/" docs/js/*.js
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
