@@ -1,10 +1,11 @@
 import React from 'react';
-import { useComponents } from '@wq/react';
+import { useComponents, useInputComponents } from '@wq/react';
 import PropTypes from 'prop-types';
 
 export default function MappingFieldsetArray({ label, subform, children }) {
-    const { Fieldset, Table, TableHead, TableBody, TableRow, TableTitle } =
-        useComponents();
+    const { Table, TableHead, TableBody, TableRow, TableTitle } =
+            useComponents(),
+        { Fieldset } = useInputComponents();
     return (
         <Fieldset label={label}>
             <Table>

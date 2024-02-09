@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useComponents } from '@wq/react';
+import { useComponents, useInputComponents } from '@wq/react';
 import { useRunInfo } from '../hooks';
 
 export default function RunColumns() {
@@ -16,8 +16,8 @@ export default function RunColumns() {
             TableRow,
             TableCell,
             ContinueForm,
-            MappingFieldsetArray,
-        } = useComponents();
+        } = useComponents(),
+        { MappingFieldsetArray } = useInputComponents();
 
     if (!unknown_count) {
         return (

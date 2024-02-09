@@ -1,4 +1,5 @@
+import MappingFieldsetArray from './MappingFieldsetArray';
 import MappingSelect from './MappingSelect';
 import ReadOnly from './ReadOnly';
 
-export { MappingSelect, ReadOnly };
+export { MappingFieldsetArray, MappingSelect, ReadOnly };
