@@ -1,19 +1,15 @@
 {
     "name": "@wq/wizard",
-    "version": "2.0.0",
+    "version": "3.0.0-alpha.0",
     "description": "wq framework plugin & React UI for Django Data Wizard",
-    "main": "dist/index.js",
-    "unpkg": "dist/index.unpkg.js",
-    "files": [
-        "src/",
-        "dist/"
-    ],
+    "main": "index.js",
+    "react-native": "src/index.js",
     "type": "module",
     "scripts": {
         "test": "cd ../../ && npm run jest packages/wizard",
         "prettier": "cd ../../ && npm run prettier",
         "lint": "cd ../../ && npm run lint",
-        "build": "cd ../../ && npm run rollup -- -c packages/wizard/rollup.config.js"
+        "build": "cd ../../ && npm run babel -- packages/wizard/src --out-dir packages/wizard/"
     },
     "repository": {
         "type": "git",
@@ -32,14 +28,13 @@
     },
     "homepage": "https://django-data-wizard.wq.io/@wq/wizard",
     "dependencies": {
-        "@wq/material": "^2.0.0-alpha.0",
-        "@wq/progress": "^2.0.0"
+        "@wq/react": "^3.0.0-alpha.0"
     },
     "peerDependencies": {
-        "@wq/material-web": "*",
-        "react": "*"
+        "react": "*",
+        "@tanstack/react-query": "*"
     },
     "devDependencies": {
-        "@mui/x-date-pickers": "^5.0.20"
+        "@tanstack/react-query": "^5.90.19"
     }
 }

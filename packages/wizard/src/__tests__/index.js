@@ -1,5 +1,5 @@
-import wizard from '../index';
+import { Wizard } from "../index";
 
-test('it loads', () => {
-    expect(wizard.name).toBe('wizard');
+test("it loads", () => {
+    expect(Wizard.displayName).toBe("Wizard:wq");
 });
